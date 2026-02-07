@@ -364,7 +364,21 @@ class Dungeon:
 class Game:
     def __init__(self):
         pygame.init()
-        self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        # Force fullscreen landscape — detect native display size
+        display_info = pygame.display.Info()
+        native_w = display_info.current_w
+        native_h = display_info.current_h
+        global WIDTH, HEIGHT
+        # Use landscape: wider dimension is width
+        WIDTH = max(native_w, native_h)
+        HEIGHT = min(native_w, native_h)
+        # Minimum size fallback
+        if WIDTH < 800 or HEIGHT < 400:
+            WIDTH, HEIGHT = 1280, 720
+        try:
+            self.screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
+        except Exception:
+            self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption("Dungeon of the Damned — ARPG")
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont(FONT_NAME, 18)
@@ -411,20 +425,27 @@ class Game:
         self.touch_move = Vec(0, 0)  # virtual joystick direction
         self.touch_joy_active = False
         self.touch_joy_id = None
-        self.touch_joy_center = Vec(120, HEIGHT - 180)
-        self.touch_joy_pos = Vec(120, HEIGHT - 180)
+        self.touch_joy_radius = 70  # bigger for thumbs
+        # Bottom-left corner for joystick
+        joy_margin = 40
+        self.touch_joy_center = Vec(joy_margin + self.touch_joy_radius + 20,
+                                     HEIGHT - joy_margin - self.touch_joy_radius - 90)
+        self.touch_joy_pos = self.touch_joy_center.copy()
         self.touch_attack_active = False
         self.touch_power_active = False
         self.touch_dash_active = False
         self.touch_hppot_active = False
         self.touch_mpot_active = False
-        # Button positions (right side)
-        self.touch_btn_attack = Vec(WIDTH - 90, HEIGHT - 200)
-        self.touch_btn_power = Vec(WIDTH - 170, HEIGHT - 160)
-        self.touch_btn_dash = Vec(WIDTH - 90, HEIGHT - 120)
-        self.touch_btn_hppot = Vec(WIDTH - 170, HEIGHT - 240)
-        self.touch_btn_mpot = Vec(WIDTH - 250, HEIGHT - 200)
-        self.touch_btn_radius = 32
+        # Button positions — bottom-right, ergonomic thumb arc
+        self.touch_btn_radius = 38  # bigger for mobile
+        br = self.touch_btn_radius
+        right_x = WIDTH - br - 30  # primary attack far right
+        bot_y = HEIGHT - 90 - br   # above UI panel
+        self.touch_btn_attack = Vec(right_x, bot_y)              # main attack (biggest, easiest to reach)
+        self.touch_btn_power = Vec(right_x - 85, bot_y + 10)     # power shot left of attack
+        self.touch_btn_dash = Vec(right_x - 42, bot_y - 80)      # dash above attack
+        self.touch_btn_hppot = Vec(right_x - 130, bot_y - 60)    # HP pot upper-left
+        self.touch_btn_mpot = Vec(right_x - 170, bot_y + 10)     # MP pot far left
 
     # ---- Texture generation ----
     def _build_texture_cache(self):
@@ -559,6 +580,27 @@ class Game:
                         idx = (idx + 1) % 3
                     if e.key in (pygame.K_RETURN, pygame.K_SPACE):
                         selecting = False
+                # Touch support for menu
+                if e.type == pygame.FINGERDOWN:
+                    tx = e.x * WIDTH
+                    ty = e.y * HEIGHT
+                    # Tap on difficulty option boxes
+                    for i in range(3):
+                        bx = WIDTH // 2 - 300 + i * 300
+                        by = 290
+                        if abs(tx - bx) < 80 and abs(ty - by - 20) < 50:
+                            idx = i
+                            selecting = False
+                            break
+                if e.type == pygame.MOUSEBUTTONDOWN:
+                    mx, my = e.pos
+                    for i in range(3):
+                        bx = WIDTH // 2 - 300 + i * 300
+                        by = 290
+                        if abs(mx - bx) < 80 and abs(my - by - 20) < 50:
+                            idx = i
+                            selecting = False
+                            break
             screen.fill(C_GOTHIC_BG)
 
             # Ambient particles on menu
@@ -1964,7 +2006,7 @@ class Game:
         waiting = True
         while waiting:
             for e in pygame.event.get():
-                if e.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN, pygame.QUIT):
+                if e.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN, pygame.FINGERDOWN, pygame.QUIT):
                     waiting = False
 
     def game_over(self):
@@ -2006,7 +2048,7 @@ class Game:
         waiting = True
         while waiting:
             for event in pygame.event.get():
-                if event.type in (pygame.KEYDOWN, pygame.QUIT):
+                if event.type in (pygame.KEYDOWN, pygame.FINGERDOWN, pygame.QUIT):
                     waiting = False
 
     # ---- Touch input handlers ----
@@ -2022,11 +2064,11 @@ class Game:
     def _handle_touch_down(self, event):
         self.touch_mode = True
         sx, sy = self._touch_to_screen(event)
-        joy_r = 60
-        # Check joystick area (left side)
+        joy_r = self.touch_joy_radius
+        # Check joystick area (left side — generous zone)
         dx = sx - self.touch_joy_center.x
         dy = sy - self.touch_joy_center.y
-        if dx * dx + dy * dy <= (joy_r + 40) ** 2:
+        if dx * dx + dy * dy <= (joy_r + 60) ** 2:
             self.touch_joy_active = True
             self.touch_joy_id = event.finger_id
             self.touch_joy_pos = Vec(sx, sy)
@@ -2062,11 +2104,11 @@ class Game:
             sx, sy = self._touch_to_screen(event)
             self.touch_joy_pos = Vec(sx, sy)
             diff = self.touch_joy_pos - self.touch_joy_center
-            joy_r = 60
+            joy_r = self.touch_joy_radius
             if diff.length() > joy_r:
                 diff = diff.normalize() * joy_r
                 self.touch_joy_pos = self.touch_joy_center + diff
-            if diff.length() > 8:  # dead zone
+            if diff.length() > 10:  # dead zone
                 self.touch_move = diff.normalize()
             else:
                 self.touch_move = Vec(0, 0)
@@ -2095,19 +2137,22 @@ class Game:
         """Draw virtual joystick and buttons for mobile."""
         if not self.touch_mode:
             return
-        # Virtual joystick
+        # Virtual joystick — bottom-left
         jc = self.touch_joy_center
-        jr = 60
-        # outer ring
-        joy_surf = pygame.Surface((jr * 2 + 20, jr * 2 + 20), pygame.SRCALPHA)
-        pygame.draw.circle(joy_surf, (255, 255, 255, 35), (jr + 10, jr + 10), jr, 2)
-        s.blit(joy_surf, (int(jc.x - jr - 10), int(jc.y - jr - 10)))
-        # thumb position
+        jr = self.touch_joy_radius
+        pad = 10
+        # outer ring (base)
+        joy_surf = pygame.Surface((jr * 2 + pad * 2, jr * 2 + pad * 2), pygame.SRCALPHA)
+        pygame.draw.circle(joy_surf, (255, 255, 255, 25), (jr + pad, jr + pad), jr)
+        pygame.draw.circle(joy_surf, (255, 255, 255, 50), (jr + pad, jr + pad), jr, 3)
+        s.blit(joy_surf, (int(jc.x - jr - pad), int(jc.y - jr - pad)))
+        # thumb knob
         thumb = self.touch_joy_pos
-        thumb_surf = pygame.Surface((50, 50), pygame.SRCALPHA)
-        pygame.draw.circle(thumb_surf, (255, 255, 255, 60), (25, 25), 22)
-        pygame.draw.circle(thumb_surf, (255, 255, 255, 100), (25, 25), 18)
-        s.blit(thumb_surf, (int(thumb.x - 25), int(thumb.y - 25)))
+        knob_r = 28
+        knob_surf = pygame.Surface((knob_r * 2 + 4, knob_r * 2 + 4), pygame.SRCALPHA)
+        pygame.draw.circle(knob_surf, (255, 255, 255, 70), (knob_r + 2, knob_r + 2), knob_r)
+        pygame.draw.circle(knob_surf, (255, 255, 255, 130), (knob_r + 2, knob_r + 2), knob_r - 4)
+        s.blit(knob_surf, (int(thumb.x - knob_r - 2), int(thumb.y - knob_r - 2)))
 
         # Buttons
         br = self.touch_btn_radius
