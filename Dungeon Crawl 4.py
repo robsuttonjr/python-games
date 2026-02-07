@@ -364,21 +364,7 @@ class Dungeon:
 class Game:
     def __init__(self):
         pygame.init()
-        # Force fullscreen landscape — detect native display size
-        display_info = pygame.display.Info()
-        native_w = display_info.current_w
-        native_h = display_info.current_h
-        global WIDTH, HEIGHT
-        # Use landscape: wider dimension is width
-        WIDTH = max(native_w, native_h)
-        HEIGHT = min(native_w, native_h)
-        # Minimum size fallback
-        if WIDTH < 800 or HEIGHT < 400:
-            WIDTH, HEIGHT = 1280, 720
-        try:
-            self.screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
-        except Exception:
-            self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption("Dungeon of the Damned — ARPG")
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont(FONT_NAME, 18)
@@ -419,33 +405,6 @@ class Game:
         self._build_light_surfaces()
         self.light_map = pygame.Surface((WIDTH, HEIGHT))
         self.portal_angle = 0.0
-
-        # ---- Mobile / Touch controls ----
-        self.touch_mode = False  # auto-detected on first touch
-        self.touch_move = Vec(0, 0)  # virtual joystick direction
-        self.touch_joy_active = False
-        self.touch_joy_id = None
-        self.touch_joy_radius = 70  # bigger for thumbs
-        # Bottom-left corner for joystick
-        joy_margin = 40
-        self.touch_joy_center = Vec(joy_margin + self.touch_joy_radius + 20,
-                                     HEIGHT - joy_margin - self.touch_joy_radius - 90)
-        self.touch_joy_pos = self.touch_joy_center.copy()
-        self.touch_attack_active = False
-        self.touch_power_active = False
-        self.touch_dash_active = False
-        self.touch_hppot_active = False
-        self.touch_mpot_active = False
-        # Button positions — bottom-right, ergonomic thumb arc
-        self.touch_btn_radius = 38  # bigger for mobile
-        br = self.touch_btn_radius
-        right_x = WIDTH - br - 30  # primary attack far right
-        bot_y = HEIGHT - 90 - br   # above UI panel
-        self.touch_btn_attack = Vec(right_x, bot_y)              # main attack (biggest, easiest to reach)
-        self.touch_btn_power = Vec(right_x - 85, bot_y + 10)     # power shot left of attack
-        self.touch_btn_dash = Vec(right_x - 42, bot_y - 80)      # dash above attack
-        self.touch_btn_hppot = Vec(right_x - 130, bot_y - 60)    # HP pot upper-left
-        self.touch_btn_mpot = Vec(right_x - 170, bot_y + 10)     # MP pot far left
 
     # ---- Texture generation ----
     def _build_texture_cache(self):
@@ -580,18 +539,6 @@ class Game:
                         idx = (idx + 1) % 3
                     if e.key in (pygame.K_RETURN, pygame.K_SPACE):
                         selecting = False
-                # Touch support for menu
-                if e.type == pygame.FINGERDOWN:
-                    tx = e.x * WIDTH
-                    ty = e.y * HEIGHT
-                    # Tap on difficulty option boxes
-                    for i in range(3):
-                        bx = WIDTH // 2 - 300 + i * 300
-                        by = 290
-                        if abs(tx - bx) < 80 and abs(ty - by - 20) < 50:
-                            idx = i
-                            selecting = False
-                            break
                 if e.type == pygame.MOUSEBUTTONDOWN:
                     mx, my = e.pos
                     for i in range(3):
@@ -841,56 +788,44 @@ class Game:
             move.x -= 1
         if keys[pygame.K_d]:
             move.x += 1
-        # Merge touch joystick input
-        if self.touch_mode and self.touch_joy_active and self.touch_move.length_squared() > 0:
-            move = self.touch_move
         if move.length_squared() > 0:
             move = move.normalize()
         self.player.vel = move * PLAYER_SPEED
 
-        # Dash: keyboard or touch button
-        want_dash = keys[pygame.K_LSHIFT] or self.touch_dash_active
-        if want_dash and self.player.dash_cd <= 0 and self.player.dash_timer <= 0:
+        # Dash
+        if keys[pygame.K_LSHIFT] and self.player.dash_cd <= 0 and self.player.dash_timer <= 0:
             self.player.dash_timer = DASH_TIME
             self.player.dash_cd = DASH_CD
             self.player.iframes = max(self.player.iframes, IFRAME_TIME)
             self.emit_dust(self.player.pos.x, self.player.pos.y + 8, 6)
-            self.touch_dash_active = False  # one-shot
 
-        # Aim direction: mouse or auto-aim for touch
-        if self.touch_mode:
-            aim_dir = self._get_auto_aim_dir()
-        else:
-            mx, my = pygame.mouse.get_pos()
-            world_mouse = Vec(mx + self.cam_x - self.shake_x, my + self.cam_y - self.shake_y)
-            aim_dir = world_mouse - self.player.pos
-            if aim_dir.length_squared() == 0:
-                aim_dir = Vec(1, 0)
-            aim_dir = aim_dir.normalize()
+        # Aim direction: mouse
+        mx, my = pygame.mouse.get_pos()
+        world_mouse = Vec(mx + self.cam_x - self.shake_x, my + self.cam_y - self.shake_y)
+        aim_dir = world_mouse - self.player.pos
+        if aim_dir.length_squared() == 0:
+            aim_dir = Vec(1, 0)
+        aim_dir = aim_dir.normalize()
 
-        # Shooting: mouse buttons or touch buttons
+        # Shooting: mouse buttons
         buttons = pygame.mouse.get_pressed(3)
-        want_basic = buttons[0] or self.touch_attack_active
-        want_power = buttons[2] or self.touch_power_active
+        want_basic = buttons[0]
+        want_power = buttons[2]
         if want_basic and self.player.basic_cd <= 0:
             self.shoot_basic(aim_dir)
         if want_power and self.player.power_cd <= 0 and self.player.mana >= POWER_MANA_COST:
             self.shoot_power(aim_dir)
 
-        # Potions: keyboard or touch buttons
-        want_hp_pot = keys[pygame.K_q] or self.touch_hppot_active
-        want_mp_pot = keys[pygame.K_e] or self.touch_mpot_active
-        if want_hp_pot and self.player.potions_hp > 0 and self.player.hp < PLAYER_HP:
+        # Potions
+        if keys[pygame.K_q] and self.player.potions_hp > 0 and self.player.hp < PLAYER_HP:
             self.player.hp = min(PLAYER_HP + 10 * self.player.level, self.player.hp + POTION_HEAL)
             self.player.potions_hp -= 1
             self.emit_particles(self.player.pos.x, self.player.pos.y, 10, (100, 220, 100), speed=40, life=0.6, gravity=-60)
             self.add_floating_text(self.player.pos.x, self.player.pos.y - 20, f"+{POTION_HEAL}", (100, 255, 100))
-            self.touch_hppot_active = False  # one-shot
-        if want_mp_pot and self.player.potions_mana > 0 and self.player.mana < PLAYER_MANA:
+        if keys[pygame.K_e] and self.player.potions_mana > 0 and self.player.mana < PLAYER_MANA:
             self.player.mana = min(PLAYER_MANA + 8 * self.player.level, self.player.mana + POTION_MANA)
             self.player.potions_mana -= 1
             self.emit_particles(self.player.pos.x, self.player.pos.y, 10, C_MANA_LIGHT, speed=40, life=0.6, gravity=-60)
-            self.touch_mpot_active = False  # one-shot
 
     # ---- Combat ----
     def shoot_basic(self, direction: Vec):
@@ -1300,10 +1235,8 @@ class Game:
         self._draw_floating_texts(s, ox, oy)
         self._draw_lighting(s, ox, oy)
         self._draw_ui(s)
-        if not self.touch_mode:
-            self._draw_reticle(s)
+        self._draw_reticle(s)
         self._draw_minimap(s)
-        self._draw_touch_controls(s)
         pygame.display.flip()
 
     def _tile_in_view(self, tx: int, ty: int) -> bool:
@@ -2006,7 +1939,7 @@ class Game:
         waiting = True
         while waiting:
             for e in pygame.event.get():
-                if e.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN, pygame.FINGERDOWN, pygame.QUIT):
+                if e.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN, pygame.QUIT):
                     waiting = False
 
     def game_over(self):
@@ -2048,131 +1981,8 @@ class Game:
         waiting = True
         while waiting:
             for event in pygame.event.get():
-                if event.type in (pygame.KEYDOWN, pygame.FINGERDOWN, pygame.QUIT):
+                if event.type in (pygame.KEYDOWN, pygame.QUIT):
                     waiting = False
-
-    # ---- Touch input handlers ----
-    def _touch_to_screen(self, event) -> Tuple[float, float]:
-        """Convert normalized touch coords to screen pixels."""
-        return event.x * WIDTH, event.y * HEIGHT
-
-    def _touch_hit_btn(self, sx, sy, btn_pos) -> bool:
-        dx = sx - btn_pos.x
-        dy = sy - btn_pos.y
-        return dx * dx + dy * dy <= self.touch_btn_radius * self.touch_btn_radius * 1.5
-
-    def _handle_touch_down(self, event):
-        self.touch_mode = True
-        sx, sy = self._touch_to_screen(event)
-        joy_r = self.touch_joy_radius
-        # Check joystick area (left side — generous zone)
-        dx = sx - self.touch_joy_center.x
-        dy = sy - self.touch_joy_center.y
-        if dx * dx + dy * dy <= (joy_r + 60) ** 2:
-            self.touch_joy_active = True
-            self.touch_joy_id = event.finger_id
-            self.touch_joy_pos = Vec(sx, sy)
-            return
-        # Check buttons (right side)
-        if self._touch_hit_btn(sx, sy, self.touch_btn_attack):
-            self.touch_attack_active = True
-        elif self._touch_hit_btn(sx, sy, self.touch_btn_power):
-            self.touch_power_active = True
-        elif self._touch_hit_btn(sx, sy, self.touch_btn_dash):
-            self.touch_dash_active = True
-        elif self._touch_hit_btn(sx, sy, self.touch_btn_hppot):
-            self.touch_hppot_active = True
-        elif self._touch_hit_btn(sx, sy, self.touch_btn_mpot):
-            self.touch_mpot_active = True
-
-    def _handle_touch_up(self, event):
-        if event.finger_id == self.touch_joy_id:
-            self.touch_joy_active = False
-            self.touch_joy_id = None
-            self.touch_move = Vec(0, 0)
-            self.touch_joy_pos = self.touch_joy_center.copy()
-        # release all buttons on any finger up
-        sx, sy = self._touch_to_screen(event)
-        self.touch_attack_active = False
-        self.touch_power_active = False
-        self.touch_dash_active = False
-        self.touch_hppot_active = False
-        self.touch_mpot_active = False
-
-    def _handle_touch_move(self, event):
-        if event.finger_id == self.touch_joy_id and self.touch_joy_active:
-            sx, sy = self._touch_to_screen(event)
-            self.touch_joy_pos = Vec(sx, sy)
-            diff = self.touch_joy_pos - self.touch_joy_center
-            joy_r = self.touch_joy_radius
-            if diff.length() > joy_r:
-                diff = diff.normalize() * joy_r
-                self.touch_joy_pos = self.touch_joy_center + diff
-            if diff.length() > 10:  # dead zone
-                self.touch_move = diff.normalize()
-            else:
-                self.touch_move = Vec(0, 0)
-
-    def _get_auto_aim_dir(self) -> Vec:
-        """Auto-aim at nearest visible enemy for touch controls."""
-        nearest = None
-        best_dist = float('inf')
-        for e in self.enemies:
-            if not e.alive:
-                continue
-            d = (e.pos - self.player.pos).length()
-            if d < best_dist and d < 500:
-                best_dist = d
-                nearest = e
-        if nearest:
-            aim = nearest.pos - self.player.pos
-            if aim.length_squared() > 0:
-                return aim.normalize()
-        # default: aim in movement direction or right
-        if self.player.vel.length_squared() > 0:
-            return self.player.vel.normalize()
-        return Vec(1, 0)
-
-    def _draw_touch_controls(self, s):
-        """Draw virtual joystick and buttons for mobile."""
-        if not self.touch_mode:
-            return
-        # Virtual joystick — bottom-left
-        jc = self.touch_joy_center
-        jr = self.touch_joy_radius
-        pad = 10
-        # outer ring (base)
-        joy_surf = pygame.Surface((jr * 2 + pad * 2, jr * 2 + pad * 2), pygame.SRCALPHA)
-        pygame.draw.circle(joy_surf, (255, 255, 255, 25), (jr + pad, jr + pad), jr)
-        pygame.draw.circle(joy_surf, (255, 255, 255, 50), (jr + pad, jr + pad), jr, 3)
-        s.blit(joy_surf, (int(jc.x - jr - pad), int(jc.y - jr - pad)))
-        # thumb knob
-        thumb = self.touch_joy_pos
-        knob_r = 28
-        knob_surf = pygame.Surface((knob_r * 2 + 4, knob_r * 2 + 4), pygame.SRCALPHA)
-        pygame.draw.circle(knob_surf, (255, 255, 255, 70), (knob_r + 2, knob_r + 2), knob_r)
-        pygame.draw.circle(knob_surf, (255, 255, 255, 130), (knob_r + 2, knob_r + 2), knob_r - 4)
-        s.blit(knob_surf, (int(thumb.x - knob_r - 2), int(thumb.y - knob_r - 2)))
-
-        # Buttons
-        br = self.touch_btn_radius
-        buttons = [
-            (self.touch_btn_attack, self.touch_attack_active, (140, 200, 255), "ATK"),
-            (self.touch_btn_power, self.touch_power_active, (160, 120, 255), "PWR"),
-            (self.touch_btn_dash, self.touch_dash_active, (100, 200, 140), "DSH"),
-            (self.touch_btn_hppot, self.touch_hppot_active, (220, 80, 80), "HP"),
-            (self.touch_btn_mpot, self.touch_mpot_active, (80, 120, 220), "MP"),
-        ]
-        for pos, active, color, label in buttons:
-            btn_surf = pygame.Surface((br * 2 + 4, br * 2 + 4), pygame.SRCALPHA)
-            fill_alpha = 100 if active else 40
-            pygame.draw.circle(btn_surf, (color[0], color[1], color[2], fill_alpha),
-                               (br + 2, br + 2), br)
-            pygame.draw.circle(btn_surf, (color[0], color[1], color[2], 120),
-                               (br + 2, br + 2), br, 2)
-            s.blit(btn_surf, (int(pos.x - br - 2), int(pos.y - br - 2)))
-            lbl = self.font.render(label, True, (*color,))
-            s.blit(lbl, (int(pos.x - lbl.get_width() // 2), int(pos.y - lbl.get_height() // 2)))
 
     # ---- Main Loop ----
     def run(self):
@@ -2189,13 +1999,6 @@ class Game:
                         self.paused = not self.paused
                     if event.key == pygame.K_F1:
                         self._help_overlay()
-                # Touch / finger events
-                elif event.type == pygame.FINGERDOWN:
-                    self._handle_touch_down(event)
-                elif event.type == pygame.FINGERUP:
-                    self._handle_touch_up(event)
-                elif event.type == pygame.FINGERMOTION:
-                    self._handle_touch_move(event)
             if self.paused:
                 self._pause_screen()
                 continue
