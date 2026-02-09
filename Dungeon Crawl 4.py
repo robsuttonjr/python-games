@@ -32,7 +32,10 @@ PROJECTILE_SPEED = 760
 BASIC_RADIUS = 6
 POWER_RADIUS = 9
 BASIC_PIERCE = 1
-POWER_PIERCE = 2
+POWER_PIERCE = 1
+
+MULTISHOT_COUNT = 5
+MULTISHOT_SPREAD = math.pi / 4  # 45-degree fan
 
 DASH_SPEED = 700
 DASH_TIME = 0.22
@@ -83,11 +86,49 @@ CHEST_WEAPON_CHANCE = 0.10
 CHEST_BOOST_CHANCE = 0.12
 MANA_REGEN_RATE = 3.0  # mana per second
 
+INFUSION_DURATION = 15.0
+INFUSION_TYPES = ["fire", "ice", "lightning"]
+INFUSION_DROP_CHANCE = 0.07
+INFUSION_COLORS = {"fire": (255, 140, 40), "ice": (140, 200, 255), "lightning": (255, 255, 100)}
+
+GOBLIN_SPAWN_CHANCE = 0.06  # per wave
+GOBLIN_SPEED_MULT = 1.5
+GOBLIN_DESPAWN_TIME = 18.0
+GOBLIN_LOOT_INTERVAL = 0.6
+
 TILE = 48
 MAP_W, MAP_H = 180, 140
-LEVELS = 5
 WALL = 1
 FLOOR = 0
+
+BIOMES = ["crypt", "cave", "firepit", "icecavern", "swamp"]
+BIOME_COLORS = {
+    "crypt":      {"wall_base": 38, "floor_r": 22, "floor_g": 20, "floor_b": 24,
+                   "wall_tint": (0, -2, 8), "floor_tint": (0, -2, 4)},
+    "cave":       {"wall_base": 48, "floor_r": 35, "floor_g": 30, "floor_b": 22,
+                   "wall_tint": (6, 2, -4), "floor_tint": (4, 2, -2)},
+    "firepit":    {"wall_base": 42, "floor_r": 30, "floor_g": 16, "floor_b": 12,
+                   "wall_tint": (12, -4, -8), "floor_tint": (8, -2, -4)},
+    "icecavern":  {"wall_base": 36, "floor_r": 20, "floor_g": 28, "floor_b": 38,
+                   "wall_tint": (-4, 2, 12), "floor_tint": (-2, 4, 8)},
+    "swamp":      {"wall_base": 34, "floor_r": 18, "floor_g": 28, "floor_b": 16,
+                   "wall_tint": (-4, 8, -6), "floor_tint": (-2, 6, -4)},
+}
+BIOME_AMBIENT = {
+    "crypt":     (20, 17, 25),
+    "cave":      (25, 20, 15),
+    "firepit":   (35, 14, 10),
+    "icecavern": (14, 20, 30),
+    "swamp":     (16, 24, 14),
+}
+BIOME_NAMES = {
+    "crypt": "Ancient Crypt", "cave": "Dark Caverns", "firepit": "Infernal Pits",
+    "icecavern": "Frozen Depths", "swamp": "Poison Swamp",
+}
+BIOME_HAZARD = {
+    "crypt": "poison", "cave": None, "firepit": "lava", "icecavern": "ice", "swamp": "poison",
+}
+PORTALS_PER_LEVEL = 2
 
 # ============ VISUAL CONFIG ============
 AMBIENT_LIGHT = (20, 17, 25)
@@ -110,9 +151,16 @@ C_FIRE = (255, 140, 40)
 C_FIRE_BRIGHT = (255, 220, 100)
 C_POISON = (80, 200, 60)
 C_ICE = (140, 200, 255)
+C_LIGHTNING = (255, 255, 100)
+C_LAVA = (255, 80, 20)
 C_GOTHIC_FRAME = (90, 75, 50)
 C_GOTHIC_FRAME_LIGHT = (140, 120, 80)
 C_GOTHIC_BG = (12, 10, 15)
+
+BIOME_PORTAL_COLORS = {
+    "crypt": (180, 160, 120), "cave": (160, 130, 80), "firepit": (255, 120, 40),
+    "icecavern": (100, 180, 255), "swamp": (80, 200, 60),
+}
 
 Vec = pygame.math.Vector2
 
@@ -174,6 +222,7 @@ class Loot:
     weapon: Optional[Weapon] = None
     dmg_boost: bool = False
     shield_boost: bool = False
+    infusion: Optional[str] = None  # "fire", "ice", "lightning"
     ttl: float = 30.0
     bob_phase: float = 0.0
 
@@ -187,6 +236,9 @@ class Projectile:
     pierce: int = 1
     hostile: bool = False
     trail_timer: float = 0.0
+    is_arrow: bool = False
+    angle: float = 0.0
+    infusion: Optional[str] = None  # "fire", "ice", "lightning"
 
 @dataclass
 class Entity:
@@ -206,7 +258,7 @@ class Player(Entity):
     potions_mana: int = 1
     basic_cd: float = 0.0
     power_cd: float = 0.0
-    weapon: Weapon = field(default_factory=lambda: Weapon("Rusty Dagger", 6, 10, 2.5, False))
+    weapon: Weapon = field(default_factory=lambda: Weapon("Wooden Bow", 6, 10, 2.5, True))
     dmg_mult: float = 1.0
     dmg_timer: float = 0.0
     shield: int = 0
@@ -215,6 +267,8 @@ class Player(Entity):
     iframes: float = 0.0
     walk_anim: float = 0.0
     levelup_flash: float = 0.0
+    infusion_type: Optional[str] = None
+    infusion_timer: float = 0.0
 
 @dataclass
 class Enemy(Entity):
@@ -247,6 +301,12 @@ class Boss(Enemy):
     shot_cd: float = 1.0
 
 @dataclass
+class TreasureGoblin(Enemy):
+    flee_timer: float = 0.0
+    loot_drop_timer: float = 0.0
+    portal_timer: float = GOBLIN_DESPAWN_TIME
+
+@dataclass
 class Chest:
     pos: Vec
     hp: int = CHEST_HP
@@ -256,18 +316,18 @@ class Chest:
 
 # ======================= DUNGEON =======================
 class Dungeon:
-    def __init__(self, level: int = 1):
+    def __init__(self, level: int = 1, biome: str = "crypt"):
         self.level = level
+        self.biome = biome
         self.tiles = [[WALL for _ in range(MAP_H)] for _ in range(MAP_W)]
         self.seen = [[False for _ in range(MAP_H)] for _ in range(MAP_W)]
         self.rooms: List[pygame.Rect] = []
         self.scenery: List[Tuple[int, int, str]] = []
         self.torches: List[Tuple[int, int]] = []
         self.blood_stains: List[Tuple[float, float, float]] = []
-        self.stairs_tx = None
-        self.stairs_ty = None
+        self.portal_positions: List[Tuple[int, int, str]] = []  # (tx, ty, dest_biome)
         self.chest_positions: List[Tuple[int, int]] = []
-        self.poison_pools: List[Tuple[int, int]] = []
+        self.hazard_pools: List[Tuple[int, int]] = []  # lava, poison, ice based on biome
         self.tile_variants = [[random.randint(0, 7) for _ in range(MAP_H)] for _ in range(MAP_W)]
         self.generate()
 
@@ -293,7 +353,17 @@ class Dungeon:
                 tx = rng.randint(new.left + 1, new.right - 2)
                 ty = rng.randint(new.top + 1, new.bottom - 2)
                 self.tiles[tx][ty] = WALL
-                self.scenery.append((tx, ty, 'pillar' if rng.random() < 0.6 else 'crate'))
+                if self.biome == "cave":
+                    stype = 'stalagmite' if rng.random() < 0.7 else 'rock'
+                elif self.biome == "icecavern":
+                    stype = 'ice_crystal' if rng.random() < 0.6 else 'pillar'
+                elif self.biome == "swamp":
+                    stype = 'mushroom' if rng.random() < 0.5 else 'crate'
+                elif self.biome == "firepit":
+                    stype = 'pillar' if rng.random() < 0.7 else 'crate'
+                else:
+                    stype = 'pillar' if rng.random() < 0.6 else 'crate'
+                self.scenery.append((tx, ty, stype))
             self._place_torches(new, rng)
         # Place treasure chests in rooms
         for room in self.rooms[1:]:  # skip first room (player spawn)
@@ -317,13 +387,14 @@ class Dungeon:
                         if not too_close:
                             self.chest_positions.append((tx, ty))
                             break
-        # Place poison pools in some rooms
+        # Place hazard pools based on biome
+        hazard_chance = 0.20 if self.biome in ("swamp", "firepit") else 0.12
         for room in self.rooms[2:]:
-            if rng.random() < 0.15:
+            if rng.random() < hazard_chance:
                 cx = rng.randint(room.left + 2, max(room.left + 2, room.right - 3))
                 cy = rng.randint(room.top + 2, max(room.top + 2, room.bottom - 3))
                 if self.tiles[cx][cy] == FLOOR:
-                    self.poison_pools.append((cx, cy))
+                    self.hazard_pools.append((cx, cy))
 
         for x in range(MAP_W):
             self.tiles[x][0] = WALL
@@ -331,10 +402,18 @@ class Dungeon:
         for y in range(MAP_H):
             self.tiles[0][y] = WALL
             self.tiles[MAP_W - 1][y] = WALL
-        if self.rooms:
-            sx, sy = self.center(self.rooms[-1])
-            self.stairs_tx, self.stairs_ty = sx, sy
-            self.tiles[sx][sy] = FLOOR
+
+        # Place biome portals in later rooms
+        if len(self.rooms) >= 3:
+            available_biomes = [b for b in BIOMES if b != self.biome]
+            portal_rooms = list(self.rooms[len(self.rooms) // 2:])
+            rng.shuffle(portal_rooms)
+            for i in range(min(PORTALS_PER_LEVEL, len(portal_rooms), len(available_biomes))):
+                room = portal_rooms[i]
+                px, py = self.center(room)
+                dest = available_biomes[i]
+                self.portal_positions.append((px, py, dest))
+                self.tiles[px][py] = FLOOR
 
     def _place_torches(self, room: pygame.Rect, rng):
         walls = []
@@ -412,6 +491,7 @@ class Dungeon:
 class Game:
     def __init__(self):
         pygame.init()
+        self.fullscreen = False
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption("Dungeon of the Damned — ARPG")
         self.clock = pygame.time.Clock()
@@ -427,7 +507,8 @@ class Game:
         MAX_ACTIVE_ENEMIES = self.diff["max_enemies"]
 
         self.current_level = 1
-        self.dungeon = Dungeon(level=self.current_level)
+        self.current_biome = "crypt"
+        self.dungeon = Dungeon(level=self.current_level, biome=self.current_biome)
         rx, ry = self.dungeon.center(self.dungeon.rooms[0]) if self.dungeon.rooms else (MAP_W // 2, MAP_H // 2)
         self.player = Player(pos=Vec(rx * TILE + TILE / 2, ry * TILE + TILE / 2), vel=Vec(0, 0), radius=20)
         self.enemies: List[Enemy] = []
@@ -448,9 +529,11 @@ class Game:
         self.game_time = 0.0
         self.boss_spawned = False
         self.kills = 0
+        self.treasure_goblin: Optional[TreasureGoblin] = None
+        self.lightning_chains: List[Tuple[Vec, Vec, float]] = []  # (start, end, life)
         self.dungeon.mark_seen_radius(self.player.pos)
 
-        self._build_texture_cache()
+        self._build_texture_cache(self.current_biome)
         self._build_light_surfaces()
         self.light_map = pygame.Surface((WIDTH, HEIGHT))
         self.portal_angle = 0.0
@@ -458,14 +541,20 @@ class Game:
         self._spawn_chests()
 
     # ---- Texture generation ----
-    def _build_texture_cache(self):
+    def _build_texture_cache(self, biome: str = "crypt"):
+        bc = BIOME_COLORS.get(biome, BIOME_COLORS["crypt"])
+        wt = bc["wall_tint"]
+        ft = bc["floor_tint"]
+        wb = bc["wall_base"]
+
         self.wall_tiles = []
         for i in range(8):
             surf = pygame.Surface((TILE, TILE))
-            base = 38 + (i * 3) % 16
-            surf.fill((base, base - 2, base + 8))
-            # stone brick mortar lines
-            mortar = (base - 18, base - 20, base - 12)
+            base = wb + (i * 3) % 16
+            surf.fill((max(0, min(255, base + wt[0])),
+                        max(0, min(255, base - 2 + wt[1])),
+                        max(0, min(255, base + 8 + wt[2]))))
+            mortar = (max(0, base - 18 + wt[0]), max(0, base - 20 + wt[1]), max(0, base - 12 + wt[2]))
             for row in range(3):
                 y = row * (TILE // 3)
                 pygame.draw.line(surf, mortar, (0, y), (TILE, y))
@@ -473,29 +562,28 @@ class Game:
                 for bx in range(offset, TILE + TILE // 2, TILE // 2):
                     if 0 <= bx < TILE:
                         pygame.draw.line(surf, mortar, (bx, y), (bx, y + TILE // 3))
-            # highlight top edge
-            pygame.draw.line(surf, (base + 12, base + 10, base + 18), (0, 0), (TILE - 1, 0))
-            # noise
+            hl = (min(255, base + 12 + wt[0]), min(255, base + 10 + wt[1]), min(255, base + 18 + wt[2]))
+            pygame.draw.line(surf, hl, (0, 0), (TILE - 1, 0))
             for _ in range(6):
                 nx, ny = random.randint(0, TILE - 1), random.randint(0, TILE - 1)
                 c = random.randint(max(0, base - 12), min(255, base + 8))
-                surf.set_at((nx, ny), (c, c - 2, c + 4))
+                surf.set_at((nx, ny), (max(0, min(255, c + wt[0])),
+                                        max(0, min(255, c - 2 + wt[1])),
+                                        max(0, min(255, c + 4 + wt[2]))))
             self.wall_tiles.append(surf)
 
         self.floor_tiles = []
         for i in range(8):
             surf = pygame.Surface((TILE, TILE))
-            br = 22 + (i * 2) % 10
-            bg = 20 + (i * 3) % 8
-            bb = 24 + (i * 2) % 12
+            br = bc["floor_r"] + (i * 2) % 10
+            bg = bc["floor_g"] + (i * 3) % 8
+            bb = bc["floor_b"] + (i * 2) % 12
             surf.fill((br, bg, bb))
-            # subtle stone joints
-            jc = (br - 6, bg - 6, bb - 4)
+            jc = (max(0, br - 6), max(0, bg - 6), max(0, bb - 4))
             if i % 3 == 0:
                 pygame.draw.line(surf, jc, (0, TILE // 2), (TILE, TILE // 2))
             if i % 3 == 1:
                 pygame.draw.line(surf, jc, (TILE // 2, 0), (TILE // 2, TILE))
-            # crack
             if i % 4 == 0:
                 cx = random.randint(4, TILE - 4)
                 cy = random.randint(4, TILE - 4)
@@ -557,6 +645,32 @@ class Game:
         pygame.draw.circle(self.gold_chest_surf, (200, 180, 60), (TILE // 2, 20), 7, 1)
         pygame.draw.line(self.gold_chest_surf, (220, 190, 80), (8, 10), (TILE - 9, 10))
 
+        # Biome-specific scenery
+        # Stalagmite
+        self.stalagmite_surf = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
+        self.stalagmite_surf.fill((0, 0, 0, 0))
+        pygame.draw.polygon(self.stalagmite_surf, (75, 65, 50),
+                            [(TILE // 2, 2), (TILE // 2 - 12, TILE - 4), (TILE // 2 + 12, TILE - 4)])
+        pygame.draw.polygon(self.stalagmite_surf, (60, 52, 40),
+                            [(TILE // 2, 2), (TILE // 2 - 12, TILE - 4), (TILE // 2 + 12, TILE - 4)], 2)
+        # Rock
+        self.rock_surf = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
+        self.rock_surf.fill((0, 0, 0, 0))
+        pygame.draw.ellipse(self.rock_surf, (68, 60, 48), (4, 8, TILE - 8, TILE - 12))
+        pygame.draw.ellipse(self.rock_surf, (55, 48, 38), (4, 8, TILE - 8, TILE - 12), 2)
+        # Ice crystal
+        self.ice_crystal_surf = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
+        self.ice_crystal_surf.fill((0, 0, 0, 0))
+        pts = [(TILE // 2, 0), (TILE - 4, TILE // 2), (TILE // 2, TILE - 2), (4, TILE // 2)]
+        pygame.draw.polygon(self.ice_crystal_surf, (120, 180, 230, 180), pts)
+        pygame.draw.polygon(self.ice_crystal_surf, (180, 220, 255, 220), pts, 2)
+        # Mushroom
+        self.mushroom_surf = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
+        self.mushroom_surf.fill((0, 0, 0, 0))
+        pygame.draw.rect(self.mushroom_surf, (80, 70, 50), (TILE // 2 - 3, TILE // 2, 6, TILE // 2 - 2))
+        pygame.draw.ellipse(self.mushroom_surf, (60, 120, 50), (4, 4, TILE - 8, TILE // 2))
+        pygame.draw.ellipse(self.mushroom_surf, (80, 160, 60), (8, 8, TILE - 16, TILE // 2 - 8))
+
         # torch texture
         self.torch_surf = pygame.Surface((17, 22), pygame.SRCALPHA)
         pygame.draw.rect(self.torch_surf, (90, 70, 40), (6, 8, 5, 14))
@@ -579,6 +693,11 @@ class Game:
             ("chest", 100, (200, 180, 100)),
             ("gold_chest", 130, (255, 220, 80)),
             ("poison", 110, (60, 180, 40)),
+            ("lava", 130, (255, 100, 30)),
+            ("ice_pool", 90, (100, 160, 255)),
+            ("infusion_fire", PROJ_LIGHT_RADIUS + 15, (255, 140, 40)),
+            ("infusion_ice", PROJ_LIGHT_RADIUS + 15, (100, 180, 255)),
+            ("infusion_lightning", PROJ_LIGHT_RADIUS + 15, (255, 255, 100)),
         ]:
             self.light_surfs[name] = self._make_light_surf(radius, color)
 
@@ -620,6 +739,13 @@ class Game:
                         idx = (idx + 1) % 3
                     if e.key in (pygame.K_RETURN, pygame.K_SPACE):
                         selecting = False
+                    if e.key == pygame.K_f:
+                        self.fullscreen = not self.fullscreen
+                        if self.fullscreen:
+                            screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
+                        else:
+                            screen = pygame.display.set_mode((WIDTH, HEIGHT))
+                        self.screen = screen
                 if e.type == pygame.MOUSEBUTTONDOWN:
                     mx, my = e.pos
                     for i in range(3):
@@ -675,8 +801,12 @@ class Game:
                 screen.blit(desc, (bx - desc.get_width() // 2, by + 44))
 
             # Controls hint
-            hint = small.render("[A/D] or [Arrow Keys] to choose  -  [Enter] to begin", True, (100, 95, 80))
+            hint = small.render("[A/D] or [Arrow Keys] to choose  -  [Enter] to begin  -  [F] Fullscreen", True, (100, 95, 80))
             screen.blit(hint, (WIDTH // 2 - hint.get_width() // 2, HEIGHT * 2 // 3 + 40))
+
+            # Fullscreen indicator
+            fs_txt = small.render(f"Display: {'Fullscreen' if self.fullscreen else 'Windowed'}  [F11 in-game]", True, (80, 75, 65))
+            screen.blit(fs_txt, (WIDTH // 2 - fs_txt.get_width() // 2, HEIGHT * 2 // 3 + 70))
 
             # Bottom decorative line
             bot_y = HEIGHT - 140
@@ -830,14 +960,33 @@ class Game:
             self.spawn_enemy(near_player=False, kind_override=kind)
             self.enemies[-1].pos = mpos
 
+    def spawn_treasure_goblin(self):
+        if self.treasure_goblin is not None:
+            return
+        pos = self._random_floor_pos(near_player=True)
+        scale = 1.0 + 0.1 * (self.current_level - 1)
+        hp = int(50 * scale)
+        goblin = TreasureGoblin(
+            pos=pos, vel=Vec(0, 0), radius=16,
+            hp=hp, max_hp=hp, dmg_min=0, dmg_max=0,
+            speed=ENEMY_SPEED * GOBLIN_SPEED_MULT, kind=4,
+            portal_timer=GOBLIN_DESPAWN_TIME
+        )
+        self.treasure_goblin = goblin
+        self.enemies.append(goblin)
+        self.add_floating_text(pos.x, pos.y - 30, "TREASURE GOBLIN!", C_GOLD, 1.5)
+        self.emit_particles(pos.x, pos.y, 25, C_GOLD, speed=100, life=0.8, gravity=-40)
+        self.add_screen_shake(4)
+
     def spawn_boss(self):
-        if self.current_level != LEVELS or self.boss_spawned:
+        if self.current_level % 5 != 0 or self.boss_spawned:
             return
         center_tx, center_ty = self.dungeon.center(self.dungeon.rooms[-1])
         pos = Vec(center_tx * TILE + TILE / 2, center_ty * TILE + TILE / 2)
-        hp = int(BOSS_HP * self.diff["enemy_hp"])
-        dmg_min = int(BOSS_DMG[0] * self.diff["enemy_dmg"])
-        dmg_max = int(BOSS_DMG[1] * self.diff["enemy_dmg"])
+        boss_scale = 1.0 + (self.current_level // 5 - 1) * 0.3
+        hp = int(BOSS_HP * self.diff["enemy_hp"] * boss_scale)
+        dmg_min = int(BOSS_DMG[0] * self.diff["enemy_dmg"] * boss_scale)
+        dmg_max = int(BOSS_DMG[1] * self.diff["enemy_dmg"] * boss_scale)
         b = Boss(pos=pos, vel=Vec(0, 0), radius=34, hp=hp, max_hp=hp,
                  dmg_min=dmg_min, dmg_max=dmg_max,
                  speed=ENEMY_SPEED * 0.9 * self.diff["enemy_speed"],
@@ -898,10 +1047,10 @@ class Game:
         if random.random() < CHEST_WEAPON_CHANCE:
             tier = self.current_level
             weapons = [
-                Weapon("Iron Sword", 8 + tier * 2, 14 + tier * 3, 2.2, False),
-                Weapon("Fire Wand", 10 + tier * 2, 18 + tier * 3, 1.8, True),
-                Weapon("Shadow Blade", 12 + tier * 2, 20 + tier * 2, 2.5, False),
-                Weapon("Crystal Staff", 9 + tier * 3, 16 + tier * 4, 1.6, True),
+                Weapon("Longbow", 8 + tier * 2, 14 + tier * 2, 2.2, True),
+                Weapon("Composite Bow", 10 + tier * 2, 16 + tier * 3, 2.0, True),
+                Weapon("War Bow", 12 + tier * 2, 20 + tier * 2, 2.4, True),
+                Weapon("Elven Bow", 9 + tier * 3, 18 + tier * 3, 1.8, True),
             ]
             self.loots.append(Loot(pos=chest.pos + Vec(random.uniform(-8, 8), random.uniform(-8, 8)),
                                    weapon=random.choice(weapons)))
@@ -976,20 +1125,34 @@ class Game:
         self.player.basic_cd = BASIC_CD
         base = random.randint(*BASIC_DMG)
         dmg = int(base * self.player.dmg_mult)
+        ang = math.atan2(direction.y, direction.x)
         proj = Projectile(pos=self.player.pos + direction * 20, vel=direction * PROJECTILE_SPEED,
-                          dmg=dmg, ttl=0.9, radius=BASIC_RADIUS, pierce=BASIC_PIERCE)
+                          dmg=dmg, ttl=0.9, radius=BASIC_RADIUS, pierce=BASIC_PIERCE,
+                          is_arrow=True, angle=ang, infusion=self.player.infusion_type)
         self.projectiles.append(proj)
-        self.emit_sparks(self.player.pos.x + direction.x * 18, self.player.pos.y + direction.y * 18, 2)
+        # Bowstring twang particles
+        self.emit_particles(self.player.pos.x + direction.x * 18,
+                            self.player.pos.y + direction.y * 18,
+                            3, (180, 160, 120), speed=40, life=0.25, gravity=0)
 
     def shoot_power(self, direction: Vec):
         self.player.power_cd = POWER_CD
         self.player.mana -= POWER_MANA_COST
         base = random.randint(*POWER_DMG)
         dmg = int(base * self.player.dmg_mult)
-        proj = Projectile(pos=self.player.pos + direction * 22, vel=direction * PROJECTILE_SPEED * 0.95,
-                          dmg=dmg, ttl=1.1, radius=POWER_RADIUS, pierce=POWER_PIERCE)
-        self.projectiles.append(proj)
-        self.emit_magic(self.player.pos.x + direction.x * 20, self.player.pos.y + direction.y * 20, 5)
+        base_angle = math.atan2(direction.y, direction.x)
+        # Multishot fan of arrows
+        for i in range(MULTISHOT_COUNT):
+            offset = (i - MULTISHOT_COUNT // 2) * (MULTISHOT_SPREAD / max(1, MULTISHOT_COUNT - 1))
+            a = base_angle + offset
+            arrow_dir = Vec(math.cos(a), math.sin(a))
+            proj = Projectile(pos=self.player.pos + arrow_dir * 22,
+                              vel=arrow_dir * PROJECTILE_SPEED * 0.92,
+                              dmg=dmg, ttl=1.0, radius=BASIC_RADIUS, pierce=BASIC_PIERCE,
+                              is_arrow=True, angle=a, infusion=self.player.infusion_type)
+            self.projectiles.append(proj)
+        self.emit_particles(self.player.pos.x, self.player.pos.y, 8,
+                            (180, 200, 220), speed=60, life=0.4, gravity=0)
         self.add_screen_shake(2)
 
     # ---- Updates ----
@@ -1004,6 +1167,11 @@ class Game:
         max_mana = PLAYER_MANA + 8 * p.level
         if p.mana < max_mana:
             p.mana = min(max_mana, p.mana + MANA_REGEN_RATE * dt)
+        # Infusion timer
+        if p.infusion_timer > 0:
+            p.infusion_timer -= dt
+            if p.infusion_timer <= 0:
+                p.infusion_type = None
         if p.dmg_timer > 0:
             p.dmg_timer -= dt
             if p.dmg_timer <= 0:
@@ -1037,23 +1205,27 @@ class Game:
         self.cam_y = int(p.pos.y - HEIGHT / 2)
         self.cam_x = max(0, min(self.cam_x, MAP_W * TILE - WIDTH))
         self.cam_y = max(0, min(self.cam_y, MAP_H * TILE - HEIGHT))
-        # Poison pool damage
+        # Hazard pool damage
         ptx = int(p.pos.x // TILE)
         pty = int(p.pos.y // TILE)
-        for ppx, ppy in self.dungeon.poison_pools:
+        for ppx, ppy in self.dungeon.hazard_pools:
             if abs(ptx - ppx) <= 1 and abs(pty - ppy) <= 1:
                 pool_center = Vec(ppx * TILE + TILE / 2, ppy * TILE + TILE / 2)
                 if (pool_center - p.pos).length() < TILE * 1.2:
                     if p.iframes <= 0:
-                        p.hp -= max(1, int(2 * dt * 10))
+                        hazard = BIOME_HAZARD.get(self.current_biome, "poison")
+                        dmg_rate = 3 if hazard == "lava" else 2
+                        p.hp -= max(1, int(dmg_rate * dt * 10))
                         if random.random() < 0.3:
-                            self.emit_particles(p.pos.x, p.pos.y, 2, C_POISON, speed=20, life=0.4, gravity=-40)
+                            hcol = C_LAVA if hazard == "lava" else C_ICE if hazard == "ice" else C_POISON
+                            self.emit_particles(p.pos.x, p.pos.y, 2, hcol, speed=20, life=0.4, gravity=-40)
 
-        if self.dungeon.stairs_tx is not None:
-            sx = self.dungeon.stairs_tx * TILE + TILE / 2
-            sy = self.dungeon.stairs_ty * TILE + TILE / 2
-            if (Vec(sx, sy) - p.pos).length() < 18:
-                self.next_level()
+        # Portal collision
+        for ptx, pty, dest_biome in self.dungeon.portal_positions:
+            portal_pos = Vec(ptx * TILE + TILE / 2, pty * TILE + TILE / 2)
+            if (portal_pos - p.pos).length() < 24:
+                self.next_level(dest_biome)
+                break
 
     def _circle_collides(self, pos: Vec, radius: int) -> bool:
         for ang in (0, math.pi * 0.5, math.pi, math.pi * 1.5):
@@ -1083,6 +1255,50 @@ class Game:
             if not e.alive:
                 continue
             e.hit_flash = max(0.0, e.hit_flash - dt)
+            # Treasure goblin: flee from player, drop loot
+            if isinstance(e, TreasureGoblin) and e.alive:
+                e.portal_timer -= dt
+                if e.portal_timer <= 0:
+                    e.alive = False
+                    if self.treasure_goblin is e:
+                        self.treasure_goblin = None
+                    self.emit_particles(e.pos.x, e.pos.y, 20, C_GOLD, speed=80, life=0.6, gravity=-30)
+                    self.add_floating_text(e.pos.x, e.pos.y - 20, "ESCAPED!", (200, 180, 60), 1.2)
+                    continue
+                # Flee from player
+                flee_dir = (e.pos - p.pos)
+                if flee_dir.length_squared() > 0:
+                    flee_dir = flee_dir.normalize()
+                else:
+                    flee_dir = Vec(1, 0)
+                jitter = Vec(random.uniform(-0.4, 0.4), random.uniform(-0.4, 0.4))
+                acc = (flee_dir + jitter).normalize() * (e.speed * 1.1)
+                e.vel += (acc - e.vel) * 0.15
+                # Drop loot periodically
+                e.loot_drop_timer -= dt
+                if e.loot_drop_timer <= 0:
+                    e.loot_drop_timer = GOBLIN_LOOT_INTERVAL
+                    offset = Vec(random.uniform(-8, 8), random.uniform(-8, 8))
+                    self.loots.append(Loot(pos=e.pos + offset, gold=random.randint(3, 10)))
+                    self.emit_particles(e.pos.x, e.pos.y, 3, C_GOLD, speed=30, life=0.3, gravity=-20)
+                # Continue to wall collision below (skip normal movement calc)
+                new_epos = e.pos + e.vel * dt
+                test_x = Vec(new_epos.x, e.pos.y)
+                if not self._circle_collides(test_x, e.radius):
+                    e.pos.x = test_x.x
+                else:
+                    e.vel.x = 0
+                test_y = Vec(e.pos.x, new_epos.y)
+                if not self._circle_collides(test_y, e.radius):
+                    e.pos.y = test_y.y
+                else:
+                    e.vel.y = 0
+                e.pos.x = max(e.radius, min(MAP_W * TILE - e.radius, e.pos.x))
+                e.pos.y = max(e.radius, min(MAP_H * TILE - e.radius, e.pos.y))
+                if e.hp <= 0 and e.alive:
+                    e.alive = False
+                    self.on_enemy_dead(e)
+                continue
             desired = (p.pos - e.pos)
             dist = desired.length() or 0.0001
             desired = desired / dist
@@ -1168,6 +1384,8 @@ class Game:
         for pr in self.projectiles:
             pr.ttl -= dt
             pr.pos += pr.vel * dt
+            if pr.is_arrow:
+                pr.angle = math.atan2(pr.vel.y, pr.vel.x)
             pr.trail_timer += dt
             # particle trail
             if pr.trail_timer > 0.03:
@@ -1202,12 +1420,39 @@ class Game:
                         continue
                     if (e.pos - pr.pos).length() < e.radius + pr.radius:
                         damage = max(1, int(pr.dmg * e.mult_taken))
+                        # Elemental infusion effects
+                        if pr.infusion == "fire":
+                            damage = int(damage * 1.35)
+                            self.emit_fire(e.pos.x, e.pos.y, 8)
+                        elif pr.infusion == "ice":
+                            e.vel *= 0.3
+                            e.mult_speed *= 0.5
+                            self.emit_particles(e.pos.x, e.pos.y, 6, C_ICE, speed=40, life=0.5, gravity=-20)
+                        elif pr.infusion == "lightning":
+                            damage = int(damage * 1.15)
+                            # Chain lightning to one nearby enemy
+                            for nearby in self.enemies:
+                                if nearby is e or not nearby.alive:
+                                    continue
+                                if (nearby.pos - e.pos).length() < 150:
+                                    chain_dmg = max(1, damage // 3)
+                                    nearby.hp -= chain_dmg
+                                    nearby.hit_flash = 0.1
+                                    self.add_floating_text(nearby.pos.x, nearby.pos.y - 10,
+                                                           str(chain_dmg), C_LIGHTNING, 0.9)
+                                    self.lightning_chains.append((
+                                        Vec(e.pos.x, e.pos.y),
+                                        Vec(nearby.pos.x, nearby.pos.y), 0.2))
+                                    self.emit_particles(nearby.pos.x, nearby.pos.y, 4,
+                                                        C_LIGHTNING, speed=50, life=0.3, gravity=0)
+                                    break
                         e.hp -= damage
                         e.knockback = 200
                         e.vel += (e.pos - pr.pos).normalize() * 300
                         e.hit_flash = 0.12
+                        dmg_col = INFUSION_COLORS.get(pr.infusion, C_GOLD if damage > 15 else (220, 220, 220))
                         self.add_floating_text(e.pos.x, e.pos.y - e.radius - 8,
-                                               str(damage), C_GOLD if damage > 15 else (220, 220, 220),
+                                               str(damage), dmg_col,
                                                scale=1.3 if damage > 20 else 1.0)
                         self.emit_blood(e.pos.x, e.pos.y, 4)
                         if damage > 15:
@@ -1262,6 +1507,13 @@ class Game:
                     self.player.shield = max(self.player.shield, SHIELD_POINTS)
                     self.add_floating_text(l.pos.x, l.pos.y - 10, "SHIELD!", C_ICE, 1.3)
                     self.emit_particles(l.pos.x, l.pos.y, 12, C_ICE, speed=60, life=0.6, gravity=-40)
+                if l.infusion:
+                    self.player.infusion_type = l.infusion
+                    self.player.infusion_timer = INFUSION_DURATION
+                    icol = INFUSION_COLORS[l.infusion]
+                    self.add_floating_text(l.pos.x, l.pos.y - 10,
+                                           f"{l.infusion.upper()} ARROWS!", icol, 1.3)
+                    self.emit_particles(l.pos.x, l.pos.y, 15, icol, speed=80, life=0.7, gravity=-30)
                 self.emit_sparks(l.pos.x, l.pos.y, 3)
                 l.ttl = 0
         self.loots = [l for l in self.loots if l.ttl > 0]
@@ -1281,6 +1533,27 @@ class Game:
             self.add_floating_text(self.player.pos.x, self.player.pos.y - 30, "LEVEL UP!", C_GOLD, 1.5)
             self.emit_particles(self.player.pos.x, self.player.pos.y, 25, C_GOLD, speed=100, life=1.0, gravity=-50)
             self.add_screen_shake(5)
+
+        # Treasure goblin: massive loot explosion
+        if isinstance(e, TreasureGoblin):
+            if self.treasure_goblin is e:
+                self.treasure_goblin = None
+            self.emit_death_burst(e.pos.x, e.pos.y, C_GOLD, 50)
+            self.add_screen_shake(8)
+            self.add_floating_text(e.pos.x, e.pos.y - 30, "JACKPOT!", C_GOLD, 2.0)
+            for _ in range(10):
+                offset = Vec(random.uniform(-40, 40), random.uniform(-40, 40))
+                self.loots.append(Loot(pos=e.pos + offset, gold=random.randint(12, 35)))
+            self.loots.append(Loot(pos=e.pos + Vec(25, 0), dmg_boost=True))
+            self.loots.append(Loot(pos=e.pos + Vec(-25, 0), shield_boost=True))
+            # Guaranteed infusion drop
+            inf = random.choice(INFUSION_TYPES)
+            self.loots.append(Loot(pos=e.pos + Vec(0, 20), infusion=inf))
+            if random.random() < 0.5:
+                self.loots.append(Loot(pos=e.pos + Vec(0, -20), potion_hp=True))
+            self.corpses.append(Corpse(x=e.pos.x, y=e.pos.y, radius=e.radius, kind=e.kind,
+                                       color=C_GOLD, is_boss=False, is_elite=False))
+            return
 
         # death effects
         death_color = (180, 60, 60)
@@ -1307,11 +1580,20 @@ class Game:
             potion = random.choice(["hp", "mana"])
             drops.append(Loot(pos=e.pos.copy(), potion_hp=(potion == "hp"), potion_mana=(potion == "mana")))
         if random.random() < LOOT_DROP_CHANCE:
-            drops.append(Loot(pos=e.pos.copy(), weapon=Weapon("Find", 10, 16, 2.0, True)))
+            tier = self.current_level
+            bows = [
+                Weapon("Longbow", 8 + tier * 2, 14 + tier * 2, 2.2, True),
+                Weapon("Composite Bow", 10 + tier * 2, 16 + tier * 3, 2.0, True),
+                Weapon("War Bow", 12 + tier * 2, 20 + tier * 2, 2.4, True),
+                Weapon("Elven Bow", 9 + tier * 3, 18 + tier * 3, 1.8, True),
+            ]
+            drops.append(Loot(pos=e.pos.copy(), weapon=random.choice(bows)))
         if random.random() < DMG_PICKUP_DROP_CHANCE:
             drops.append(Loot(pos=e.pos.copy(), dmg_boost=True))
         if random.random() < SHIELD_PICKUP_DROP_CHANCE:
             drops.append(Loot(pos=e.pos.copy(), shield_boost=True))
+        if random.random() < INFUSION_DROP_CHANCE:
+            drops.append(Loot(pos=e.pos.copy(), infusion=random.choice(INFUSION_TYPES)))
         if isinstance(e, Elite):
             drops.append(Loot(pos=e.pos.copy(), gold=random.randint(15, 35)))
             if random.random() < 0.5:
@@ -1336,6 +1618,9 @@ class Game:
                     self.spawn_enemy(near_player=True)
             if random.random() < PICKUP_SPAWN_CHANCE:
                 self.spawn_pickup_near_player()
+            # Treasure goblin chance
+            if self.treasure_goblin is None and random.random() < GOBLIN_SPAWN_CHANCE:
+                self.spawn_treasure_goblin()
             self.wave += 1
             self.spawn_timer = SPAWN_INTERVAL
             self.spawn_boss()
@@ -1389,12 +1674,11 @@ class Game:
             self.shake_intensity = 0
 
     # ---- Level management ----
-    def next_level(self):
-        if self.current_level >= LEVELS:
-            self.current_level = 1
-        else:
-            self.current_level += 1
-        self.dungeon = Dungeon(level=self.current_level)
+    def next_level(self, dest_biome: Optional[str] = None):
+        self.current_level += 1
+        if dest_biome:
+            self.current_biome = dest_biome
+        self.dungeon = Dungeon(level=self.current_level, biome=self.current_biome)
         rx, ry = self.dungeon.center(self.dungeon.rooms[0]) if self.dungeon.rooms else (MAP_W // 2, MAP_H // 2)
         self.player.pos = Vec(rx * TILE + TILE / 2, ry * TILE + TILE / 2)
         self.enemies.clear()
@@ -1404,11 +1688,19 @@ class Game:
         self.floating_texts.clear()
         self.corpses.clear()
         self.chests.clear()
+        self.treasure_goblin = None
+        self.lightning_chains.clear()
+        self._build_texture_cache(self.current_biome)
         self._spawn_chests()
         self.wave = 1
         self.spawn_timer = SPAWN_INTERVAL
         self.dungeon.mark_seen_radius(self.player.pos)
         self.boss_spawned = False
+        # Announce biome
+        biome_name = BIOME_NAMES.get(self.current_biome, self.current_biome)
+        self.add_floating_text(self.player.pos.x, self.player.pos.y - 40,
+                               f"Entering {biome_name} - Depth {self.current_level}",
+                               BIOME_PORTAL_COLORS.get(self.current_biome, C_GOLD), 1.5)
 
     # ======================= RENDERING =======================
     def draw(self):
@@ -1419,9 +1711,9 @@ class Game:
 
         self._draw_tiles(s, ox, oy)
         self._draw_blood_stains(s, ox, oy)
-        self._draw_poison_pools(s, ox, oy)
+        self._draw_hazard_pools(s, ox, oy)
         self._draw_scenery(s, ox, oy)
-        self._draw_stairs_portal(s, ox, oy)
+        self._draw_portals(s, ox, oy)
         self._draw_torches(s, ox, oy)
         self._draw_corpses(s, ox, oy)
         self._draw_chests(s, ox, oy)
@@ -1480,35 +1772,48 @@ class Game:
                 continue
             px = tx * TILE - self.cam_x + ox
             py = ty * TILE - self.cam_y + oy
+            # shadow
+            pygame.draw.ellipse(s, (10, 8, 12), (px + 4, py + TILE - 8, TILE - 8, 6))
             if t == 'pillar':
-                # shadow
-                pygame.draw.ellipse(s, (10, 8, 12), (px + 4, py + TILE - 8, TILE - 8, 6))
                 s.blit(self.pillar_surf, (px, py))
+            elif t == 'stalagmite':
+                s.blit(self.stalagmite_surf, (px, py))
+            elif t == 'rock':
+                s.blit(self.rock_surf, (px, py))
+            elif t == 'ice_crystal':
+                s.blit(self.ice_crystal_surf, (px, py))
+            elif t == 'mushroom':
+                s.blit(self.mushroom_surf, (px, py))
             else:
-                pygame.draw.ellipse(s, (10, 8, 12), (px + 3, py + TILE - 7, TILE - 6, 5))
                 s.blit(self.crate_surf, (px, py))
 
-    def _draw_stairs_portal(self, s, ox, oy):
-        if self.dungeon.stairs_tx is None:
-            return
-        if not self._tile_in_view(self.dungeon.stairs_tx, self.dungeon.stairs_ty):
-            return
-        px = self.dungeon.stairs_tx * TILE - self.cam_x + ox + TILE // 2
-        py = self.dungeon.stairs_ty * TILE - self.cam_y + oy + TILE // 2
+    def _draw_portals(self, s, ox, oy):
         self.portal_angle += 0.05
-        # swirling portal
-        for i in range(8):
-            ang = self.portal_angle + i * (math.tau / 8)
-            r = 17
-            x = px + int(math.cos(ang) * r)
-            y = py + int(math.sin(ang) * r)
-            pulse = 0.6 + 0.4 * math.sin(self.game_time * 3 + i)
-            col = (int(200 * pulse), int(200 * pulse), int(80 * pulse))
-            pygame.draw.circle(s, col, (x, y), 4)
-        # center glow
-        glow = 0.7 + 0.3 * math.sin(self.game_time * 2)
-        pygame.draw.circle(s, (int(160 * glow), int(160 * glow), int(60 * glow)), (px, py), 11)
-        pygame.draw.circle(s, (int(220 * glow), int(220 * glow), int(80 * glow)), (px, py), 6)
+        for ptx, pty, dest_biome in self.dungeon.portal_positions:
+            if not self._tile_in_view(ptx, pty):
+                continue
+            px = ptx * TILE - self.cam_x + ox + TILE // 2
+            py = pty * TILE - self.cam_y + oy + TILE // 2
+            pcol = BIOME_PORTAL_COLORS.get(dest_biome, (200, 200, 100))
+            # Swirling portal with biome color
+            for i in range(8):
+                ang = self.portal_angle + i * (math.tau / 8)
+                r = 17
+                x = px + int(math.cos(ang) * r)
+                y = py + int(math.sin(ang) * r)
+                pulse = 0.6 + 0.4 * math.sin(self.game_time * 3 + i)
+                col = (int(pcol[0] * pulse), int(pcol[1] * pulse), int(pcol[2] * pulse))
+                pygame.draw.circle(s, col, (x, y), 4)
+            # Center glow
+            glow = 0.7 + 0.3 * math.sin(self.game_time * 2)
+            center_col = (int(pcol[0] * 0.7 * glow), int(pcol[1] * 0.7 * glow), int(pcol[2] * 0.5 * glow))
+            pygame.draw.circle(s, center_col, (px, py), 11)
+            bright = (min(255, int(pcol[0] * glow)), min(255, int(pcol[1] * glow)), min(255, int(pcol[2] * 0.6 * glow)))
+            pygame.draw.circle(s, bright, (px, py), 6)
+            # Biome name label
+            name = BIOME_NAMES.get(dest_biome, dest_biome)
+            label = self.font.render(name, True, pcol)
+            s.blit(label, (px - label.get_width() // 2, py - 30))
 
     def _draw_torches(self, s, ox, oy):
         for tx, ty in self.dungeon.torches:
@@ -1543,26 +1848,39 @@ class Game:
                 rad = int(c.radius * (0.8 + 0.2 * alpha))
                 pygame.draw.circle(s, (r, g, b), (sx, sy), rad)
 
-    def _draw_poison_pools(self, s, ox, oy):
-        for ppx, ppy in self.dungeon.poison_pools:
+    def _draw_hazard_pools(self, s, ox, oy):
+        hazard = BIOME_HAZARD.get(self.current_biome, "poison")
+        for ppx, ppy in self.dungeon.hazard_pools:
             if not self._tile_in_view(ppx, ppy):
                 continue
             if not self.dungeon.seen[ppx][ppy]:
                 continue
             px = ppx * TILE - self.cam_x + ox + TILE // 2
             py = ppy * TILE - self.cam_y + oy + TILE // 2
-            # Bubbling poison pool
             pulse = 0.6 + 0.4 * math.sin(self.game_time * 2 + ppx * 0.7)
             r = int(TILE * 0.8)
             pool_surf = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
-            pygame.draw.ellipse(pool_surf, (30, int(80 * pulse), 20, 120), (0, 4, r * 2, r * 2 - 8))
-            pygame.draw.ellipse(pool_surf, (40, int(120 * pulse), 30, 80), (4, 8, r * 2 - 8, r * 2 - 16))
+            if hazard == "lava":
+                pygame.draw.ellipse(pool_surf, (80, int(30 * pulse), 5, 140), (0, 4, r * 2, r * 2 - 8))
+                pygame.draw.ellipse(pool_surf, (120, int(50 * pulse), 10, 100), (4, 8, r * 2 - 8, r * 2 - 16))
+                bubble_col = (255, 120, 20)
+            elif hazard == "ice":
+                pygame.draw.ellipse(pool_surf, (20, int(60 * pulse), int(100 * pulse), 120), (0, 4, r * 2, r * 2 - 8))
+                pygame.draw.ellipse(pool_surf, (40, int(80 * pulse), int(140 * pulse), 80), (4, 8, r * 2 - 8, r * 2 - 16))
+                bubble_col = (140, 200, 255)
+            else:  # poison
+                pygame.draw.ellipse(pool_surf, (30, int(80 * pulse), 20, 120), (0, 4, r * 2, r * 2 - 8))
+                pygame.draw.ellipse(pool_surf, (40, int(120 * pulse), 30, 80), (4, 8, r * 2 - 8, r * 2 - 16))
+                bubble_col = (60, 180, 40)
             s.blit(pool_surf, (px - r, py - r))
-            # bubbles
-            if random.random() < 0.1:
+            if random.random() < 0.12:
                 bx = px + random.randint(-12, 12)
                 by = py + random.randint(-8, 8)
-                pygame.draw.circle(s, (60, 180, 40), (bx, by), random.randint(2, 4))
+                pygame.draw.circle(s, bubble_col, (bx, by), random.randint(2, 4))
+            # Lava emits fire particles
+            if hazard == "lava" and random.random() < 0.08:
+                self.emit_fire(px + self.cam_x - ox + random.randint(-10, 10),
+                               py + self.cam_y - oy + random.randint(-10, 10), 1)
 
     def _draw_chests(self, s, ox, oy):
         for chest in self.chests:
@@ -1627,6 +1945,16 @@ class Game:
                     ex = vx + int(math.cos(ang) * 13)
                     ey = vy + int(math.sin(ang) * 13)
                     pygame.draw.line(s, (140, 220, 255), (vx, vy), (ex, ey), 2)
+            elif l.infusion:
+                icol = INFUSION_COLORS[l.infusion]
+                pygame.draw.circle(s, (icol[0] // 3, icol[1] // 3, icol[2] // 3), (vx, vy), 16)
+                pygame.draw.circle(s, icol, (vx, vy), 11)
+                # Arrow symbol inside
+                pygame.draw.line(s, (255, 255, 255), (vx - 5, vy), (vx + 5, vy), 2)
+                pygame.draw.polygon(s, (255, 255, 255), [(vx + 5, vy), (vx + 2, vy - 3), (vx + 2, vy + 3)])
+                # Pulsing ring
+                ring_pulse = int(3 + 2 * math.sin(self.game_time * 4))
+                pygame.draw.circle(s, icol, (vx, vy), 11 + ring_pulse, 2)
             elif l.gold:
                 pygame.draw.circle(s, (glow_alpha + 10, glow_alpha + 5, 0), (vx, vy), 11)
                 pygame.draw.circle(s, (255, 215, 0), (vx, vy), 7)
@@ -1639,21 +1967,67 @@ class Game:
             if not (-20 < px < WIDTH + 20 and -20 < py < HEIGHT + 20):
                 continue
             if pr.hostile:
-                # red enemy projectile with glow
                 pygame.draw.circle(s, (120, 30, 30), (px, py), pr.radius + 3)
                 pygame.draw.circle(s, (255, 100, 110), (px, py), pr.radius)
                 pygame.draw.circle(s, (255, 180, 180), (px, py), max(1, pr.radius - 2))
-            else:
-                if pr.radius > BASIC_RADIUS:
-                    # power shot - purple/blue glow
-                    pygame.draw.circle(s, (60, 40, 120), (px, py), pr.radius + 4)
-                    pygame.draw.circle(s, (140, 120, 255), (px, py), pr.radius)
-                    pygame.draw.circle(s, (200, 190, 255), (px, py), max(1, pr.radius - 2))
+            elif pr.is_arrow:
+                # Arrow shaft
+                arrow_len = 14
+                tail_x = px - int(math.cos(pr.angle) * arrow_len)
+                tail_y = py - int(math.sin(pr.angle) * arrow_len)
+                # Infusion color or default
+                if pr.infusion:
+                    icol = INFUSION_COLORS[pr.infusion]
+                    shaft_col = (min(255, icol[0] // 2 + 70), min(255, icol[1] // 2 + 50), min(255, icol[2] // 2 + 40))
                 else:
-                    # basic shot - blue glow
-                    pygame.draw.circle(s, (40, 60, 100), (px, py), pr.radius + 2)
-                    pygame.draw.circle(s, (140, 200, 255), (px, py), pr.radius)
-                    pygame.draw.circle(s, (220, 240, 255), (px, py), max(1, pr.radius - 1))
+                    shaft_col = (160, 140, 110)
+                pygame.draw.line(s, shaft_col, (tail_x, tail_y), (px, py), 2)
+                # Arrowhead
+                head_len = 7
+                hx = px + int(math.cos(pr.angle) * head_len)
+                hy = py + int(math.sin(pr.angle) * head_len)
+                left_a = pr.angle + 2.6
+                right_a = pr.angle - 2.6
+                lx = px + int(math.cos(left_a) * 5)
+                ly = py + int(math.sin(left_a) * 5)
+                rx = px + int(math.cos(right_a) * 5)
+                ry = py + int(math.sin(right_a) * 5)
+                head_col = (200, 190, 170) if not pr.infusion else icol
+                pygame.draw.polygon(s, head_col, [(hx, hy), (lx, ly), (rx, ry)])
+                # Fletching
+                fl = pr.angle + math.pi
+                for fa in (fl + 0.4, fl - 0.4):
+                    fx = tail_x + int(math.cos(fa) * 5)
+                    fy = tail_y + int(math.sin(fa) * 5)
+                    pygame.draw.line(s, (120, 100, 80), (tail_x, tail_y), (fx, fy), 1)
+                # Infusion glow
+                if pr.infusion:
+                    pygame.draw.circle(s, (*icol, ), (px, py), pr.radius + 3, 2)
+            else:
+                pygame.draw.circle(s, (40, 60, 100), (px, py), pr.radius + 2)
+                pygame.draw.circle(s, (140, 200, 255), (px, py), pr.radius)
+                pygame.draw.circle(s, (220, 240, 255), (px, py), max(1, pr.radius - 1))
+        # Draw lightning chains
+        for start, end, life in self.lightning_chains:
+            if life > 0:
+                sx = int(start.x - self.cam_x + ox)
+                sy = int(start.y - self.cam_y + oy)
+                ex = int(end.x - self.cam_x + ox)
+                ey = int(end.y - self.cam_y + oy)
+                alpha = min(1.0, life / 0.15)
+                col = (int(255 * alpha), int(255 * alpha), int(100 * alpha))
+                # Jagged lightning line
+                points = [(sx, sy)]
+                dx, dy = ex - sx, ey - sy
+                steps = max(3, int(math.sqrt(dx * dx + dy * dy) / 20))
+                for i in range(1, steps):
+                    t = i / steps
+                    mx = int(sx + dx * t + random.randint(-8, 8))
+                    my = int(sy + dy * t + random.randint(-8, 8))
+                    points.append((mx, my))
+                points.append((ex, ey))
+                if len(points) >= 2:
+                    pygame.draw.lines(s, col, False, points, 2)
 
     def _draw_enemies(self, s, ox, oy):
         for e in self.enemies:
@@ -1746,6 +2120,27 @@ class Game:
                 pygame.draw.circle(s, (200, 60, 255), (ex, ey), 3)
                 pygame.draw.circle(s, (200, 40, 20), (ex + 8, ey - 5), 3)
                 pygame.draw.circle(s, (255, 200, 60), (ex + 8, ey - 5), 1)
+            elif e.kind == 4:  # Treasure Goblin
+                shimmer = 0.7 + 0.3 * math.sin(self.game_time * 8)
+                gcol = (int(255 * shimmer), int(215 * shimmer), int(40 * shimmer))
+                pygame.draw.circle(s, gcol, (ex, ey), e.radius)
+                pygame.draw.circle(s, (200, 170, 30), (ex, ey), e.radius, 2)
+                # Loot bag on back
+                pygame.draw.circle(s, (180, 150, 50), (ex - 5, ey - 8), 8)
+                pygame.draw.circle(s, (160, 130, 40), (ex - 5, ey - 8), 8, 1)
+                pygame.draw.line(s, (140, 110, 40), (ex - 5, ey - 16), (ex - 5, ey - 10), 2)
+                # Eyes (excited)
+                pygame.draw.circle(s, (255, 255, 200), (ex - 3, ey - 2), 3)
+                pygame.draw.circle(s, (255, 255, 200), (ex + 5, ey - 2), 3)
+                pygame.draw.circle(s, (40, 20, 10), (ex - 3, ey - 2), 1)
+                pygame.draw.circle(s, (40, 20, 10), (ex + 5, ey - 2), 1)
+                # Timer arc
+                if isinstance(e, TreasureGoblin):
+                    timer_frac = max(0, e.portal_timer / GOBLIN_DESPAWN_TIME)
+                    if timer_frac < 1.0:
+                        pygame.draw.arc(s, C_GOLD, (ex - e.radius - 4, ey - e.radius - 4,
+                                        (e.radius + 4) * 2, (e.radius + 4) * 2),
+                                        0, math.tau * timer_frac, 2)
 
         # HP bar above enemy
         if ratio < 1.0:
@@ -1814,19 +2209,31 @@ class Game:
                                 [(px - 8, py + 3), (px + 8, py + 3),
                                  (px + 6 + cape_sway, py + 20), (px - 6 + cape_sway, py + 20)])
 
-        # Arm/weapon toward mouse
+        # Arm/bow toward mouse
         mx, my = pygame.mouse.get_pos()
         ang = math.atan2(my - py, mx - px)
-        hand_x = px + int(math.cos(ang) * 20)
-        hand_y = py + int(math.sin(ang) * 20)
-        # Weapon glow based on power cooldown
-        if p.dmg_timer > 0:
-            weapon_col = (255, 180, 60)
-        else:
-            weapon_col = (180, 180, 190)
+        hand_x = px + int(math.cos(ang) * 18)
+        hand_y = py + int(math.sin(ang) * 18)
+        # Arm
         pygame.draw.line(s, (100, 95, 85), (px + int(math.cos(ang) * 8), py + int(math.sin(ang) * 8)),
                          (hand_x, hand_y), 3)
-        pygame.draw.circle(s, weapon_col, (hand_x, hand_y), 4)
+        # Bow
+        bow_r = 14
+        perp = ang + math.pi / 2
+        bow_top_x = hand_x + int(math.cos(perp) * bow_r)
+        bow_top_y = hand_y + int(math.sin(perp) * bow_r)
+        bow_bot_x = hand_x + int(math.cos(perp) * -bow_r)
+        bow_bot_y = hand_y + int(math.sin(perp) * -bow_r)
+        # Bow limbs
+        bow_col = (120, 90, 50) if p.dmg_timer <= 0 else (200, 160, 60)
+        pygame.draw.line(s, bow_col, (bow_top_x, bow_top_y), (hand_x, hand_y), 3)
+        pygame.draw.line(s, bow_col, (hand_x, hand_y), (bow_bot_x, bow_bot_y), 3)
+        # Bowstring
+        pygame.draw.line(s, (200, 200, 210), (bow_top_x, bow_top_y), (bow_bot_x, bow_bot_y), 1)
+        # Infusion glow on bow
+        if p.infusion_type:
+            icol = INFUSION_COLORS[p.infusion_type]
+            pygame.draw.circle(s, icol, (hand_x, hand_y), 8, 2)
 
         # Shield visual
         if p.shield > 0:
@@ -1870,7 +2277,7 @@ class Game:
             s.blit(rendered, (sx - rendered.get_width() // 2, sy - rendered.get_height() // 2))
 
     def _draw_lighting(self, s, ox, oy):
-        self.light_map.fill(AMBIENT_LIGHT)
+        self.light_map.fill(BIOME_AMBIENT.get(self.current_biome, AMBIENT_LIGHT))
         # Player light
         plx = int(self.player.pos.x - self.cam_x + ox)
         ply = int(self.player.pos.y - self.cam_y + oy)
@@ -1898,6 +2305,8 @@ class Game:
             if -100 < prx < WIDTH + 100 and -100 < pry < HEIGHT + 100:
                 if pr_obj.hostile:
                     key = "proj_red"
+                elif pr_obj.infusion and f"infusion_{pr_obj.infusion}" in self.light_surfs:
+                    key = f"infusion_{pr_obj.infusion}"
                 elif pr_obj.radius > BASIC_RADIUS:
                     key = "proj_power"
                 else:
@@ -1918,13 +2327,14 @@ class Game:
                         er = els.get_width() // 2
                         self.light_map.blit(els, (elx - er, ely - er), special_flags=pygame.BLEND_RGB_ADD)
 
-        # Portal light
-        if self.dungeon.stairs_tx is not None and self._tile_in_view(self.dungeon.stairs_tx, self.dungeon.stairs_ty):
-            stx = int(self.dungeon.stairs_tx * TILE + TILE // 2 - self.cam_x + ox)
-            sty = int(self.dungeon.stairs_ty * TILE + TILE // 2 - self.cam_y + oy)
-            pls3 = self.light_surfs["portal"]
-            r3 = pls3.get_width() // 2
-            self.light_map.blit(pls3, (stx - r3, sty - r3), special_flags=pygame.BLEND_RGB_ADD)
+        # Portal lights
+        for ptx, pty, _ in self.dungeon.portal_positions:
+            if self._tile_in_view(ptx, pty):
+                stx = int(ptx * TILE + TILE // 2 - self.cam_x + ox)
+                sty = int(pty * TILE + TILE // 2 - self.cam_y + oy)
+                pls3 = self.light_surfs["portal"]
+                r3 = pls3.get_width() // 2
+                self.light_map.blit(pls3, (stx - r3, sty - r3), special_flags=pygame.BLEND_RGB_ADD)
 
         # Chest lights
         for chest in self.chests:
@@ -1938,15 +2348,18 @@ class Game:
                 cr = cls.get_width() // 2
                 self.light_map.blit(cls, (clx - cr, cly - cr), special_flags=pygame.BLEND_RGB_ADD)
 
-        # Poison pool lights
-        for ppx, ppy in self.dungeon.poison_pools:
+        # Hazard pool lights
+        hazard = BIOME_HAZARD.get(self.current_biome, "poison")
+        hazard_light_key = "lava" if hazard == "lava" else "ice_pool" if hazard == "ice" else "poison"
+        for ppx, ppy in self.dungeon.hazard_pools:
             if not self._tile_in_view(ppx, ppy):
                 continue
             plx = int(ppx * TILE + TILE // 2 - self.cam_x + ox)
             ply = int(ppy * TILE + TILE // 2 - self.cam_y + oy)
-            pls4 = self.light_surfs["poison"]
-            pr4 = pls4.get_width() // 2
-            self.light_map.blit(pls4, (plx - pr4, ply - pr4), special_flags=pygame.BLEND_RGB_ADD)
+            if hazard_light_key in self.light_surfs:
+                pls4 = self.light_surfs[hazard_light_key]
+                pr4 = pls4.get_width() // 2
+                self.light_map.blit(pls4, (plx - pr4, ply - pr4), special_flags=pygame.BLEND_RGB_ADD)
 
         # Apply lighting
         s.blit(self.light_map, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
@@ -2016,19 +2429,34 @@ class Game:
             col = (255, 220, 80) if chest.kind == "gold" else (200, 160, 60)
             pygame.draw.rect(surf, col, (cpx - 1, cpy - 1, 3, 3))
 
-        # poison pools
-        for ppx, ppy in self.dungeon.poison_pools:
+        # hazard pools
+        hazard = BIOME_HAZARD.get(self.current_biome, "poison")
+        for ppx, ppy in self.dungeon.hazard_pools:
             rpx = int(ppx * sx)
             rpy = int(ppy * sy)
-            pygame.draw.circle(surf, (40, 160, 30, 180), (rpx, rpy), 2)
+            if hazard == "lava":
+                col = (200, 60, 10, 180)
+            elif hazard == "ice":
+                col = (60, 120, 200, 180)
+            else:
+                col = (40, 160, 30, 180)
+            pygame.draw.circle(surf, col, (rpx, rpy), 2)
 
-        # stairs
-        if self.dungeon.stairs_tx is not None:
-            stpx = int(self.dungeon.stairs_tx * sx)
-            stpy = int(self.dungeon.stairs_ty * sy)
+        # portals
+        for ptx, pty, dest in self.dungeon.portal_positions:
+            ppx = int(ptx * sx)
+            ppy = int(pty * sy)
             pulse = 0.5 + 0.5 * math.sin(self.game_time * 3)
-            col = (int(220 * pulse), int(220 * pulse), int(80 * pulse), 255)
-            pygame.draw.rect(surf, col, (stpx - 2, stpy - 2, 5, 5))
+            pcol = BIOME_PORTAL_COLORS.get(dest, (200, 200, 100))
+            col = (int(pcol[0] * pulse), int(pcol[1] * pulse), int(pcol[2] * pulse), 255)
+            pygame.draw.rect(surf, col, (ppx - 2, ppy - 2, 5, 5))
+
+        # treasure goblin
+        if self.treasure_goblin and self.treasure_goblin.alive:
+            gpx = int(self.treasure_goblin.pos.x / TILE * sx)
+            gpy = int(self.treasure_goblin.pos.y / TILE * sy)
+            pulse = 0.5 + 0.5 * math.sin(self.game_time * 6)
+            pygame.draw.circle(surf, (int(255 * pulse), int(215 * pulse), 0), (gpx, gpy), 3)
 
         s.blit(surf, (WIDTH - mm_w - 12, 12))
 
@@ -2124,9 +2552,16 @@ class Game:
             pygame.draw.rect(s, (200, 130, 30), (buff_x, buff_y, 120, 18), 1, border_radius=3)
             txt = self.font.render(f"Dmg x{DMG_BOOST_MULT:.1f} {p.dmg_timer:.1f}s", True, (255, 200, 100))
             s.blit(txt, (buff_x + 6, buff_y + 1))
+            buff_x += 130
+        if p.infusion_type and p.infusion_timer > 0:
+            icol = INFUSION_COLORS[p.infusion_type]
+            pygame.draw.rect(s, icol, (buff_x, buff_y, 130, 18), 1, border_radius=3)
+            txt = self.font.render(f"{p.infusion_type.upper()} {p.infusion_timer:.1f}s", True, icol)
+            s.blit(txt, (buff_x + 6, buff_y + 1))
 
         # Top-left info
-        info = self.font.render(f"Dlvl {self.current_level}/{LEVELS}  {self.difficulty_name}  Wave {self.wave}", True, (170, 165, 150))
+        biome_name = BIOME_NAMES.get(self.current_biome, self.current_biome)
+        info = self.font.render(f"Depth {self.current_level}  {biome_name}  {self.difficulty_name}  Wave {self.wave}", True, (170, 165, 150))
         s.blit(info, (16, 12))
         wave_txt = self.font.render(f"Next wave: {self.spawn_timer:.1f}s", True, (140, 135, 120))
         s.blit(wave_txt, (16, 32))
@@ -2193,17 +2628,20 @@ class Game:
 
         lines = [
             ("WASD", "Move"),
-            ("Left Click", "Basic Shot"),
-            ("Right Click", "Power Shot (costs mana)"),
+            ("Left Click", "Single Arrow"),
+            ("Right Click", "Multishot (fan of arrows, costs mana)"),
             ("Q / E", "Use HP / Mana Potion"),
             ("Left Shift", "Dash (grants invulnerability)"),
+            ("F11", "Toggle Fullscreen"),
             ("P", "Pause"),
             ("Esc", "Quit"),
             ("", ""),
             ("Shoot Chests", "Break open for gold, potions, weapons, boosts"),
-            ("Green Pools", "Poison! Avoid or take damage"),
+            ("Infusions", "Pick up Fire/Ice/Lightning arrows for timed buffs"),
+            ("Portals", "Step into colored portals to enter new biomes"),
+            ("Treasure Goblin", "Chase it! Drops gold as it flees, jackpot on kill"),
             ("Elites", "Lead packs with auras: Haste / Frenzy / Guardian"),
-            ("Goal", "Explore 5 levels, find stairs, defeat the Boss"),
+            ("Goal", "Explore endless depths, hunt goblins, slay bosses"),
         ]
         y = 140
         for key, desc in lines:
@@ -2247,7 +2685,7 @@ class Game:
 
         # Stats
         stats = [
-            f"Level {self.player.level}  -  Dungeon Level {self.current_level}  -  Wave {self.wave}",
+            f"Level {self.player.level}  -  Depth {self.current_level} ({BIOME_NAMES.get(self.current_biome, '')})  -  Wave {self.wave}",
             f"Gold collected: {self.player.gold}",
             f"Enemies slain: {self.kills}",
             f"Difficulty: {self.difficulty_name}",
@@ -2284,6 +2722,13 @@ class Game:
                         self.paused = not self.paused
                     if event.key == pygame.K_F1:
                         self._help_overlay()
+                    if event.key == pygame.K_F11:
+                        self.fullscreen = not self.fullscreen
+                        if self.fullscreen:
+                            self.screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
+                        else:
+                            self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
+                        self.light_map = pygame.Surface((WIDTH, HEIGHT))
             if self.paused:
                 self._pause_screen()
                 continue
@@ -2299,6 +2744,8 @@ class Game:
             self.update_corpses(dt)
             self.update_blood_stains(dt)
             self.update_screen_shake(dt)
+            # Update lightning chains
+            self.lightning_chains = [(s, e, l - dt) for s, e, l in self.lightning_chains if l - dt > 0]
             if self.player.hp <= 0:
                 self.game_over()
                 return
