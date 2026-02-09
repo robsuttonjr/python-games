@@ -721,11 +721,16 @@ class Game:
     def _build_sounds(self):
         rate = 22050
         self.sounds = {}
+        num_channels = pygame.mixer.get_init()[2]  # actual channel count (1=mono, 2=stereo)
 
         def make_sound(samples):
             """Convert float array (-1..1) to pygame Sound."""
             arr = (np.clip(samples, -1, 1) * 32767).astype(np.int16)
-            return pygame.sndarray.make_sound(arr.reshape(-1, 1) if arr.ndim == 1 else arr)
+            if num_channels == 2:
+                arr = np.column_stack((arr, arr))
+            else:
+                arr = arr.reshape(-1, 1)
+            return pygame.sndarray.make_sound(arr)
 
         def tone(freq, dur, vol=0.3):
             t = np.linspace(0, dur, int(rate * dur), endpoint=False)
