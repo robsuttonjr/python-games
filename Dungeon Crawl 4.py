@@ -9,7 +9,7 @@ from typing import List, Optional, Tuple
 import pygame
 
 # ======================= CONFIG =======================
-WIDTH, HEIGHT = 1280, 720
+WIDTH, HEIGHT = 1920, 1080
 FPS = 60
 FONT_NAME = "consolas"
 
@@ -19,7 +19,7 @@ DIFFICULTY = {
     "Hard":   {"enemy_hp":1.2,"enemy_dmg":1.25,"enemy_speed":1.05,"max_enemies":9},
 }
 
-PLAYER_SPEED = 250
+PLAYER_SPEED = 340
 PLAYER_HP = 140
 PLAYER_MANA = 80
 
@@ -28,13 +28,13 @@ POWER_DMG = (18, 30)
 BASIC_CD = 0.18
 POWER_CD = 0.60
 POWER_MANA_COST = 12
-PROJECTILE_SPEED = 560
-BASIC_RADIUS = 4
-POWER_RADIUS = 6
+PROJECTILE_SPEED = 760
+BASIC_RADIUS = 6
+POWER_RADIUS = 9
 BASIC_PIERCE = 1
 POWER_PIERCE = 2
 
-DASH_SPEED = 520
+DASH_SPEED = 700
 DASH_TIME = 0.22
 DASH_CD = 1.5
 IFRAME_TIME = 0.25
@@ -44,15 +44,15 @@ POTION_MANA = 40
 
 ENEMY_BASE_HP = 40
 ENEMY_BASE_DMG = (4, 8)
-ENEMY_SPEED = 110
+ENEMY_SPEED = 150
 SPAWN_INTERVAL = 6.0
 WAVE_SCALE = 1.10
 MAX_ACTIVE_ENEMIES = 7
 
 ELITE_PACK_CHANCE = 0.35
 PACK_SIZE_RANGE = (3, 6)
-ELITE_MULT = {"hp": 2.6, "dmg": 1.8, "spd": 1.08, "radius": 18}
-AURA_RADIUS = 220
+ELITE_MULT = {"hp": 2.6, "dmg": 1.8, "spd": 1.08, "radius": 26}
+AURA_RADIUS = 300
 AURAS = {
     "haste":    {"speed":1.28,"damage":1.00,"taken":1.00,"color":(120,200,255)},
     "frenzy":   {"speed":1.00,"damage":1.35,"taken":1.00,"color":(255,150,90)},
@@ -62,7 +62,7 @@ AURAS = {
 BOSS_HP = 600
 BOSS_DMG = (8, 14)
 BOSS_SHOT_CD = (1.0, 1.6)
-BOSS_PROJ_SPEED = 360
+BOSS_PROJ_SPEED = 480
 
 DMG_BOOST_MULT = 1.6
 DMG_BOOST_TIME = 8.0
@@ -83,7 +83,7 @@ CHEST_WEAPON_CHANCE = 0.10
 CHEST_BOOST_CHANCE = 0.12
 MANA_REGEN_RATE = 3.0  # mana per second
 
-TILE = 34
+TILE = 48
 MAP_W, MAP_H = 180, 140
 LEVELS = 5
 WALL = 1
@@ -91,11 +91,11 @@ FLOOR = 0
 
 # ============ VISUAL CONFIG ============
 AMBIENT_LIGHT = (20, 17, 25)
-PLAYER_LIGHT_RADIUS = 280
+PLAYER_LIGHT_RADIUS = 400
 PLAYER_LIGHT_COLOR = (255, 230, 190)
-TORCH_LIGHT_RADIUS = 190
+TORCH_LIGHT_RADIUS = 270
 TORCH_LIGHT_COLOR = (255, 180, 80)
-PROJ_LIGHT_RADIUS = 80
+PROJ_LIGHT_RADIUS = 110
 MAX_PARTICLES = 500
 SCREEN_SHAKE_DECAY = 10.0
 
@@ -395,7 +395,7 @@ class Dungeon:
             return True
         return self.tiles[tx][ty] == WALL
 
-    def mark_seen_radius(self, pos: Vec, radius_px: int = 200):
+    def mark_seen_radius(self, pos: Vec, radius_px: int = 320):
         r2 = radius_px * radius_px
         min_tx = max(0, int((pos.x - radius_px) // TILE))
         max_tx = min(MAP_W - 1, int((pos.x + radius_px) // TILE))
@@ -415,11 +415,11 @@ class Game:
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption("Dungeon of the Damned — ARPG")
         self.clock = pygame.time.Clock()
-        self.font = pygame.font.SysFont(FONT_NAME, 18)
-        self.bigfont = pygame.font.SysFont(FONT_NAME, 28, bold=True)
-        self.dmgfont = pygame.font.SysFont(FONT_NAME, 20, bold=True)
-        self.titlefont = pygame.font.SysFont(FONT_NAME, 52, bold=True)
-        self.subfont = pygame.font.SysFont(FONT_NAME, 22)
+        self.font = pygame.font.SysFont(FONT_NAME, 24)
+        self.bigfont = pygame.font.SysFont(FONT_NAME, 36, bold=True)
+        self.dmgfont = pygame.font.SysFont(FONT_NAME, 28, bold=True)
+        self.titlefont = pygame.font.SysFont(FONT_NAME, 72, bold=True)
+        self.subfont = pygame.font.SysFont(FONT_NAME, 28)
 
         self.difficulty_name = self._difficulty_select()
         self.diff = DIFFICULTY[self.difficulty_name]
@@ -429,7 +429,7 @@ class Game:
         self.current_level = 1
         self.dungeon = Dungeon(level=self.current_level)
         rx, ry = self.dungeon.center(self.dungeon.rooms[0]) if self.dungeon.rooms else (MAP_W // 2, MAP_H // 2)
-        self.player = Player(pos=Vec(rx * TILE + TILE / 2, ry * TILE + TILE / 2), vel=Vec(0, 0), radius=14)
+        self.player = Player(pos=Vec(rx * TILE + TILE / 2, ry * TILE + TILE / 2), vel=Vec(0, 0), radius=20)
         self.enemies: List[Enemy] = []
         self.projectiles: List[Projectile] = []
         self.loots: List[Loot] = []
@@ -534,33 +534,33 @@ class Game:
         self.chest_surf = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
         self.chest_surf.fill((0, 0, 0, 0))
         # chest body
-        pygame.draw.rect(self.chest_surf, (120, 85, 45), (4, 10, TILE - 8, TILE - 14), border_radius=3)
+        pygame.draw.rect(self.chest_surf, (120, 85, 45), (6, 14, TILE - 12, TILE - 20), border_radius=4)
         # lid (slightly wider)
-        pygame.draw.rect(self.chest_surf, (140, 100, 55), (3, 6, TILE - 6, 10), border_radius=4)
+        pygame.draw.rect(self.chest_surf, (140, 100, 55), (4, 8, TILE - 8, 14), border_radius=5)
         # metal bands
-        pygame.draw.rect(self.chest_surf, (180, 170, 80), (3, 8, TILE - 6, 2))
-        pygame.draw.rect(self.chest_surf, (180, 170, 80), (3, TILE - 8, TILE - 6, 2))
+        pygame.draw.rect(self.chest_surf, (180, 170, 80), (4, 11, TILE - 8, 3))
+        pygame.draw.rect(self.chest_surf, (180, 170, 80), (4, TILE - 11, TILE - 8, 3))
         # lock/clasp
-        pygame.draw.circle(self.chest_surf, (220, 200, 80), (TILE // 2, 14), 4)
-        pygame.draw.circle(self.chest_surf, (180, 160, 60), (TILE // 2, 14), 4, 1)
+        pygame.draw.circle(self.chest_surf, (220, 200, 80), (TILE // 2, 20), 6)
+        pygame.draw.circle(self.chest_surf, (180, 160, 60), (TILE // 2, 20), 6, 1)
         # highlight
-        pygame.draw.line(self.chest_surf, (170, 130, 75), (6, 7), (TILE - 7, 7))
+        pygame.draw.line(self.chest_surf, (170, 130, 75), (8, 10), (TILE - 9, 10))
 
         # gold chest texture
         self.gold_chest_surf = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
         self.gold_chest_surf.fill((0, 0, 0, 0))
-        pygame.draw.rect(self.gold_chest_surf, (180, 150, 50), (4, 10, TILE - 8, TILE - 14), border_radius=3)
-        pygame.draw.rect(self.gold_chest_surf, (200, 170, 60), (3, 6, TILE - 6, 10), border_radius=4)
-        pygame.draw.rect(self.gold_chest_surf, (255, 230, 100), (3, 8, TILE - 6, 2))
-        pygame.draw.rect(self.gold_chest_surf, (255, 230, 100), (3, TILE - 8, TILE - 6, 2))
-        pygame.draw.circle(self.gold_chest_surf, (255, 240, 120), (TILE // 2, 14), 5)
-        pygame.draw.circle(self.gold_chest_surf, (200, 180, 60), (TILE // 2, 14), 5, 1)
-        pygame.draw.line(self.gold_chest_surf, (220, 190, 80), (6, 7), (TILE - 7, 7))
+        pygame.draw.rect(self.gold_chest_surf, (180, 150, 50), (6, 14, TILE - 12, TILE - 20), border_radius=4)
+        pygame.draw.rect(self.gold_chest_surf, (200, 170, 60), (4, 8, TILE - 8, 14), border_radius=5)
+        pygame.draw.rect(self.gold_chest_surf, (255, 230, 100), (4, 11, TILE - 8, 3))
+        pygame.draw.rect(self.gold_chest_surf, (255, 230, 100), (4, TILE - 11, TILE - 8, 3))
+        pygame.draw.circle(self.gold_chest_surf, (255, 240, 120), (TILE // 2, 20), 7)
+        pygame.draw.circle(self.gold_chest_surf, (200, 180, 60), (TILE // 2, 20), 7, 1)
+        pygame.draw.line(self.gold_chest_surf, (220, 190, 80), (8, 10), (TILE - 9, 10))
 
         # torch texture
-        self.torch_surf = pygame.Surface((12, 16), pygame.SRCALPHA)
-        pygame.draw.rect(self.torch_surf, (90, 70, 40), (4, 6, 4, 10))
-        pygame.draw.rect(self.torch_surf, (110, 85, 50), (3, 6, 6, 2))
+        self.torch_surf = pygame.Surface((17, 22), pygame.SRCALPHA)
+        pygame.draw.rect(self.torch_surf, (90, 70, 40), (6, 8, 5, 14))
+        pygame.draw.rect(self.torch_surf, (110, 85, 50), (4, 8, 9, 3))
 
     # ---- Lighting surfaces ----
     def _build_light_surfaces(self):
@@ -571,14 +571,14 @@ class Game:
             ("proj_blue", PROJ_LIGHT_RADIUS, (140, 180, 255)),
             ("proj_red", PROJ_LIGHT_RADIUS, (255, 100, 80)),
             ("proj_power", PROJ_LIGHT_RADIUS + 20, (160, 140, 255)),
-            ("elite_haste", 120, (100, 170, 255)),
-            ("elite_frenzy", 120, (255, 130, 70)),
-            ("elite_guardian", 120, (100, 220, 140)),
-            ("portal", 140, (200, 200, 100)),
-            ("loot", 50, (200, 180, 100)),
-            ("chest", 70, (200, 180, 100)),
-            ("gold_chest", 90, (255, 220, 80)),
-            ("poison", 80, (60, 180, 40)),
+            ("elite_haste", 170, (100, 170, 255)),
+            ("elite_frenzy", 170, (255, 130, 70)),
+            ("elite_guardian", 170, (100, 220, 140)),
+            ("portal", 200, (200, 200, 100)),
+            ("loot", 70, (200, 180, 100)),
+            ("chest", 100, (200, 180, 100)),
+            ("gold_chest", 130, (255, 220, 80)),
+            ("poison", 110, (60, 180, 40)),
         ]:
             self.light_surfs[name] = self._make_light_surf(radius, color)
 
@@ -623,9 +623,9 @@ class Game:
                 if e.type == pygame.MOUSEBUTTONDOWN:
                     mx, my = e.pos
                     for i in range(3):
-                        bx = WIDTH // 2 - 300 + i * 300
-                        by = 290
-                        if abs(mx - bx) < 80 and abs(my - by - 20) < 50:
+                        bx = WIDTH // 2 - 380 + i * 380
+                        by = HEIGHT // 2 - 30
+                        if abs(mx - bx) < 90 and abs(my - by - 25) < 60:
                             idx = i
                             selecting = False
                             break
@@ -642,42 +642,47 @@ class Game:
             flicker = 0.9 + 0.1 * math.sin(t * 3.0)
             tc = tuple(min(255, int(c * flicker)) for c in (200, 160, 80))
             title = title_font.render("DUNGEON OF THE DAMNED", True, tc)
-            screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 120))
+            title_y = HEIGHT // 6
+            screen.blit(title, (WIDTH // 2 - title.get_width() // 2, title_y))
 
             # Decorative line
-            ly = 185
-            pygame.draw.line(screen, C_GOTHIC_FRAME, (WIDTH // 2 - 260, ly), (WIDTH // 2 + 260, ly), 2)
-            pygame.draw.circle(screen, C_GOLD_DARK, (WIDTH // 2, ly), 5)
-            pygame.draw.circle(screen, C_GOLD, (WIDTH // 2, ly), 3)
+            ly = title_y + title.get_height() + 20
+            pygame.draw.line(screen, C_GOTHIC_FRAME, (WIDTH // 2 - 320, ly), (WIDTH // 2 + 320, ly), 2)
+            pygame.draw.circle(screen, C_GOLD_DARK, (WIDTH // 2, ly), 6)
+            pygame.draw.circle(screen, C_GOLD, (WIDTH // 2, ly), 4)
 
             # Subtitle
             sub = small.render("Choose your fate, wanderer", True, (150, 140, 120))
-            screen.blit(sub, (WIDTH // 2 - sub.get_width() // 2, 200))
+            sub_y = ly + 30
+            screen.blit(sub, (WIDTH // 2 - sub.get_width() // 2, sub_y))
 
-            # Options
+            # Options — spread across width
+            opt_y = HEIGHT // 2 - 30
+            opt_spacing = 380
             for i, name in enumerate(options):
-                bx = WIDTH // 2 - 300 + i * 300
-                by = 290
+                bx = WIDTH // 2 - opt_spacing + i * opt_spacing
+                by = opt_y
                 is_sel = (i == idx)
                 # Selection box
                 if is_sel:
                     glow = int(20 + 10 * math.sin(t * 4))
-                    pygame.draw.rect(screen, (glow + 30, glow + 20, glow), (bx - 70, by - 10, 140, 80), border_radius=6)
-                    pygame.draw.rect(screen, C_GOLD, (bx - 70, by - 10, 140, 80), 2, border_radius=6)
+                    pygame.draw.rect(screen, (glow + 30, glow + 20, glow), (bx - 90, by - 15, 180, 100), border_radius=8)
+                    pygame.draw.rect(screen, C_GOLD, (bx - 90, by - 15, 180, 100), 2, border_radius=8)
                 col = C_GOLD if is_sel else (140, 135, 120)
                 txt = font.render(name, True, col)
                 screen.blit(txt, (bx - txt.get_width() // 2, by))
                 desc = small.render(descs[i], True, (120, 115, 100) if is_sel else (80, 75, 65))
-                screen.blit(desc, (bx - desc.get_width() // 2, by + 36))
+                screen.blit(desc, (bx - desc.get_width() // 2, by + 44))
 
             # Controls hint
             hint = small.render("[A/D] or [Arrow Keys] to choose  -  [Enter] to begin", True, (100, 95, 80))
-            screen.blit(hint, (WIDTH // 2 - hint.get_width() // 2, 440))
+            screen.blit(hint, (WIDTH // 2 - hint.get_width() // 2, HEIGHT * 2 // 3 + 40))
 
             # Bottom decorative line
-            pygame.draw.line(screen, (50, 45, 35), (100, 500), (WIDTH - 100, 500), 1)
-            ver = small.render("Dungeon of the Damned v4.0", True, (60, 55, 45))
-            screen.blit(ver, (WIDTH // 2 - ver.get_width() // 2, 520))
+            bot_y = HEIGHT - 140
+            pygame.draw.line(screen, (50, 45, 35), (200, bot_y), (WIDTH - 200, bot_y), 1)
+            ver = small.render("Dungeon of the Damned v5.0", True, (60, 55, 45))
+            screen.blit(ver, (WIDTH // 2 - ver.get_width() // 2, bot_y + 20))
 
             pygame.display.flip()
             pygame.time.delay(16)
@@ -759,7 +764,7 @@ class Game:
         dmg_max = int(ENEMY_BASE_DMG[1] * scale * self.diff["enemy_dmg"])
         speed = ENEMY_SPEED * (0.95 + 0.1 * random.random()) * self.diff["enemy_speed"]
         kind = kind_override if kind_override is not None else random.choices([0, 1, 2, 3], [0.35, 0.25, 0.25, 0.15])[0]
-        e = Enemy(pos=pos, vel=Vec(0, 0), radius=14, hp=hp, max_hp=hp,
+        e = Enemy(pos=pos, vel=Vec(0, 0), radius=20, hp=hp, max_hp=hp,
                   dmg_min=dmg_min, dmg_max=dmg_max, speed=speed, kind=kind)
         if kind == 3:
             e.shot_cd = random.uniform(1.4, 2.2)
@@ -833,7 +838,7 @@ class Game:
         hp = int(BOSS_HP * self.diff["enemy_hp"])
         dmg_min = int(BOSS_DMG[0] * self.diff["enemy_dmg"])
         dmg_max = int(BOSS_DMG[1] * self.diff["enemy_dmg"])
-        b = Boss(pos=pos, vel=Vec(0, 0), radius=24, hp=hp, max_hp=hp,
+        b = Boss(pos=pos, vel=Vec(0, 0), radius=34, hp=hp, max_hp=hp,
                  dmg_min=dmg_min, dmg_max=dmg_max,
                  speed=ENEMY_SPEED * 0.9 * self.diff["enemy_speed"],
                  kind=1, shot_cd=random.uniform(*BOSS_SHOT_CD))
@@ -1012,12 +1017,12 @@ class Game:
                 vel = Vec(1, 0) * DASH_SPEED
             # dash trail
             if random.random() < 0.5:
-                self.emit_dust(p.pos.x, p.pos.y + 6, 1)
+                self.emit_dust(p.pos.x, p.pos.y + 8, 1)
         # walking animation
         if vel.length_squared() > 100:
             p.walk_anim += dt * 10
             if random.random() < 0.05:
-                self.emit_dust(p.pos.x, p.pos.y + 10, 1)
+                self.emit_dust(p.pos.x, p.pos.y + 14, 1)
         new_pos = p.pos + vel * dt
         test = Vec(new_pos.x, p.pos.y)
         if not self.dungeon.is_solid_at_px(test) and not self._circle_collides(test, p.radius):
@@ -1494,16 +1499,16 @@ class Game:
         # swirling portal
         for i in range(8):
             ang = self.portal_angle + i * (math.tau / 8)
-            r = 12
+            r = 17
             x = px + int(math.cos(ang) * r)
             y = py + int(math.sin(ang) * r)
             pulse = 0.6 + 0.4 * math.sin(self.game_time * 3 + i)
             col = (int(200 * pulse), int(200 * pulse), int(80 * pulse))
-            pygame.draw.circle(s, col, (x, y), 3)
+            pygame.draw.circle(s, col, (x, y), 4)
         # center glow
         glow = 0.7 + 0.3 * math.sin(self.game_time * 2)
-        pygame.draw.circle(s, (int(160 * glow), int(160 * glow), int(60 * glow)), (px, py), 8)
-        pygame.draw.circle(s, (int(220 * glow), int(220 * glow), int(80 * glow)), (px, py), 4)
+        pygame.draw.circle(s, (int(160 * glow), int(160 * glow), int(60 * glow)), (px, py), 11)
+        pygame.draw.circle(s, (int(220 * glow), int(220 * glow), int(80 * glow)), (px, py), 6)
 
     def _draw_torches(self, s, ox, oy):
         for tx, ty in self.dungeon.torches:
@@ -1514,14 +1519,14 @@ class Game:
             px = tx * TILE - self.cam_x + ox + TILE // 2
             py = ty * TILE - self.cam_y + oy + TILE // 2
             # torch base
-            pygame.draw.rect(s, (90, 70, 40), (px - 2, py, 4, 8))
+            pygame.draw.rect(s, (90, 70, 40), (px - 3, py, 6, 11))
             # flame
             flicker = random.uniform(0.6, 1.0)
             fr = int(255 * flicker)
             fg = int(160 * flicker)
             fb = int(40 * flicker)
-            pygame.draw.circle(s, (fr, fg, fb), (px, py - 2), 4)
-            pygame.draw.circle(s, (255, min(255, fg + 60), fb + 20), (px, py - 4), 2)
+            pygame.draw.circle(s, (fr, fg, fb), (px, py - 3), 6)
+            pygame.draw.circle(s, (255, min(255, fg + 60), fb + 20), (px, py - 6), 3)
             # emit occasional fire particles
             if random.random() < 0.15:
                 self.emit_fire(px + self.cam_x - ox, py + self.cam_y - oy, 1)
@@ -1555,9 +1560,9 @@ class Game:
             s.blit(pool_surf, (px - r, py - r))
             # bubbles
             if random.random() < 0.1:
-                bx = px + random.randint(-8, 8)
-                by = py + random.randint(-6, 6)
-                pygame.draw.circle(s, (60, 180, 40), (bx, by), random.randint(1, 3))
+                bx = px + random.randint(-12, 12)
+                by = py + random.randint(-8, 8)
+                pygame.draw.circle(s, (60, 180, 40), (bx, by), random.randint(2, 4))
 
     def _draw_chests(self, s, ox, oy):
         for chest in self.chests:
@@ -1568,7 +1573,7 @@ class Game:
             if not (-TILE < cx < WIDTH + TILE and -TILE < cy < HEIGHT + TILE):
                 continue
             # Shadow
-            pygame.draw.ellipse(s, (8, 6, 10), (cx - 12, cy + 10, 24, 8))
+            pygame.draw.ellipse(s, (8, 6, 10), (cx - 17, cy + 14, 34, 11))
             # Chest sprite
             if chest.hit_flash > 0:
                 # Flash white on hit
@@ -1580,52 +1585,52 @@ class Game:
                 s.blit(surf, (cx - TILE // 2, cy - TILE // 2))
             # HP pips
             for i in range(chest.hp):
-                pip_x = cx - (CHEST_HP * 4) // 2 + i * 8
-                pygame.draw.rect(s, (200, 180, 80), (pip_x, cy - TILE // 2 - 6, 6, 4))
+                pip_x = cx - (CHEST_HP * 6) // 2 + i * 12
+                pygame.draw.rect(s, (200, 180, 80), (pip_x, cy - TILE // 2 - 8, 8, 5))
 
     def _draw_loot(self, s, ox, oy):
         for l in self.loots:
             vx = int(l.pos.x - self.cam_x + ox)
-            vy = int(l.pos.y - self.cam_y + oy + math.sin(l.bob_phase) * 3)
+            vy = int(l.pos.y - self.cam_y + oy + math.sin(l.bob_phase) * 4)
             if not (-20 < vx < WIDTH + 20 and -20 < vy < HEIGHT + 20):
                 continue
             # glow under loot
             glow_alpha = int(30 + 15 * math.sin(l.bob_phase * 1.5))
             if l.weapon:
-                pygame.draw.circle(s, (glow_alpha + 20, glow_alpha + 10, 0), (vx, vy), 12)
-                pygame.draw.rect(s, (255, 225, 120), (vx - 6, vy - 6, 12, 12), border_radius=2)
-                pygame.draw.rect(s, (200, 170, 60), (vx - 6, vy - 6, 12, 12), 1, border_radius=2)
+                pygame.draw.circle(s, (glow_alpha + 20, glow_alpha + 10, 0), (vx, vy), 17)
+                pygame.draw.rect(s, (255, 225, 120), (vx - 8, vy - 8, 16, 16), border_radius=3)
+                pygame.draw.rect(s, (200, 170, 60), (vx - 8, vy - 8, 16, 16), 1, border_radius=3)
             elif l.potion_hp:
-                pygame.draw.circle(s, (glow_alpha, 0, 0), (vx, vy), 10)
-                pygame.draw.rect(s, (200, 40, 40), (vx - 5, vy - 5, 10, 10), border_radius=3)
-                pygame.draw.rect(s, (255, 80, 80), (vx - 2, vy - 4, 4, 3))
+                pygame.draw.circle(s, (glow_alpha, 0, 0), (vx, vy), 14)
+                pygame.draw.rect(s, (200, 40, 40), (vx - 7, vy - 7, 14, 14), border_radius=4)
+                pygame.draw.rect(s, (255, 80, 80), (vx - 3, vy - 6, 6, 4))
             elif l.potion_mana:
-                pygame.draw.circle(s, (0, 0, glow_alpha), (vx, vy), 10)
-                pygame.draw.rect(s, (40, 80, 200), (vx - 5, vy - 5, 10, 10), border_radius=3)
-                pygame.draw.rect(s, (80, 120, 255), (vx - 2, vy - 4, 4, 3))
+                pygame.draw.circle(s, (0, 0, glow_alpha), (vx, vy), 14)
+                pygame.draw.rect(s, (40, 80, 200), (vx - 7, vy - 7, 14, 14), border_radius=4)
+                pygame.draw.rect(s, (80, 120, 255), (vx - 3, vy - 6, 6, 4))
             elif l.dmg_boost:
-                pygame.draw.circle(s, (glow_alpha + 15, glow_alpha, 0), (vx, vy), 10)
-                pygame.draw.circle(s, (250, 160, 40), (vx, vy), 7)
-                pygame.draw.circle(s, (255, 220, 120), (vx, vy), 4)
+                pygame.draw.circle(s, (glow_alpha + 15, glow_alpha, 0), (vx, vy), 14)
+                pygame.draw.circle(s, (250, 160, 40), (vx, vy), 10)
+                pygame.draw.circle(s, (255, 220, 120), (vx, vy), 6)
                 # pulsing rays
                 for i in range(4):
                     ang = self.game_time * 2 + i * math.pi / 2
-                    ex = vx + int(math.cos(ang) * 9)
-                    ey = vy + int(math.sin(ang) * 9)
-                    pygame.draw.line(s, (255, 200, 80), (vx, vy), (ex, ey), 1)
+                    ex = vx + int(math.cos(ang) * 13)
+                    ey = vy + int(math.sin(ang) * 13)
+                    pygame.draw.line(s, (255, 200, 80), (vx, vy), (ex, ey), 2)
             elif l.shield_boost:
-                pygame.draw.circle(s, (0, 0, glow_alpha + 10), (vx, vy), 10)
-                pygame.draw.circle(s, (80, 200, 250), (vx, vy), 7)
-                pygame.draw.circle(s, (180, 240, 255), (vx, vy), 4)
+                pygame.draw.circle(s, (0, 0, glow_alpha + 10), (vx, vy), 14)
+                pygame.draw.circle(s, (80, 200, 250), (vx, vy), 10)
+                pygame.draw.circle(s, (180, 240, 255), (vx, vy), 6)
                 for i in range(4):
                     ang = self.game_time * 2 + i * math.pi / 2
-                    ex = vx + int(math.cos(ang) * 9)
-                    ey = vy + int(math.sin(ang) * 9)
-                    pygame.draw.line(s, (140, 220, 255), (vx, vy), (ex, ey), 1)
+                    ex = vx + int(math.cos(ang) * 13)
+                    ey = vy + int(math.sin(ang) * 13)
+                    pygame.draw.line(s, (140, 220, 255), (vx, vy), (ex, ey), 2)
             elif l.gold:
-                pygame.draw.circle(s, (glow_alpha + 10, glow_alpha + 5, 0), (vx, vy), 8)
-                pygame.draw.circle(s, (255, 215, 0), (vx, vy), 5)
-                pygame.draw.circle(s, (200, 170, 0), (vx, vy), 5, 1)
+                pygame.draw.circle(s, (glow_alpha + 10, glow_alpha + 5, 0), (vx, vy), 11)
+                pygame.draw.circle(s, (255, 215, 0), (vx, vy), 7)
+                pygame.draw.circle(s, (200, 170, 0), (vx, vy), 7, 1)
 
     def _draw_projectiles(self, s, ox, oy):
         for pr in self.projectiles:
@@ -1664,13 +1669,13 @@ class Game:
         ratio = max(0.0, min(1.0, e.hp / max(1, e.max_hp)))
 
         # Shadow
-        pygame.draw.ellipse(s, (8, 6, 10), (ex - e.radius, ey + e.radius - 4, e.radius * 2, 8))
+        pygame.draw.ellipse(s, (8, 6, 10), (ex - e.radius, ey + e.radius - 6, e.radius * 2, 11))
 
         # Aura ring for buffed minions
         if e.mult_speed > 1.0 or e.mult_damage > 1.0 or e.mult_taken < 1.0:
             pulse = 0.6 + 0.4 * math.sin(self.game_time * 4)
             ac = (int(180 * pulse), int(160 * pulse), int(220 * pulse))
-            pygame.draw.circle(s, ac, (ex, ey), e.radius + 5, 2)
+            pygame.draw.circle(s, ac, (ex, ey), e.radius + 7, 3)
 
         # Elite aura effect
         if isinstance(e, Elite):
@@ -1679,11 +1684,11 @@ class Game:
             r = int(aura_col[0] * pulse * 0.5)
             g = int(aura_col[1] * pulse * 0.5)
             b = int(aura_col[2] * pulse * 0.5)
-            pygame.draw.circle(s, (r, g, b), (ex, ey), e.radius + 10, 3)
+            pygame.draw.circle(s, (r, g, b), (ex, ey), e.radius + 14, 4)
             # Crown
             crown_col = (240, 200, 100)
-            pts = [(ex - 10, ey - 16), (ex - 5, ey - 24), (ex - 1, ey - 16),
-                   (ex + 1, ey - 16), (ex + 5, ey - 24), (ex + 10, ey - 16)]
+            pts = [(ex - 14, ey - 22), (ex - 7, ey - 34), (ex - 1, ey - 22),
+                   (ex + 1, ey - 22), (ex + 7, ey - 34), (ex + 14, ey - 22)]
             pygame.draw.polygon(s, crown_col, pts)
             pygame.draw.polygon(s, (200, 160, 60), pts, 1)
 
@@ -1699,23 +1704,22 @@ class Game:
 
         if isinstance(e, Boss):
             # Boss: larger, more imposing
-            pygame.draw.circle(s, (40, 15, 15), (ex, ey), e.radius + 2)
+            pygame.draw.circle(s, (40, 15, 15), (ex, ey), e.radius + 3)
             pygame.draw.circle(s, body_col, (ex, ey), e.radius)
-            # inner detail
             pygame.draw.circle(s, (max(0, body_col[0] - 30), max(0, body_col[1] - 30), max(0, body_col[2] - 20)),
-                               (ex, ey), e.radius - 4)
+                               (ex, ey), e.radius - 6)
             # Demonic eyes
-            pygame.draw.circle(s, (255, 60, 20), (ex - 8, ey - 6), 4)
-            pygame.draw.circle(s, (255, 60, 20), (ex + 8, ey - 6), 4)
-            pygame.draw.circle(s, (255, 220, 60), (ex - 8, ey - 6), 2)
-            pygame.draw.circle(s, (255, 220, 60), (ex + 8, ey - 6), 2)
+            pygame.draw.circle(s, (255, 60, 20), (ex - 12, ey - 8), 6)
+            pygame.draw.circle(s, (255, 60, 20), (ex + 12, ey - 8), 6)
+            pygame.draw.circle(s, (255, 220, 60), (ex - 12, ey - 8), 3)
+            pygame.draw.circle(s, (255, 220, 60), (ex + 12, ey - 8), 3)
             # Crown
-            pts = [(ex - 14, ey - 18), (ex - 7, ey - 30), (ex, ey - 18),
-                   (ex + 7, ey - 30), (ex + 14, ey - 18)]
+            pts = [(ex - 20, ey - 26), (ex - 10, ey - 42), (ex, ey - 26),
+                   (ex + 10, ey - 42), (ex + 20, ey - 26)]
             pygame.draw.polygon(s, (240, 180, 60), pts)
             pygame.draw.polygon(s, (180, 130, 30), pts, 2)
             # Mouth
-            pygame.draw.arc(s, (0, 0, 0), (ex - 8, ey + 2, 16, 10), 3.14, 6.28, 2)
+            pygame.draw.arc(s, (0, 0, 0), (ex - 12, ey + 4, 24, 14), 3.14, 6.28, 2)
         else:
             # Regular enemy body
             pygame.draw.circle(s, (max(0, body_col[0] - 40), max(0, body_col[1] - 40), max(0, body_col[2] - 30)),
@@ -1723,32 +1727,32 @@ class Game:
             pygame.draw.circle(s, body_col, (ex, ey), e.radius)
 
             if e.kind == 0:  # Eyes demon
-                pygame.draw.circle(s, (220, 40, 20), (ex - 4, ey - 3), 3)
-                pygame.draw.circle(s, (220, 40, 20), (ex + 4, ey - 3), 3)
-                pygame.draw.circle(s, (255, 200, 60), (ex - 4, ey - 3), 1)
-                pygame.draw.circle(s, (255, 200, 60), (ex + 4, ey - 3), 1)
+                pygame.draw.circle(s, (220, 40, 20), (ex - 6, ey - 4), 4)
+                pygame.draw.circle(s, (220, 40, 20), (ex + 6, ey - 4), 4)
+                pygame.draw.circle(s, (255, 200, 60), (ex - 6, ey - 4), 2)
+                pygame.draw.circle(s, (255, 200, 60), (ex + 6, ey - 4), 2)
             elif e.kind == 1:  # Horned
-                pygame.draw.polygon(s, (140, 110, 80), [(ex - 8, ey - 10), (ex - 4, ey - 2), (ex - 12, ey - 2)])
-                pygame.draw.polygon(s, (140, 110, 80), [(ex + 8, ey - 10), (ex + 4, ey - 2), (ex + 12, ey - 2)])
-                pygame.draw.circle(s, (200, 40, 20), (ex - 3, ey - 2), 2)
-                pygame.draw.circle(s, (200, 40, 20), (ex + 3, ey - 2), 2)
+                pygame.draw.polygon(s, (140, 110, 80), [(ex - 12, ey - 14), (ex - 6, ey - 3), (ex - 17, ey - 3)])
+                pygame.draw.polygon(s, (140, 110, 80), [(ex + 12, ey - 14), (ex + 6, ey - 3), (ex + 17, ey - 3)])
+                pygame.draw.circle(s, (200, 40, 20), (ex - 4, ey - 3), 3)
+                pygame.draw.circle(s, (200, 40, 20), (ex + 4, ey - 3), 3)
             elif e.kind == 2:  # Mandibles
-                pygame.draw.line(s, (160, 120, 80), (ex - 4, ey + 4), (ex - 10, ey + 12), 2)
-                pygame.draw.line(s, (160, 120, 80), (ex + 4, ey + 4), (ex + 10, ey + 12), 2)
-                pygame.draw.circle(s, (200, 40, 20), (ex - 3, ey - 2), 2)
-                pygame.draw.circle(s, (200, 40, 20), (ex + 3, ey - 2), 2)
+                pygame.draw.line(s, (160, 120, 80), (ex - 6, ey + 6), (ex - 14, ey + 17), 3)
+                pygame.draw.line(s, (160, 120, 80), (ex + 6, ey + 6), (ex + 14, ey + 17), 3)
+                pygame.draw.circle(s, (200, 40, 20), (ex - 4, ey - 3), 3)
+                pygame.draw.circle(s, (200, 40, 20), (ex + 4, ey - 3), 3)
             elif e.kind == 3:  # Spitter
-                pygame.draw.circle(s, (30, 30, 50), (ex, ey), 4)
-                pygame.draw.circle(s, (200, 60, 255), (ex, ey), 2)
-                pygame.draw.circle(s, (200, 40, 20), (ex + 6, ey - 4), 2)
-                pygame.draw.circle(s, (255, 200, 60), (ex + 6, ey - 4), 1)
+                pygame.draw.circle(s, (30, 30, 50), (ex, ey), 6)
+                pygame.draw.circle(s, (200, 60, 255), (ex, ey), 3)
+                pygame.draw.circle(s, (200, 40, 20), (ex + 8, ey - 5), 3)
+                pygame.draw.circle(s, (255, 200, 60), (ex + 8, ey - 5), 1)
 
         # HP bar above enemy
         if ratio < 1.0:
-            bar_w = e.radius * 2 + 4
-            bar_h = 3
+            bar_w = e.radius * 2 + 8
+            bar_h = 5
             bar_x = ex - bar_w // 2
-            bar_y = ey - e.radius - 10
+            bar_y = ey - e.radius - 14
             pygame.draw.rect(s, (20, 15, 15), (bar_x - 1, bar_y - 1, bar_w + 2, bar_h + 2))
             pygame.draw.rect(s, (60, 20, 20), (bar_x, bar_y, bar_w, bar_h))
             fill_w = int(bar_w * ratio)
@@ -1766,12 +1770,12 @@ class Game:
         py = int(p.pos.y - self.cam_y + oy)
 
         # Shadow
-        pygame.draw.ellipse(s, (8, 6, 10), (px - 10, py + 10, 20, 8))
+        pygame.draw.ellipse(s, (8, 6, 10), (px - 14, py + 14, 28, 10))
 
         # Level up flash
         if p.levelup_flash > 0:
             flash_r = int(40 + 20 * math.sin(p.levelup_flash * 8))
-            pygame.draw.circle(s, (flash_r, flash_r - 5, 0), (px, py), 30, 2)
+            pygame.draw.circle(s, (flash_r, flash_r - 5, 0), (px, py), 40, 2)
 
         # Iframes blink
         if p.iframes > 0 and int(p.iframes * 20) % 2 == 0:
@@ -1779,50 +1783,50 @@ class Game:
 
         # Dash afterimage
         if p.dash_timer > 0:
-            pygame.draw.circle(s, (40, 60, 100), (px, py), 16, 2)
+            pygame.draw.circle(s, (40, 60, 100), (px, py), 22, 2)
 
         # Body - armored warrior
         # Feet with walk animation
-        walk_offset = int(math.sin(p.walk_anim) * 3) if p.vel.length_squared() > 100 else 0
-        pygame.draw.rect(s, (50, 45, 35), (px - 7, py + 9 + walk_offset, 6, 5), border_radius=2)
-        pygame.draw.rect(s, (50, 45, 35), (px + 1, py + 9 - walk_offset, 6, 5), border_radius=2)
+        walk_offset = int(math.sin(p.walk_anim) * 4) if p.vel.length_squared() > 100 else 0
+        pygame.draw.rect(s, (50, 45, 35), (px - 10, py + 12 + walk_offset, 8, 7), border_radius=2)
+        pygame.draw.rect(s, (50, 45, 35), (px + 2, py + 12 - walk_offset, 8, 7), border_radius=2)
 
         # Torso (armor)
-        pygame.draw.rect(s, (55, 65, 90), (px - 9, py - 6, 18, 18), border_radius=4)
+        pygame.draw.rect(s, (55, 65, 90), (px - 13, py - 8, 26, 24), border_radius=5)
         # Armor detail
-        pygame.draw.rect(s, (70, 82, 110), (px - 7, py - 4, 14, 3), border_radius=1)
-        pygame.draw.rect(s, (65, 75, 100), (px - 5, py + 2, 10, 2))
+        pygame.draw.rect(s, (70, 82, 110), (px - 10, py - 6, 20, 4), border_radius=1)
+        pygame.draw.rect(s, (65, 75, 100), (px - 7, py + 3, 14, 3))
         # Shoulder pauldrons
-        pygame.draw.circle(s, (70, 80, 105), (px - 10, py - 3), 5)
-        pygame.draw.circle(s, (70, 80, 105), (px + 10, py - 3), 5)
-        pygame.draw.circle(s, (85, 95, 125), (px - 10, py - 4), 3)
-        pygame.draw.circle(s, (85, 95, 125), (px + 10, py - 4), 3)
+        pygame.draw.circle(s, (70, 80, 105), (px - 14, py - 4), 7)
+        pygame.draw.circle(s, (70, 80, 105), (px + 14, py - 4), 7)
+        pygame.draw.circle(s, (85, 95, 125), (px - 14, py - 5), 4)
+        pygame.draw.circle(s, (85, 95, 125), (px + 14, py - 5), 4)
 
         # Head (helmet)
-        pygame.draw.circle(s, (75, 80, 95), (px, py - 9), 7)
+        pygame.draw.circle(s, (75, 80, 95), (px, py - 13), 10)
         # Visor slit
-        pygame.draw.rect(s, (180, 170, 140), (px - 4, py - 10, 8, 2))
+        pygame.draw.rect(s, (180, 170, 140), (px - 6, py - 14, 12, 3))
 
         # Cape hint
         if p.vel.length_squared() > 100:
-            cape_sway = int(math.sin(p.walk_anim * 0.7) * 3)
+            cape_sway = int(math.sin(p.walk_anim * 0.7) * 4)
             pygame.draw.polygon(s, (50, 30, 30),
-                                [(px - 6, py + 2), (px + 6, py + 2),
-                                 (px + 4 + cape_sway, py + 14), (px - 4 + cape_sway, py + 14)])
+                                [(px - 8, py + 3), (px + 8, py + 3),
+                                 (px + 6 + cape_sway, py + 20), (px - 6 + cape_sway, py + 20)])
 
         # Arm/weapon toward mouse
         mx, my = pygame.mouse.get_pos()
         ang = math.atan2(my - py, mx - px)
-        hand_x = px + int(math.cos(ang) * 14)
-        hand_y = py + int(math.sin(ang) * 14)
+        hand_x = px + int(math.cos(ang) * 20)
+        hand_y = py + int(math.sin(ang) * 20)
         # Weapon glow based on power cooldown
         if p.dmg_timer > 0:
             weapon_col = (255, 180, 60)
         else:
             weapon_col = (180, 180, 190)
-        pygame.draw.line(s, (100, 95, 85), (px + int(math.cos(ang) * 6), py + int(math.sin(ang) * 6)),
-                         (hand_x, hand_y), 2)
-        pygame.draw.circle(s, weapon_col, (hand_x, hand_y), 3)
+        pygame.draw.line(s, (100, 95, 85), (px + int(math.cos(ang) * 8), py + int(math.sin(ang) * 8)),
+                         (hand_x, hand_y), 3)
+        pygame.draw.circle(s, weapon_col, (hand_x, hand_y), 4)
 
         # Shield visual
         if p.shield > 0:
@@ -1950,20 +1954,20 @@ class Game:
     def _draw_reticle(self, s):
         mx, my = pygame.mouse.get_pos()
         # outer ring
-        pygame.draw.circle(s, (180, 160, 120), (mx, my), 8, 1)
+        pygame.draw.circle(s, (180, 160, 120), (mx, my), 12, 2)
         # crosshair
-        gap = 3
-        length = 8
-        pygame.draw.line(s, (200, 180, 140), (mx - length, my), (mx - gap, my), 1)
-        pygame.draw.line(s, (200, 180, 140), (mx + gap, my), (mx + length, my), 1)
-        pygame.draw.line(s, (200, 180, 140), (mx, my - length), (mx, my - gap), 1)
-        pygame.draw.line(s, (200, 180, 140), (mx, my + gap), (mx, my + length), 1)
+        gap = 4
+        length = 12
+        pygame.draw.line(s, (200, 180, 140), (mx - length, my), (mx - gap, my), 2)
+        pygame.draw.line(s, (200, 180, 140), (mx + gap, my), (mx + length, my), 2)
+        pygame.draw.line(s, (200, 180, 140), (mx, my - length), (mx, my - gap), 2)
+        pygame.draw.line(s, (200, 180, 140), (mx, my + gap), (mx, my + length), 2)
         # center dot
-        pygame.draw.circle(s, (220, 200, 160), (mx, my), 1)
+        pygame.draw.circle(s, (220, 200, 160), (mx, my), 2)
 
     def _draw_minimap(self, s):
-        mm_w = 240
-        mm_h = 170
+        mm_w = 300
+        mm_h = 220
         surf = pygame.Surface((mm_w, mm_h), pygame.SRCALPHA)
         surf.fill((0, 0, 0, 150))
         # Gothic frame
@@ -2035,15 +2039,15 @@ class Game:
         max_mana = PLAYER_MANA + 8 * p.level
 
         # Bottom panel background
-        panel_h = 80
+        panel_h = 100
         panel_surf = pygame.Surface((WIDTH, panel_h), pygame.SRCALPHA)
         panel_surf.fill((10, 8, 14, 200))
-        pygame.draw.line(panel_surf, (80, 65, 45, 200), (0, 0), (WIDTH, 0), 2)
+        pygame.draw.line(panel_surf, (80, 65, 45, 200), (0, 0), (WIDTH, 0), 3)
         s.blit(panel_surf, (0, HEIGHT - panel_h))
 
         # Health globe (left)
-        globe_r = 32
-        globe_cx = 60
+        globe_r = 42
+        globe_cx = 70
         globe_cy = HEIGHT - panel_h // 2
         hp_frac = max(0, min(1, p.hp / max_hp))
         self._draw_globe(s, globe_cx, globe_cy, globe_r, hp_frac,
@@ -2054,7 +2058,7 @@ class Game:
         s.blit(hp_txt, (globe_cx - hp_txt.get_width() // 2, globe_cy - hp_txt.get_height() // 2))
 
         # Mana globe (right)
-        mana_cx = WIDTH - 60
+        mana_cx = WIDTH - 70
         mana_frac = max(0, min(1, p.mana / max_mana))
         self._draw_globe(s, mana_cx, globe_cy, globe_r, mana_frac,
                          empty_color=(10, 15, 45), fill_color=(30, 50, 170),
@@ -2064,53 +2068,53 @@ class Game:
 
         # XP bar between globes
         xp_frac = p.xp / max(1, p.xp_to_next)
-        bar_x = 110
-        bar_w = WIDTH - 220
-        bar_y = HEIGHT - 16
-        bar_h = 8
+        bar_x = 130
+        bar_w = WIDTH - 260
+        bar_y = HEIGHT - 18
+        bar_h = 10
         pygame.draw.rect(s, (25, 20, 15), (bar_x, bar_y, bar_w, bar_h))
         pygame.draw.rect(s, (180, 160, 80), (bar_x, bar_y, int(bar_w * xp_frac), bar_h))
         pygame.draw.rect(s, C_GOTHIC_FRAME, (bar_x, bar_y, bar_w, bar_h), 1)
         xp_label = self.font.render(f"Level {p.level}", True, (200, 190, 150))
-        s.blit(xp_label, (WIDTH // 2 - xp_label.get_width() // 2, bar_y - 16))
+        s.blit(xp_label, (WIDTH // 2 - xp_label.get_width() // 2, bar_y - 22))
 
         # Skill indicators / cooldowns
-        skill_y = HEIGHT - panel_h + 8
+        skill_y = HEIGHT - panel_h + 10
         # Basic attack
         cd_frac = p.basic_cd / BASIC_CD if BASIC_CD > 0 else 0
-        self._draw_skill_icon(s, WIDTH // 2 - 60, skill_y, 28, cd_frac, (140, 200, 255), "LMB")
+        self._draw_skill_icon(s, WIDTH // 2 - 80, skill_y, 36, cd_frac, (140, 200, 255), "LMB")
         # Power shot
         cd_frac2 = p.power_cd / POWER_CD if POWER_CD > 0 else 0
-        self._draw_skill_icon(s, WIDTH // 2 - 20, skill_y, 28, cd_frac2, (160, 120, 255), "RMB")
+        self._draw_skill_icon(s, WIDTH // 2 - 30, skill_y, 36, cd_frac2, (160, 120, 255), "RMB")
         # Dash
         dash_frac = p.dash_cd / DASH_CD if DASH_CD > 0 else 0
-        self._draw_skill_icon(s, WIDTH // 2 + 20, skill_y, 28, dash_frac, (100, 200, 140), "Shift")
+        self._draw_skill_icon(s, WIDTH // 2 + 20, skill_y, 36, dash_frac, (100, 200, 140), "Shift")
 
         # Potion slots
-        pot_y = HEIGHT - panel_h + 12
+        pot_y = HEIGHT - panel_h + 14
         # HP potion
-        pygame.draw.rect(s, (60, 20, 20), (WIDTH // 2 + 80, pot_y, 24, 24), border_radius=4)
-        pygame.draw.rect(s, (120, 40, 40), (WIDTH // 2 + 80, pot_y, 24, 24), 1, border_radius=4)
+        pygame.draw.rect(s, (60, 20, 20), (WIDTH // 2 + 100, pot_y, 32, 32), border_radius=5)
+        pygame.draw.rect(s, (120, 40, 40), (WIDTH // 2 + 100, pot_y, 32, 32), 1, border_radius=5)
         pot_txt = self.font.render(f"{p.potions_hp}", True, (220, 160, 160))
-        s.blit(pot_txt, (WIDTH // 2 + 86, pot_y + 4))
+        s.blit(pot_txt, (WIDTH // 2 + 108, pot_y + 6))
         q_label = self.font.render("Q", True, (150, 130, 120))
-        s.blit(q_label, (WIDTH // 2 + 87, pot_y + 26))
+        s.blit(q_label, (WIDTH // 2 + 109, pot_y + 34))
 
         # Mana potion
-        pygame.draw.rect(s, (20, 30, 80), (WIDTH // 2 + 112, pot_y, 24, 24), border_radius=4)
-        pygame.draw.rect(s, (40, 60, 140), (WIDTH // 2 + 112, pot_y, 24, 24), 1, border_radius=4)
+        pygame.draw.rect(s, (20, 30, 80), (WIDTH // 2 + 145, pot_y, 32, 32), border_radius=5)
+        pygame.draw.rect(s, (40, 60, 140), (WIDTH // 2 + 145, pot_y, 32, 32), 1, border_radius=5)
         pot_txt2 = self.font.render(f"{p.potions_mana}", True, (160, 180, 220))
-        s.blit(pot_txt2, (WIDTH // 2 + 118, pot_y + 4))
+        s.blit(pot_txt2, (WIDTH // 2 + 153, pot_y + 6))
         e_label = self.font.render("E", True, (150, 130, 120))
-        s.blit(e_label, (WIDTH // 2 + 119, pot_y + 26))
+        s.blit(e_label, (WIDTH // 2 + 154, pot_y + 34))
 
         # Gold
         gold_txt = self.font.render(f"Gold: {p.gold}", True, C_GOLD)
-        s.blit(gold_txt, (120, HEIGHT - panel_h + 10))
+        s.blit(gold_txt, (140, HEIGHT - panel_h + 12))
 
         # Active buffs
-        buff_x = 120
-        buff_y = HEIGHT - panel_h + 32
+        buff_x = 140
+        buff_y = HEIGHT - panel_h + 40
         if p.shield > 0:
             pygame.draw.rect(s, (60, 160, 210), (buff_x, buff_y, 100, 18), 1, border_radius=3)
             txt = self.font.render(f"Shield {p.shield}", True, C_ICE)
