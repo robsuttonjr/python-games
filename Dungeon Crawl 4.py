@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
 import pygame
+import numpy as np
 
 # ======================= CONFIG =======================
 WIDTH, HEIGHT = 1920, 1080
@@ -491,6 +492,8 @@ class Dungeon:
 class Game:
     def __init__(self):
         pygame.init()
+        pygame.mixer.init(frequency=22050, size=-16, channels=1, buffer=512)
+        self._build_sounds()
         self.fullscreen = False
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption("Dungeon of the Damned — ARPG")
@@ -713,6 +716,148 @@ class Game:
             b = min(255, int(color[2] * brightness))
             pygame.draw.circle(surf, (r, g, b), (radius, radius), i)
         return surf
+
+    # ---- Sound generation ----
+    def _build_sounds(self):
+        rate = 22050
+        self.sounds = {}
+
+        def make_sound(samples):
+            """Convert float array (-1..1) to pygame Sound."""
+            arr = (np.clip(samples, -1, 1) * 32767).astype(np.int16)
+            return pygame.sndarray.make_sound(arr.reshape(-1, 1) if arr.ndim == 1 else arr)
+
+        def tone(freq, dur, vol=0.3):
+            t = np.linspace(0, dur, int(rate * dur), endpoint=False)
+            return np.sin(2 * np.pi * freq * t) * vol
+
+        def noise(dur, vol=0.15):
+            return np.random.uniform(-vol, vol, int(rate * dur))
+
+        def fade_out(s):
+            env = np.linspace(1.0, 0.0, len(s))
+            return s * env
+
+        def fade_in_out(s, attack=0.1):
+            n = len(s)
+            a = int(n * attack)
+            env = np.ones(n)
+            env[:a] = np.linspace(0, 1, a)
+            env[-a:] = np.linspace(1, 0, a)
+            return s * env
+
+        # Arrow shoot - short twang
+        t = np.linspace(0, 0.08, int(rate * 0.08), endpoint=False)
+        twang = np.sin(2 * np.pi * 600 * t) * 0.2 * np.exp(-t * 40)
+        twang += noise(0.08, 0.06) * np.exp(-t * 50)
+        self.sounds["arrow"] = make_sound(twang)
+
+        # Multishot - wider twang
+        t = np.linspace(0, 0.12, int(rate * 0.12), endpoint=False)
+        multi = np.sin(2 * np.pi * 500 * t) * 0.25 * np.exp(-t * 30)
+        multi += np.sin(2 * np.pi * 750 * t) * 0.12 * np.exp(-t * 35)
+        multi += noise(0.12, 0.05) * np.exp(-t * 40)
+        self.sounds["multishot"] = make_sound(multi)
+
+        # Hit - thud
+        t = np.linspace(0, 0.06, int(rate * 0.06), endpoint=False)
+        hit = np.sin(2 * np.pi * 200 * t) * 0.3 * np.exp(-t * 50)
+        hit += noise(0.06, 0.1) * np.exp(-t * 60)
+        self.sounds["hit"] = make_sound(hit)
+
+        # Enemy death - low burst
+        t = np.linspace(0, 0.15, int(rate * 0.15), endpoint=False)
+        death = np.sin(2 * np.pi * 120 * t) * 0.3 * np.exp(-t * 20)
+        death += noise(0.15, 0.12) * np.exp(-t * 15)
+        self.sounds["death"] = make_sound(death)
+
+        # Pickup - bright chime
+        chime = fade_out(tone(880, 0.06, 0.2))
+        chime2 = fade_out(tone(1100, 0.06, 0.15))
+        pad = np.zeros(int(rate * 0.03))
+        pickup = np.concatenate([chime, pad, chime2])
+        self.sounds["pickup"] = make_sound(pickup)
+
+        # Gold pickup - coin clink
+        t = np.linspace(0, 0.05, int(rate * 0.05), endpoint=False)
+        coin = np.sin(2 * np.pi * 2000 * t) * 0.15 * np.exp(-t * 60)
+        coin += np.sin(2 * np.pi * 3000 * t) * 0.08 * np.exp(-t * 70)
+        self.sounds["gold"] = make_sound(coin)
+
+        # Goblin spawn - playful jingle
+        g1 = fade_out(tone(660, 0.07, 0.2))
+        g2 = fade_out(tone(880, 0.07, 0.2))
+        g3 = fade_out(tone(1100, 0.1, 0.25))
+        gpad = np.zeros(int(rate * 0.02))
+        goblin = np.concatenate([g1, gpad, g2, gpad, g3])
+        self.sounds["goblin"] = make_sound(goblin)
+
+        # Goblin jackpot - triumphant
+        j1 = fade_out(tone(880, 0.08, 0.25))
+        j2 = fade_out(tone(1100, 0.08, 0.25))
+        j3 = fade_out(tone(1320, 0.08, 0.25))
+        j4 = fade_out(tone(1760, 0.15, 0.3))
+        jp = np.zeros(int(rate * 0.02))
+        jackpot = np.concatenate([j1, jp, j2, jp, j3, jp, j4])
+        self.sounds["jackpot"] = make_sound(jackpot)
+
+        # Portal enter - whoosh
+        t = np.linspace(0, 0.25, int(rate * 0.25), endpoint=False)
+        sweep = np.sin(2 * np.pi * (200 + 400 * t / 0.25) * t) * 0.2
+        sweep += noise(0.25, 0.08)
+        sweep = fade_in_out(sweep)
+        self.sounds["portal"] = make_sound(sweep)
+
+        # Level up - ascending tones
+        lu1 = fade_out(tone(440, 0.08, 0.2))
+        lu2 = fade_out(tone(550, 0.08, 0.2))
+        lu3 = fade_out(tone(660, 0.08, 0.2))
+        lu4 = fade_out(tone(880, 0.15, 0.25))
+        lp = np.zeros(int(rate * 0.02))
+        self.sounds["levelup"] = make_sound(np.concatenate([lu1, lp, lu2, lp, lu3, lp, lu4]))
+
+        # Chest break
+        t = np.linspace(0, 0.12, int(rate * 0.12), endpoint=False)
+        chest_brk = noise(0.12, 0.2) * np.exp(-t * 20)
+        chest_brk += np.sin(2 * np.pi * 300 * t) * 0.15 * np.exp(-t * 25)
+        self.sounds["chest"] = make_sound(chest_brk)
+
+        # Dash - quick whoosh
+        t = np.linspace(0, 0.1, int(rate * 0.1), endpoint=False)
+        dash = noise(0.1, 0.15) * np.exp(-t * 25)
+        self.sounds["dash"] = make_sound(fade_in_out(dash, 0.2))
+
+        # Player hurt
+        t = np.linspace(0, 0.1, int(rate * 0.1), endpoint=False)
+        hurt = np.sin(2 * np.pi * 150 * t) * 0.25 * np.exp(-t * 25)
+        hurt += noise(0.1, 0.1) * np.exp(-t * 30)
+        self.sounds["hurt"] = make_sound(hurt)
+
+        # Infusion pickup - sparkle
+        sp1 = fade_out(tone(1200, 0.05, 0.15))
+        sp2 = fade_out(tone(1600, 0.05, 0.15))
+        sp3 = fade_out(tone(2000, 0.08, 0.2))
+        sp = np.zeros(int(rate * 0.02))
+        self.sounds["infusion"] = make_sound(np.concatenate([sp1, sp, sp2, sp, sp3]))
+
+        # Lightning zap
+        t = np.linspace(0, 0.08, int(rate * 0.08), endpoint=False)
+        zap = noise(0.08, 0.25) * np.exp(-t * 35)
+        zap += np.sin(2 * np.pi * 3000 * t) * 0.1 * np.exp(-t * 50)
+        self.sounds["zap"] = make_sound(zap)
+
+        # Set volumes
+        for s in self.sounds.values():
+            s.set_volume(0.4)
+        self.sounds["gold"].set_volume(0.25)
+        self.sounds["goblin"].set_volume(0.5)
+        self.sounds["jackpot"].set_volume(0.6)
+        self.sounds["levelup"].set_volume(0.5)
+
+    def play_sound(self, name):
+        snd = self.sounds.get(name)
+        if snd:
+            snd.play()
 
     # ---- Difficulty menu (gothic) ----
     def _difficulty_select(self) -> str:
@@ -975,6 +1120,7 @@ class Game:
         self.treasure_goblin = goblin
         self.enemies.append(goblin)
         self.add_floating_text(pos.x, pos.y - 30, "TREASURE GOBLIN!", C_GOLD, 1.5)
+        self.play_sound("goblin")
         self.emit_particles(pos.x, pos.y, 25, C_GOLD, speed=100, life=0.8, gravity=-40)
         self.add_screen_shake(4)
 
@@ -1027,6 +1173,7 @@ class Game:
         self.emit_death_burst(chest.pos.x, chest.pos.y, color, 15)
         self.add_screen_shake(3)
         self.add_floating_text(chest.pos.x, chest.pos.y - 15, "LOOT!", C_GOLD, 1.2)
+        self.play_sound("chest")
 
         # Gold drop (always)
         gold_mult = 3 if chest.kind == "gold" else 1
@@ -1091,6 +1238,7 @@ class Game:
             self.player.dash_cd = DASH_CD
             self.player.iframes = max(self.player.iframes, IFRAME_TIME)
             self.emit_dust(self.player.pos.x, self.player.pos.y + 8, 6)
+            self.play_sound("dash")
 
         # Aim direction: mouse
         mx, my = pygame.mouse.get_pos()
@@ -1130,6 +1278,7 @@ class Game:
                           dmg=dmg, ttl=0.9, radius=BASIC_RADIUS, pierce=BASIC_PIERCE,
                           is_arrow=True, angle=ang, infusion=self.player.infusion_type)
         self.projectiles.append(proj)
+        self.play_sound("arrow")
         # Bowstring twang particles
         self.emit_particles(self.player.pos.x + direction.x * 18,
                             self.player.pos.y + direction.y * 18,
@@ -1154,6 +1303,7 @@ class Game:
         self.emit_particles(self.player.pos.x, self.player.pos.y, 8,
                             (180, 200, 220), speed=60, life=0.4, gravity=0)
         self.add_screen_shake(2)
+        self.play_sound("multishot")
 
     # ---- Updates ----
     def update_player(self, dt: float):
@@ -1371,6 +1521,7 @@ class Game:
                         self.add_floating_text(p.pos.x, p.pos.y - 20, f"-{dmg}", (255, 60, 60), 1.2)
                         self.add_screen_shake(4)
                         self.emit_blood(p.pos.x, p.pos.y, 6)
+                        self.play_sound("hurt")
                     kb = (p.pos - e.pos).normalize() * 150
                     p.pos += kb * dt
             e.knockback = max(0.0, e.knockback - 200 * dt)
@@ -1412,6 +1563,7 @@ class Game:
                         self.add_floating_text(self.player.pos.x, self.player.pos.y - 20, f"-{dmg}", (255, 60, 60))
                         self.add_screen_shake(3)
                         self.emit_blood(self.player.pos.x, self.player.pos.y, 4)
+                        self.play_sound("hurt")
                     pr.ttl = 0
                     continue
             else:
@@ -1455,6 +1607,9 @@ class Game:
                                                str(damage), dmg_col,
                                                scale=1.3 if damage > 20 else 1.0)
                         self.emit_blood(e.pos.x, e.pos.y, 4)
+                        self.play_sound("hit")
+                        if pr.infusion == "lightning":
+                            self.play_sound("zap")
                         if damage > 15:
                             self.add_screen_shake(2)
                         pr.pierce -= 1
@@ -1491,13 +1646,17 @@ class Game:
                 if l.gold:
                     self.player.gold += l.gold
                     self.add_floating_text(l.pos.x, l.pos.y - 10, f"+{l.gold}g", C_GOLD, 0.8)
+                    self.play_sound("gold")
                 if l.potion_hp:
                     self.player.potions_hp += 1
+                    self.play_sound("pickup")
                 if l.potion_mana:
                     self.player.potions_mana += 1
+                    self.play_sound("pickup")
                 if l.weapon:
                     self.player.weapon = l.weapon
                     self.add_floating_text(l.pos.x, l.pos.y - 10, "New Weapon!", (255, 200, 80), 1.2)
+                    self.play_sound("pickup")
                 if l.dmg_boost:
                     self.player.dmg_mult = DMG_BOOST_MULT
                     self.player.dmg_timer = DMG_BOOST_TIME
@@ -1514,6 +1673,7 @@ class Game:
                     self.add_floating_text(l.pos.x, l.pos.y - 10,
                                            f"{l.infusion.upper()} ARROWS!", icol, 1.3)
                     self.emit_particles(l.pos.x, l.pos.y, 15, icol, speed=80, life=0.7, gravity=-30)
+                    self.play_sound("infusion")
                 self.emit_sparks(l.pos.x, l.pos.y, 3)
                 l.ttl = 0
         self.loots = [l for l in self.loots if l.ttl > 0]
@@ -1533,6 +1693,7 @@ class Game:
             self.add_floating_text(self.player.pos.x, self.player.pos.y - 30, "LEVEL UP!", C_GOLD, 1.5)
             self.emit_particles(self.player.pos.x, self.player.pos.y, 25, C_GOLD, speed=100, life=1.0, gravity=-50)
             self.add_screen_shake(5)
+            self.play_sound("levelup")
 
         # Treasure goblin: massive loot explosion
         if isinstance(e, TreasureGoblin):
@@ -1541,6 +1702,7 @@ class Game:
             self.emit_death_burst(e.pos.x, e.pos.y, C_GOLD, 50)
             self.add_screen_shake(8)
             self.add_floating_text(e.pos.x, e.pos.y - 30, "JACKPOT!", C_GOLD, 2.0)
+            self.play_sound("jackpot")
             for _ in range(10):
                 offset = Vec(random.uniform(-40, 40), random.uniform(-40, 40))
                 self.loots.append(Loot(pos=e.pos + offset, gold=random.randint(12, 35)))
@@ -1567,6 +1729,7 @@ class Game:
             self.add_floating_text(e.pos.x, e.pos.y - 30, "BOSS SLAIN!", (255, 200, 60), 2.0)
         else:
             self.emit_death_burst(e.pos.x, e.pos.y, death_color, 15)
+        self.play_sound("death")
 
         # corpse
         self.corpses.append(Corpse(x=e.pos.x, y=e.pos.y, radius=e.radius, kind=e.kind,
@@ -1696,6 +1859,7 @@ class Game:
         self.spawn_timer = SPAWN_INTERVAL
         self.dungeon.mark_seen_radius(self.player.pos)
         self.boss_spawned = False
+        self.play_sound("portal")
         # Announce biome
         biome_name = BIOME_NAMES.get(self.current_biome, self.current_biome)
         self.add_floating_text(self.player.pos.x, self.player.pos.y - 40,
