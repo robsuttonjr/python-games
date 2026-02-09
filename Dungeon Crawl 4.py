@@ -75,9 +75,17 @@ LOOT_DROP_CHANCE = 0.08
 DMG_PICKUP_DROP_CHANCE = 0.06
 SHIELD_PICKUP_DROP_CHANCE = 0.06
 
+CHEST_HP = 3
+CHEST_SPAWN_PER_ROOM = 0.45  # chance per room to have a chest
+CHEST_GOLD_DROP = (8, 25)
+CHEST_POTION_CHANCE = 0.35
+CHEST_WEAPON_CHANCE = 0.10
+CHEST_BOOST_CHANCE = 0.12
+MANA_REGEN_RATE = 3.0  # mana per second
+
 TILE = 34
-MAP_W, MAP_H = 110, 85
-LEVELS = 3
+MAP_W, MAP_H = 180, 140
+LEVELS = 5
 WALL = 1
 FLOOR = 0
 
@@ -238,6 +246,14 @@ class Elite(Enemy):
 class Boss(Enemy):
     shot_cd: float = 1.0
 
+@dataclass
+class Chest:
+    pos: Vec
+    hp: int = CHEST_HP
+    alive: bool = True
+    kind: str = "wood"  # wood, gold
+    hit_flash: float = 0.0
+
 # ======================= DUNGEON =======================
 class Dungeon:
     def __init__(self, level: int = 1):
@@ -250,13 +266,15 @@ class Dungeon:
         self.blood_stains: List[Tuple[float, float, float]] = []
         self.stairs_tx = None
         self.stairs_ty = None
+        self.chest_positions: List[Tuple[int, int]] = []
+        self.poison_pools: List[Tuple[int, int]] = []
         self.tile_variants = [[random.randint(0, 7) for _ in range(MAP_H)] for _ in range(MAP_W)]
         self.generate()
 
     def generate(self):
         rng = random.Random()
-        max_rooms = 30 + self.level * 6
-        min_size, max_size = 6, 13
+        max_rooms = 50 + self.level * 10
+        min_size, max_size = 6, 15
         for _ in range(max_rooms):
             w = rng.randint(min_size, max_size)
             h = rng.randint(min_size, max_size)
@@ -277,6 +295,36 @@ class Dungeon:
                 self.tiles[tx][ty] = WALL
                 self.scenery.append((tx, ty, 'pillar' if rng.random() < 0.6 else 'crate'))
             self._place_torches(new, rng)
+        # Place treasure chests in rooms
+        for room in self.rooms[1:]:  # skip first room (player spawn)
+            if rng.random() < CHEST_SPAWN_PER_ROOM:
+                for _ in range(20):
+                    tx = rng.randint(room.left + 1, room.right - 2)
+                    ty = rng.randint(room.top + 1, room.bottom - 2)
+                    if self.tiles[tx][ty] == FLOOR:
+                        too_close = any(abs(cx - tx) + abs(cy - ty) < 3 for cx, cy in self.chest_positions)
+                        if not too_close:
+                            chest_kind = "gold" if rng.random() < 0.15 else "wood"
+                            self.chest_positions.append((tx, ty))
+                            break
+            # Rare: extra gold chest in large rooms
+            if room.w >= 10 and room.h >= 10 and rng.random() < 0.25:
+                for _ in range(20):
+                    tx = rng.randint(room.left + 2, room.right - 3)
+                    ty = rng.randint(room.top + 2, room.bottom - 3)
+                    if self.tiles[tx][ty] == FLOOR:
+                        too_close = any(abs(cx - tx) + abs(cy - ty) < 3 for cx, cy in self.chest_positions)
+                        if not too_close:
+                            self.chest_positions.append((tx, ty))
+                            break
+        # Place poison pools in some rooms
+        for room in self.rooms[2:]:
+            if rng.random() < 0.15:
+                cx = rng.randint(room.left + 2, max(room.left + 2, room.right - 3))
+                cy = rng.randint(room.top + 2, max(room.top + 2, room.bottom - 3))
+                if self.tiles[cx][cy] == FLOOR:
+                    self.poison_pools.append((cx, cy))
+
         for x in range(MAP_W):
             self.tiles[x][0] = WALL
             self.tiles[x][MAP_H - 1] = WALL
@@ -399,12 +447,15 @@ class Game:
         self.shake_intensity = 0.0
         self.game_time = 0.0
         self.boss_spawned = False
+        self.kills = 0
         self.dungeon.mark_seen_radius(self.player.pos)
 
         self._build_texture_cache()
         self._build_light_surfaces()
         self.light_map = pygame.Surface((WIDTH, HEIGHT))
         self.portal_angle = 0.0
+        self.chests: List[Chest] = []
+        self._spawn_chests()
 
     # ---- Texture generation ----
     def _build_texture_cache(self):
@@ -479,6 +530,33 @@ class Game:
         # metal bands
         pygame.draw.rect(self.crate_surf, (70, 65, 55), (3, TILE // 2 - 1, TILE - 6, 3))
 
+        # treasure chest texture
+        self.chest_surf = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
+        self.chest_surf.fill((0, 0, 0, 0))
+        # chest body
+        pygame.draw.rect(self.chest_surf, (120, 85, 45), (4, 10, TILE - 8, TILE - 14), border_radius=3)
+        # lid (slightly wider)
+        pygame.draw.rect(self.chest_surf, (140, 100, 55), (3, 6, TILE - 6, 10), border_radius=4)
+        # metal bands
+        pygame.draw.rect(self.chest_surf, (180, 170, 80), (3, 8, TILE - 6, 2))
+        pygame.draw.rect(self.chest_surf, (180, 170, 80), (3, TILE - 8, TILE - 6, 2))
+        # lock/clasp
+        pygame.draw.circle(self.chest_surf, (220, 200, 80), (TILE // 2, 14), 4)
+        pygame.draw.circle(self.chest_surf, (180, 160, 60), (TILE // 2, 14), 4, 1)
+        # highlight
+        pygame.draw.line(self.chest_surf, (170, 130, 75), (6, 7), (TILE - 7, 7))
+
+        # gold chest texture
+        self.gold_chest_surf = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
+        self.gold_chest_surf.fill((0, 0, 0, 0))
+        pygame.draw.rect(self.gold_chest_surf, (180, 150, 50), (4, 10, TILE - 8, TILE - 14), border_radius=3)
+        pygame.draw.rect(self.gold_chest_surf, (200, 170, 60), (3, 6, TILE - 6, 10), border_radius=4)
+        pygame.draw.rect(self.gold_chest_surf, (255, 230, 100), (3, 8, TILE - 6, 2))
+        pygame.draw.rect(self.gold_chest_surf, (255, 230, 100), (3, TILE - 8, TILE - 6, 2))
+        pygame.draw.circle(self.gold_chest_surf, (255, 240, 120), (TILE // 2, 14), 5)
+        pygame.draw.circle(self.gold_chest_surf, (200, 180, 60), (TILE // 2, 14), 5, 1)
+        pygame.draw.line(self.gold_chest_surf, (220, 190, 80), (6, 7), (TILE - 7, 7))
+
         # torch texture
         self.torch_surf = pygame.Surface((12, 16), pygame.SRCALPHA)
         pygame.draw.rect(self.torch_surf, (90, 70, 40), (4, 6, 4, 10))
@@ -498,6 +576,9 @@ class Game:
             ("elite_guardian", 120, (100, 220, 140)),
             ("portal", 140, (200, 200, 100)),
             ("loot", 50, (200, 180, 100)),
+            ("chest", 70, (200, 180, 100)),
+            ("gold_chest", 90, (255, 220, 80)),
+            ("poison", 80, (60, 180, 40)),
         ]:
             self.light_surfs[name] = self._make_light_surf(radius, color)
 
@@ -745,7 +826,7 @@ class Game:
             self.enemies[-1].pos = mpos
 
     def spawn_boss(self):
-        if self.current_level != 3 or self.boss_spawned:
+        if self.current_level != LEVELS or self.boss_spawned:
             return
         center_tx, center_ty = self.dungeon.center(self.dungeon.rooms[-1])
         pos = Vec(center_tx * TILE + TILE / 2, center_ty * TILE + TILE / 2)
@@ -775,6 +856,64 @@ class Game:
                     else:
                         self.loots.append(Loot(pos=pos, shield_boost=True))
                     return
+
+    # ---- Chest system ----
+    def _spawn_chests(self):
+        """Create chest objects from dungeon chest positions."""
+        self.chests = []
+        for tx, ty in self.dungeon.chest_positions:
+            pos = Vec(tx * TILE + TILE / 2, ty * TILE + TILE / 2)
+            kind = "gold" if random.random() < 0.15 else "wood"
+            self.chests.append(Chest(pos=pos, kind=kind))
+
+    def _on_chest_broken(self, chest: Chest):
+        """Handle chest breaking - spawn loot."""
+        # Burst effect
+        color = C_GOLD if chest.kind == "gold" else (160, 120, 60)
+        self.emit_death_burst(chest.pos.x, chest.pos.y, color, 15)
+        self.add_screen_shake(3)
+        self.add_floating_text(chest.pos.x, chest.pos.y - 15, "LOOT!", C_GOLD, 1.2)
+
+        # Gold drop (always)
+        gold_mult = 3 if chest.kind == "gold" else 1
+        gold = random.randint(*CHEST_GOLD_DROP) * gold_mult
+        self.loots.append(Loot(pos=chest.pos.copy(), gold=gold))
+
+        # Potions
+        if random.random() < CHEST_POTION_CHANCE:
+            potion_type = random.choice(["hp", "mana"])
+            self.loots.append(Loot(pos=chest.pos + Vec(random.uniform(-10, 10), random.uniform(-10, 10)),
+                                   potion_hp=(potion_type == "hp"), potion_mana=(potion_type == "mana")))
+        # Extra potion from gold chests
+        if chest.kind == "gold" and random.random() < 0.5:
+            self.loots.append(Loot(pos=chest.pos + Vec(random.uniform(-12, 12), random.uniform(-12, 12)),
+                                   potion_hp=True))
+
+        # Weapon
+        if random.random() < CHEST_WEAPON_CHANCE:
+            tier = self.current_level
+            weapons = [
+                Weapon("Iron Sword", 8 + tier * 2, 14 + tier * 3, 2.2, False),
+                Weapon("Fire Wand", 10 + tier * 2, 18 + tier * 3, 1.8, True),
+                Weapon("Shadow Blade", 12 + tier * 2, 20 + tier * 2, 2.5, False),
+                Weapon("Crystal Staff", 9 + tier * 3, 16 + tier * 4, 1.6, True),
+            ]
+            self.loots.append(Loot(pos=chest.pos + Vec(random.uniform(-8, 8), random.uniform(-8, 8)),
+                                   weapon=random.choice(weapons)))
+
+        # Boost pickups
+        if random.random() < CHEST_BOOST_CHANCE:
+            if random.random() < 0.5:
+                self.loots.append(Loot(pos=chest.pos + Vec(random.uniform(-10, 10), random.uniform(-10, 10)),
+                                       dmg_boost=True))
+            else:
+                self.loots.append(Loot(pos=chest.pos + Vec(random.uniform(-10, 10), random.uniform(-10, 10)),
+                                       shield_boost=True))
+
+    def update_chests(self, dt: float):
+        for chest in self.chests:
+            if chest.alive:
+                chest.hit_flash = max(0.0, chest.hit_flash - dt)
 
     # ---- Input ----
     def handle_input(self, dt: float):
@@ -856,6 +995,10 @@ class Game:
         p.dash_cd = max(0.0, p.dash_cd - dt)
         p.iframes = max(0.0, p.iframes - dt)
         p.levelup_flash = max(0.0, p.levelup_flash - dt)
+        # Passive mana regeneration
+        max_mana = PLAYER_MANA + 8 * p.level
+        if p.mana < max_mana:
+            p.mana = min(max_mana, p.mana + MANA_REGEN_RATE * dt)
         if p.dmg_timer > 0:
             p.dmg_timer -= dt
             if p.dmg_timer <= 0:
@@ -889,6 +1032,18 @@ class Game:
         self.cam_y = int(p.pos.y - HEIGHT / 2)
         self.cam_x = max(0, min(self.cam_x, MAP_W * TILE - WIDTH))
         self.cam_y = max(0, min(self.cam_y, MAP_H * TILE - HEIGHT))
+        # Poison pool damage
+        ptx = int(p.pos.x // TILE)
+        pty = int(p.pos.y // TILE)
+        for ppx, ppy in self.dungeon.poison_pools:
+            if abs(ptx - ppx) <= 1 and abs(pty - ppy) <= 1:
+                pool_center = Vec(ppx * TILE + TILE / 2, ppy * TILE + TILE / 2)
+                if (pool_center - p.pos).length() < TILE * 1.2:
+                    if p.iframes <= 0:
+                        p.hp -= max(1, int(2 * dt * 10))
+                        if random.random() < 0.3:
+                            self.emit_particles(p.pos.x, p.pos.y, 2, C_POISON, speed=20, life=0.4, gravity=-40)
+
         if self.dungeon.stairs_tx is not None:
             sx = self.dungeon.stairs_tx * TILE + TILE / 2
             sy = self.dungeon.stairs_ty * TILE + TILE / 2
@@ -930,17 +1085,30 @@ class Game:
             acc = (desired + jitter).normalize() * (e.speed * e.mult_speed)
             e.vel += (acc - e.vel) * 0.1
             new_epos = e.pos + e.vel * dt
-            # axis-separated wall collision (like player)
+            # axis-separated wall collision with wall sliding
             test_x = Vec(new_epos.x, e.pos.y)
             if not self._circle_collides(test_x, e.radius):
                 e.pos.x = test_x.x
             else:
-                e.vel.x *= -0.3
+                e.vel.x = 0
             test_y = Vec(e.pos.x, new_epos.y)
             if not self._circle_collides(test_y, e.radius):
                 e.pos.y = test_y.y
             else:
-                e.vel.y *= -0.3
+                e.vel.y = 0
+            # Push away from nearby walls to prevent sticking
+            push = Vec(0, 0)
+            for ang_i in range(8):
+                ang = ang_i * math.pi / 4
+                probe = Vec(e.pos.x + math.cos(ang) * (e.radius + 2),
+                            e.pos.y + math.sin(ang) * (e.radius + 2))
+                if self.dungeon.is_solid_at_px(probe):
+                    push.x -= math.cos(ang)
+                    push.y -= math.sin(ang)
+            if push.length_squared() > 0:
+                push = push.normalize() * 60
+                e.pos.x += push.x * dt
+                e.pos.y += push.y * dt
             # clamp to world bounds
             e.pos.x = max(e.radius, min(MAP_W * TILE - e.radius, e.pos.x))
             e.pos.y = max(e.radius, min(MAP_H * TILE - e.radius, e.pos.y))
@@ -1043,6 +1211,26 @@ class Game:
                         if pr.pierce <= 0:
                             pr.ttl = 0
                             break
+        # Projectile-chest collision (player projectiles only)
+        for pr in self.projectiles:
+            if pr.hostile or pr.ttl <= 0:
+                continue
+            for chest in self.chests:
+                if not chest.alive:
+                    continue
+                if (chest.pos - pr.pos).length() < 20 + pr.radius:
+                    chest.hp -= 1
+                    chest.hit_flash = 0.15
+                    self.emit_sparks(chest.pos.x, chest.pos.y, 5)
+                    self.add_screen_shake(1)
+                    pr.pierce -= 1
+                    if pr.pierce <= 0:
+                        pr.ttl = 0
+                    if chest.hp <= 0:
+                        chest.alive = False
+                        self._on_chest_broken(chest)
+                    break
+
         self.projectiles = [pr for pr in self.projectiles if pr.ttl > 0]
 
     def update_loot(self, dt: float):
@@ -1074,6 +1262,7 @@ class Game:
         self.loots = [l for l in self.loots if l.ttl > 0]
 
     def on_enemy_dead(self, e: Enemy):
+        self.kills += 1
         old_level = self.player.level
         self.player.xp += 6 + self.wave
         while self.player.xp >= self.player.xp_to_next:
@@ -1209,6 +1398,8 @@ class Game:
         self.particles.clear()
         self.floating_texts.clear()
         self.corpses.clear()
+        self.chests.clear()
+        self._spawn_chests()
         self.wave = 1
         self.spawn_timer = SPAWN_INTERVAL
         self.dungeon.mark_seen_radius(self.player.pos)
@@ -1223,10 +1414,12 @@ class Game:
 
         self._draw_tiles(s, ox, oy)
         self._draw_blood_stains(s, ox, oy)
+        self._draw_poison_pools(s, ox, oy)
         self._draw_scenery(s, ox, oy)
         self._draw_stairs_portal(s, ox, oy)
         self._draw_torches(s, ox, oy)
         self._draw_corpses(s, ox, oy)
+        self._draw_chests(s, ox, oy)
         self._draw_loot(s, ox, oy)
         self._draw_projectiles(s, ox, oy)
         self._draw_enemies(s, ox, oy)
@@ -1344,6 +1537,51 @@ class Game:
                 b = max(0, int(c.color[2] * alpha * 0.4))
                 rad = int(c.radius * (0.8 + 0.2 * alpha))
                 pygame.draw.circle(s, (r, g, b), (sx, sy), rad)
+
+    def _draw_poison_pools(self, s, ox, oy):
+        for ppx, ppy in self.dungeon.poison_pools:
+            if not self._tile_in_view(ppx, ppy):
+                continue
+            if not self.dungeon.seen[ppx][ppy]:
+                continue
+            px = ppx * TILE - self.cam_x + ox + TILE // 2
+            py = ppy * TILE - self.cam_y + oy + TILE // 2
+            # Bubbling poison pool
+            pulse = 0.6 + 0.4 * math.sin(self.game_time * 2 + ppx * 0.7)
+            r = int(TILE * 0.8)
+            pool_surf = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
+            pygame.draw.ellipse(pool_surf, (30, int(80 * pulse), 20, 120), (0, 4, r * 2, r * 2 - 8))
+            pygame.draw.ellipse(pool_surf, (40, int(120 * pulse), 30, 80), (4, 8, r * 2 - 8, r * 2 - 16))
+            s.blit(pool_surf, (px - r, py - r))
+            # bubbles
+            if random.random() < 0.1:
+                bx = px + random.randint(-8, 8)
+                by = py + random.randint(-6, 6)
+                pygame.draw.circle(s, (60, 180, 40), (bx, by), random.randint(1, 3))
+
+    def _draw_chests(self, s, ox, oy):
+        for chest in self.chests:
+            if not chest.alive:
+                continue
+            cx = int(chest.pos.x - self.cam_x + ox)
+            cy = int(chest.pos.y - self.cam_y + oy)
+            if not (-TILE < cx < WIDTH + TILE and -TILE < cy < HEIGHT + TILE):
+                continue
+            # Shadow
+            pygame.draw.ellipse(s, (8, 6, 10), (cx - 12, cy + 10, 24, 8))
+            # Chest sprite
+            if chest.hit_flash > 0:
+                # Flash white on hit
+                flash_surf = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
+                flash_surf.fill((255, 255, 255, 180))
+                s.blit(flash_surf, (cx - TILE // 2, cy - TILE // 2))
+            else:
+                surf = self.gold_chest_surf if chest.kind == "gold" else self.chest_surf
+                s.blit(surf, (cx - TILE // 2, cy - TILE // 2))
+            # HP pips
+            for i in range(chest.hp):
+                pip_x = cx - (CHEST_HP * 4) // 2 + i * 8
+                pygame.draw.rect(s, (200, 180, 80), (pip_x, cy - TILE // 2 - 6, 6, 4))
 
     def _draw_loot(self, s, ox, oy):
         for l in self.loots:
@@ -1684,6 +1922,28 @@ class Game:
             r3 = pls3.get_width() // 2
             self.light_map.blit(pls3, (stx - r3, sty - r3), special_flags=pygame.BLEND_RGB_ADD)
 
+        # Chest lights
+        for chest in self.chests:
+            if not chest.alive:
+                continue
+            clx = int(chest.pos.x - self.cam_x + ox)
+            cly = int(chest.pos.y - self.cam_y + oy)
+            if -100 < clx < WIDTH + 100 and -100 < cly < HEIGHT + 100:
+                key = "gold_chest" if chest.kind == "gold" else "chest"
+                cls = self.light_surfs[key]
+                cr = cls.get_width() // 2
+                self.light_map.blit(cls, (clx - cr, cly - cr), special_flags=pygame.BLEND_RGB_ADD)
+
+        # Poison pool lights
+        for ppx, ppy in self.dungeon.poison_pools:
+            if not self._tile_in_view(ppx, ppy):
+                continue
+            plx = int(ppx * TILE + TILE // 2 - self.cam_x + ox)
+            ply = int(ppy * TILE + TILE // 2 - self.cam_y + oy)
+            pls4 = self.light_surfs["poison"]
+            pr4 = pls4.get_width() // 2
+            self.light_map.blit(pls4, (plx - pr4, ply - pr4), special_flags=pygame.BLEND_RGB_ADD)
+
         # Apply lighting
         s.blit(self.light_map, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
 
@@ -1743,6 +2003,21 @@ class Game:
             else:
                 pygame.draw.circle(surf, (220, 80, 80), (epx, epy), 2)
 
+        # chests
+        for chest in self.chests:
+            if not chest.alive:
+                continue
+            cpx = int(chest.pos.x / TILE * sx)
+            cpy = int(chest.pos.y / TILE * sy)
+            col = (255, 220, 80) if chest.kind == "gold" else (200, 160, 60)
+            pygame.draw.rect(surf, col, (cpx - 1, cpy - 1, 3, 3))
+
+        # poison pools
+        for ppx, ppy in self.dungeon.poison_pools:
+            rpx = int(ppx * sx)
+            rpy = int(ppy * sy)
+            pygame.draw.circle(surf, (40, 160, 30, 180), (rpx, rpy), 2)
+
         # stairs
         if self.dungeon.stairs_tx is not None:
             stpx = int(self.dungeon.stairs_tx * sx)
@@ -1784,7 +2059,7 @@ class Game:
         self._draw_globe(s, mana_cx, globe_cy, globe_r, mana_frac,
                          empty_color=(10, 15, 45), fill_color=(30, 50, 170),
                          highlight_color=(60, 90, 220), frame_color=C_GOTHIC_FRAME)
-        mana_txt = self.font.render(f"{p.mana}", True, (200, 210, 240))
+        mana_txt = self.font.render(f"{int(p.mana)}", True, (200, 210, 240))
         s.blit(mana_txt, (mana_cx - mana_txt.get_width() // 2, globe_cy - mana_txt.get_height() // 2))
 
         # XP bar between globes
@@ -1921,8 +2196,10 @@ class Game:
             ("P", "Pause"),
             ("Esc", "Quit"),
             ("", ""),
+            ("Shoot Chests", "Break open for gold, potions, weapons, boosts"),
+            ("Green Pools", "Poison! Avoid or take damage"),
             ("Elites", "Lead packs with auras: Haste / Frenzy / Guardian"),
-            ("Goal", "Explore, find stairs, reach Level 3, defeat the Boss"),
+            ("Goal", "Explore 5 levels, find stairs, defeat the Boss"),
         ]
         y = 140
         for key, desc in lines:
@@ -1947,10 +2224,12 @@ class Game:
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         # Fade to red-black
         for i in range(30):
+            for ev in pygame.event.get():
+                pass  # drain events during fade
             overlay.fill((0, 0, 0, 8))
             self.screen.blit(overlay, (0, 0))
             pygame.display.flip()
-            pygame.time.delay(30)
+            self.clock.tick(30)
 
         self.screen.fill((8, 4, 4))
         # Blood drip effect
@@ -1966,6 +2245,7 @@ class Game:
         stats = [
             f"Level {self.player.level}  -  Dungeon Level {self.current_level}  -  Wave {self.wave}",
             f"Gold collected: {self.player.gold}",
+            f"Enemies slain: {self.kills}",
             f"Difficulty: {self.difficulty_name}",
         ]
         y = HEIGHT // 2 + 10
@@ -1980,8 +2260,9 @@ class Game:
 
         waiting = True
         while waiting:
+            self.clock.tick(30)
             for event in pygame.event.get():
-                if event.type in (pygame.KEYDOWN, pygame.QUIT):
+                if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN, pygame.QUIT):
                     waiting = False
 
     # ---- Main Loop ----
@@ -2010,6 +2291,7 @@ class Game:
             self.update_spawning(dt)
             self.update_particles(dt)
             self.update_floating_texts(dt)
+            self.update_chests(dt)
             self.update_corpses(dt)
             self.update_blood_stains(dt)
             self.update_screen_shake(dt)
@@ -2026,5 +2308,6 @@ if __name__ == "__main__":
         print("Fatal error:", e)
         import traceback
         traceback.print_exc()
+    finally:
         pygame.quit()
-        sys.exit(1)
+        sys.exit(0)
