@@ -339,6 +339,11 @@ SKILL_TREES = {
 INV_COLS = 10
 INV_ROWS = 4
 
+# Vendor NPC
+VENDOR_STOCK_SIZE = 8  # weapons for sale
+VENDOR_INTERACT_RANGE = 80  # pixels to interact
+VENDOR_RESTOCK_ON_LEVEL = True
+
 Vec = pygame.math.Vector2
 
 # ======================= DATA CLASSES =======================
@@ -585,6 +590,13 @@ class Chest:
     alive: bool = True
     kind: str = "wood"  # wood, gold
     hit_flash: float = 0.0
+
+@dataclass
+class Vendor:
+    pos: Vec
+    stock: list = field(default_factory=list)  # List[Weapon]
+    name: str = "Gheed"
+    interact_anim: float = 0.0
 
 # ======================= DUNGEON =======================
 class Dungeon:
@@ -949,6 +961,9 @@ class Game:
         self.portal_angle = 0.0
         self.chests: List[Chest] = []
         self._spawn_chests()
+        self.vendor: Optional[Vendor] = None
+        self._spawn_vendor()
+        self.show_vendor_hint = False
 
     # ---- Texture generation ----
     def _build_texture_cache(self, biome: str = "crypt"):
@@ -1569,6 +1584,49 @@ class Game:
                         self.loots.append(Loot(pos=pos, shield_boost=True))
                     return
 
+    # ---- Vendor NPC ----
+    def _spawn_vendor(self):
+        """Place vendor NPC in the first room of the dungeon."""
+        if not self.dungeon.rooms:
+            return
+        room = self.dungeon.rooms[0]
+        # Place vendor near the edge of the first room, offset from center
+        cx, cy = self.dungeon.center(room)
+        # Offset a bit so player doesn't spawn directly on vendor
+        vx = (cx + 3) * TILE + TILE / 2
+        vy = cy * TILE + TILE / 2
+        vendor_names = ["Gheed", "Charsi", "Akara", "Ormus", "Anya", "Lysander", "Halbu"]
+        name = random.choice(vendor_names)
+        stock = self._generate_vendor_stock()
+        self.vendor = Vendor(pos=Vec(vx, vy), stock=stock, name=name)
+
+    def _generate_vendor_stock(self) -> list:
+        """Generate vendor's weapon inventory, scaled to depth."""
+        stock = []
+        depth = self.current_level
+        for _ in range(VENDOR_STOCK_SIZE):
+            # Vendors sell normal and magic, with occasional rare at high depth
+            roll = random.random()
+            if roll < 0.05 + depth * 0.01:
+                rarity = RARITY_RARE
+            elif roll < 0.50:
+                rarity = RARITY_MAGIC
+            else:
+                rarity = RARITY_NORMAL
+            stock.append(generate_weapon(depth, rarity))
+        return stock
+
+    def _get_vendor_buy_price(self, w: Weapon) -> int:
+        """Price to buy from vendor."""
+        base = (w.dmg_min + w.dmg_max) * 2 + w.ilvl * 3
+        rarity_mult = {RARITY_NORMAL: 1, RARITY_MAGIC: 3, RARITY_RARE: 8,
+                       RARITY_UNIQUE: 15, RARITY_SET: 12}
+        return max(5, int(base * rarity_mult.get(w.rarity, 1)))
+
+    def _get_vendor_sell_price(self, w: Weapon) -> int:
+        """Price vendor pays for player's item (less than buy price)."""
+        return max(1, self._get_vendor_buy_price(w) // 3)
+
     # ---- Chest system ----
     def _spawn_chests(self):
         """Create chest objects from dungeon chest positions."""
@@ -1602,9 +1660,13 @@ class Game:
             self.loots.append(Loot(pos=chest.pos + Vec(random.uniform(-12, 12), random.uniform(-12, 12)),
                                    potion_hp=True))
 
-        # Weapon
+        # Weapon — chests drop normal or magic, gold chests have magic+ chance
         if random.random() < CHEST_WEAPON_CHANCE:
-            w = generate_weapon(self.current_level)
+            if chest.kind == "gold":
+                chest_rarity = RARITY_MAGIC if random.random() < 0.7 else RARITY_RARE
+            else:
+                chest_rarity = RARITY_NORMAL if random.random() < 0.65 else RARITY_MAGIC
+            w = generate_weapon(self.current_level, chest_rarity)
             self.loots.append(Loot(pos=chest.pos + Vec(random.uniform(-8, 8), random.uniform(-8, 8)),
                                    weapon=w))
 
@@ -1745,6 +1807,13 @@ class Game:
             p.dmg_timer -= dt
             if p.dmg_timer <= 0:
                 p.dmg_mult = 1.0
+        # Vendor proximity check
+        self.show_vendor_hint = False
+        if self.vendor:
+            dist = (p.pos - self.vendor.pos).length()
+            if dist < VENDOR_INTERACT_RANGE:
+                self.show_vendor_hint = True
+            self.vendor.interact_anim += dt
         vel = p.vel
         if p.dash_timer > 0:
             p.dash_timer -= dt
@@ -2162,6 +2231,12 @@ class Game:
             self.loots.append(Loot(pos=e.pos + Vec(0, 20), infusion=inf))
             if random.random() < 0.5:
                 self.loots.append(Loot(pos=e.pos + Vec(0, -20), potion_hp=True))
+            # Goblin weapon drops: 2-3 weapons, magic to rare range
+            for gi in range(random.randint(2, 3)):
+                gob_rarity = random.choice([RARITY_MAGIC, RARITY_MAGIC, RARITY_RARE])
+                goff = Vec(random.uniform(-35, 35), random.uniform(-35, 35))
+                self.loots.append(Loot(pos=e.pos + goff,
+                                       weapon=generate_weapon(self.current_level, gob_rarity)))
             self.corpses.append(Corpse(x=e.pos.x, y=e.pos.y, radius=e.radius, kind=e.kind,
                                        color=C_GOLD, is_boss=False, is_elite=False))
             return
@@ -2192,12 +2267,36 @@ class Game:
             potion = random.choice(["hp", "mana"])
             drops.append(Loot(pos=e.pos.copy(), potion_hp=(potion == "hp"), potion_mana=(potion == "mana")))
         if random.random() < LOOT_DROP_CHANCE:
-            # Higher rarity chance from elites/bosses
+            # Tiered drop system:
+            # Normal monsters: normal or magic (occasional rare at high depth)
+            # Elites: magic-rare, small chance unique
+            # Bosses: rare-unique, small chance set
             force = None
             if isinstance(e, Boss):
-                force = random.choice([RARITY_RARE, RARITY_UNIQUE, RARITY_SET])
+                roll = random.random()
+                if roll < 0.10:
+                    force = RARITY_SET
+                elif roll < 0.35:
+                    force = RARITY_UNIQUE
+                else:
+                    force = RARITY_RARE
             elif isinstance(e, Elite):
-                force = RARITY_MAGIC if random.random() < 0.5 else RARITY_RARE
+                roll = random.random()
+                if roll < 0.05:
+                    force = RARITY_UNIQUE
+                elif roll < 0.40:
+                    force = RARITY_RARE
+                else:
+                    force = RARITY_MAGIC
+            else:
+                # Regular monsters: mostly normal/magic
+                roll = random.random()
+                if roll < 0.03 + self.current_level * 0.005:
+                    force = RARITY_RARE
+                elif roll < 0.35:
+                    force = RARITY_MAGIC
+                else:
+                    force = RARITY_NORMAL
             drops.append(Loot(pos=e.pos.copy(), weapon=generate_weapon(self.current_level, force)))
         if random.random() < DMG_PICKUP_DROP_CHANCE:
             drops.append(Loot(pos=e.pos.copy(), dmg_boost=True))
@@ -2211,6 +2310,19 @@ class Game:
                 drops.append(Loot(pos=e.pos.copy(), dmg_boost=True))
             else:
                 drops.append(Loot(pos=e.pos.copy(), shield_boost=True))
+            # Elites always drop at least magic gear
+            if not any(d.weapon for d in drops):
+                elite_rarity = RARITY_MAGIC if random.random() < 0.6 else RARITY_RARE
+                drops.append(Loot(pos=e.pos + Vec(random.uniform(-15, 15), random.uniform(-15, 15)),
+                                  weapon=generate_weapon(self.current_level, elite_rarity)))
+        if isinstance(e, Boss):
+            # Bosses always drop 2 weapons: one rare+, one magic+
+            drops.append(Loot(pos=e.pos + Vec(30, 0),
+                              weapon=generate_weapon(self.current_level,
+                                  RARITY_UNIQUE if random.random() < 0.25 else RARITY_RARE)))
+            drops.append(Loot(pos=e.pos + Vec(-30, 0),
+                              weapon=generate_weapon(self.current_level, RARITY_MAGIC)))
+            drops.append(Loot(pos=e.pos.copy(), gold=random.randint(40, 100)))
         self.loots.extend(drops)
 
     def update_spawning(self, dt: float):
@@ -2307,6 +2419,7 @@ class Game:
         self.spawn_timer = SPAWN_INTERVAL
         self.dungeon.mark_seen_radius(self.player.pos)
         self.boss_spawned = False
+        self._spawn_vendor()
         self.play_sound("portal")
         # Announce biome
         biome_name = BIOME_NAMES.get(self.current_biome, self.current_biome)
@@ -2329,6 +2442,7 @@ class Game:
         self._draw_torches(s, ox, oy)
         self._draw_corpses(s, ox, oy)
         self._draw_chests(s, ox, oy)
+        self._draw_vendor(s, ox, oy)
         self._draw_loot(s, ox, oy)
         self._draw_projectiles(s, ox, oy)
         self._draw_enemies(s, ox, oy)
@@ -2517,6 +2631,52 @@ class Game:
             for i in range(chest.hp):
                 pip_x = cx - (CHEST_HP * 6) // 2 + i * 12
                 pygame.draw.rect(s, (200, 180, 80), (pip_x, cy - TILE // 2 - 8, 8, 5))
+
+    def _draw_vendor(self, s, ox, oy):
+        """Draw the vendor NPC in the world."""
+        if not self.vendor:
+            return
+        v = self.vendor
+        vx = int(v.pos.x - self.cam_x + ox)
+        vy = int(v.pos.y - self.cam_y + oy)
+        if not (-50 < vx < WIDTH + 50 and -50 < vy < HEIGHT + 50):
+            return
+        t = v.interact_anim
+
+        # Shadow
+        pygame.draw.ellipse(s, (15, 12, 10), (vx - 18, vy + 12, 36, 10))
+
+        # Body - hooded merchant figure
+        # Robe (brown/dark)
+        pygame.draw.polygon(s, (80, 60, 40), [(vx - 14, vy + 14), (vx + 14, vy + 14),
+                                               (vx + 10, vy - 8), (vx - 10, vy - 8)])
+        # Hood
+        pygame.draw.circle(s, (70, 55, 35), (vx, vy - 14), 12)
+        pygame.draw.circle(s, (50, 40, 25), (vx, vy - 14), 10)
+        # Face shadow (mysterious)
+        pygame.draw.circle(s, (30, 25, 18), (vx, vy - 12), 7)
+        # Eyes (small glowing)
+        eye_glow = int(180 + 40 * math.sin(t * 2.5))
+        pygame.draw.circle(s, (eye_glow, eye_glow - 30, 0), (vx - 3, vy - 13), 2)
+        pygame.draw.circle(s, (eye_glow, eye_glow - 30, 0), (vx + 3, vy - 13), 2)
+        # Belt
+        pygame.draw.line(s, (120, 100, 60), (vx - 10, vy - 2), (vx + 10, vy - 2), 2)
+        # Gold pouch on belt
+        pygame.draw.circle(s, (200, 170, 50), (vx + 8, vy - 1), 4)
+        pygame.draw.circle(s, (160, 130, 30), (vx + 8, vy - 1), 4, 1)
+
+        # Floating name
+        name_txt = self.font.render(v.name, True, C_GOLD)
+        s.blit(name_txt, (vx - name_txt.get_width() // 2, vy - 34))
+
+        # Interaction prompt when near
+        if self.show_vendor_hint:
+            pulse = int(180 + 40 * math.sin(t * 3))
+            hint_txt = self.font.render("[V] Trade", True, (pulse, pulse - 20, pulse // 2))
+            s.blit(hint_txt, (vx - hint_txt.get_width() // 2, vy - 52))
+            # Glow ring around vendor
+            ring_r = int(20 + 3 * math.sin(t * 2))
+            pygame.draw.circle(s, (80, 70, 40), (vx, vy), ring_r, 2)
 
     def _draw_loot(self, s, ox, oy):
         for l in self.loots:
@@ -2979,6 +3139,16 @@ class Game:
                 pr4 = pls4.get_width() // 2
                 self.light_map.blit(pls4, (plx - pr4, ply - pr4), special_flags=pygame.BLEND_RGB_ADD)
 
+        # Vendor light
+        if self.vendor:
+            vlx = int(self.vendor.pos.x - self.cam_x + ox)
+            vly = int(self.vendor.pos.y - self.cam_y + oy)
+            if -200 < vlx < WIDTH + 200 and -200 < vly < HEIGHT + 200:
+                if "torch" in self.light_surfs:
+                    vls = self.light_surfs["torch"]
+                    vr = vls.get_width() // 2
+                    self.light_map.blit(vls, (vlx - vr, vly - vr), special_flags=pygame.BLEND_RGB_ADD)
+
         # Apply lighting
         s.blit(self.light_map, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
 
@@ -3075,6 +3245,13 @@ class Game:
             gpy = int(self.treasure_goblin.pos.y / TILE * sy)
             pulse = 0.5 + 0.5 * math.sin(self.game_time * 6)
             pygame.draw.circle(surf, (int(255 * pulse), int(215 * pulse), 0), (gpx, gpy), 3)
+
+        # vendor
+        if self.vendor:
+            vpx = int(self.vendor.pos.x / TILE * sx)
+            vpy = int(self.vendor.pos.y / TILE * sy)
+            pygame.draw.circle(surf, (100, 200, 255), (vpx, vpy), 3)
+            pygame.draw.circle(surf, (60, 140, 200), (vpx, vpy), 3, 1)
 
         s.blit(surf, (WIDTH - mm_w - 12, 12))
 
@@ -3274,7 +3451,10 @@ class Game:
             ("", ""),
             ("Shoot Chests", "Break open for gold, potions, weapons, boosts"),
             ("Infusions", "Pick up Fire/Ice/Lightning arrows for timed buffs"),
+            ("V", "Trade with vendor NPC (when nearby)"),
+            ("", ""),
             ("Portals", "Step into colored portals to enter new biomes"),
+            ("Vendor NPC", "Buy/sell weapons in the starting room"),
             ("Treasure Goblin", "Chase it! Drops gold as it flees, jackpot on kill"),
             ("Elites", "Lead packs with auras: Haste / Frenzy / Guardian"),
             ("Goal", "Explore endless depths, hunt goblins, slay bosses"),
@@ -3705,6 +3885,200 @@ class Game:
             pygame.display.flip()
             self.clock.tick(30)
 
+    # ---- VENDOR SHOP SCREEN (V key near vendor) ----
+    def _vendor_screen(self):
+        """D2-style vendor buy/sell interface."""
+        if not self.vendor:
+            return
+        p = self.player
+        v = self.vendor
+        tab = 0  # 0 = buy, 1 = sell
+        scroll_buy = 0
+        scroll_sell = 0
+        running = True
+        while running:
+            mx, my = pygame.mouse.get_pos()
+            for ev in pygame.event.get():
+                if ev.type == pygame.QUIT:
+                    self.running = False
+                    return
+                if ev.type == pygame.KEYDOWN:
+                    if ev.key in (pygame.K_v, pygame.K_ESCAPE):
+                        running = False
+                    elif ev.key == pygame.K_TAB:
+                        tab = 1 - tab
+                if ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
+                    # Tab clicks
+                    if 200 <= mx <= 400 and 80 <= my <= 110:
+                        tab = 0
+                    elif 420 <= mx <= 620 and 80 <= my <= 110:
+                        tab = 1
+
+                    if tab == 0:
+                        # Buy from vendor
+                        for i, w in enumerate(v.stock):
+                            iy = 160 + i * 70 - scroll_buy
+                            if 200 <= mx <= WIDTH - 200 and iy <= my <= iy + 64:
+                                price = self._get_vendor_buy_price(w)
+                                if p.gold >= price and len(p.inventory) < INV_COLS * INV_ROWS:
+                                    p.gold -= price
+                                    p.inventory.append(w)
+                                    v.stock.pop(i)
+                                    self.play_sound("gold")
+                                    self.add_floating_text(p.pos.x, p.pos.y - 20,
+                                                           f"-{price}g", (255, 100, 100), 1.0)
+                                break
+                    else:
+                        # Sell to vendor
+                        for i, w in enumerate(p.inventory):
+                            iy = 160 + i * 70 - scroll_sell
+                            if 200 <= mx <= WIDTH - 200 and iy <= my <= iy + 64:
+                                price = self._get_vendor_sell_price(w)
+                                p.gold += price
+                                v.stock.append(w)
+                                p.inventory.pop(i)
+                                self.play_sound("gold")
+                                self.add_floating_text(p.pos.x, p.pos.y - 20,
+                                                       f"+{price}g", C_GOLD, 1.0)
+                                break
+
+                if ev.type == pygame.MOUSEBUTTONDOWN:
+                    if ev.button == 4:  # scroll up
+                        if tab == 0:
+                            scroll_buy = max(0, scroll_buy - 70)
+                        else:
+                            scroll_sell = max(0, scroll_sell - 70)
+                    elif ev.button == 5:  # scroll down
+                        if tab == 0:
+                            scroll_buy += 70
+                        else:
+                            scroll_sell += 70
+
+            # Draw
+            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 230))
+            self.screen.blit(overlay, (0, 0))
+
+            # Header
+            title = self.bigfont.render(f"- {v.name}'s Trading Post -", True, C_GOLD)
+            self.screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 25))
+            gold_txt = self.font.render(f"Gold: {p.gold}", True, C_GOLD)
+            self.screen.blit(gold_txt, (WIDTH - 280, 30))
+            inv_txt = self.font.render(f"Inventory: {len(p.inventory)}/{INV_COLS * INV_ROWS}", True, (180, 170, 140))
+            self.screen.blit(inv_txt, (WIDTH - 280, 55))
+
+            # Tabs
+            for ti, (tlabel, tx) in enumerate([("Buy", 200), ("Sell", 420)]):
+                is_active = ti == tab
+                color = C_GOLD if is_active else (100, 90, 70)
+                bg = (40, 35, 25) if is_active else (20, 18, 14)
+                pygame.draw.rect(self.screen, bg, (tx, 80, 190, 30), border_radius=5)
+                pygame.draw.rect(self.screen, color, (tx, 80, 190, 30), 2 if is_active else 1, border_radius=5)
+                tt = self.font.render(tlabel, True, color)
+                self.screen.blit(tt, (tx + 95 - tt.get_width() // 2, 85))
+
+            # Separator
+            pygame.draw.line(self.screen, C_GOTHIC_FRAME, (200, 120), (WIDTH - 200, 120), 1)
+
+            # Clip region for items
+            clip_rect = pygame.Rect(190, 130, WIDTH - 380, HEIGHT - 200)
+
+            if tab == 0:
+                # Buy tab — show vendor stock
+                if not v.stock:
+                    no_stock = self.font.render("Sold out! Come back next level.", True, (120, 115, 100))
+                    self.screen.blit(no_stock, (WIDTH // 2 - no_stock.get_width() // 2, 250))
+                for i, w in enumerate(v.stock):
+                    iy = 160 + i * 70 - scroll_buy
+                    if iy < 125 or iy > HEIGHT - 80:
+                        continue
+                    price = self._get_vendor_buy_price(w)
+                    wc = w.get_color()
+                    can_afford = p.gold >= price and len(p.inventory) < INV_COLS * INV_ROWS
+                    # Hover highlight
+                    hovered = 200 <= mx <= WIDTH - 200 and iy <= my <= iy + 64
+                    bg = (35, 30, 22) if hovered else (22, 18, 14)
+                    pygame.draw.rect(self.screen, bg, (200, iy, WIDTH - 400, 64), border_radius=5)
+                    pygame.draw.rect(self.screen, wc if hovered else (50, 45, 35),
+                                     (200, iy, WIDTH - 400, 64), 1, border_radius=5)
+                    # Item icon
+                    pygame.draw.rect(self.screen, wc, (215, iy + 10, 44, 44), border_radius=5)
+                    icon_char = "B" if w.weapon_class == "bow" else "X"
+                    it = self.font.render(icon_char, True, (20, 15, 10))
+                    self.screen.blit(it, (237 - it.get_width() // 2, iy + 22))
+                    # Weapon info
+                    nt = self.bigfont.render(w.name, True, wc)
+                    self.screen.blit(nt, (275, iy + 5))
+                    rarity_label = f"[{RARITY_NAMES[w.rarity]}] {w.weapon_class.title()}  Dmg: {w.dmg_min}-{w.dmg_max}  Spd: {w.attack_speed:.1f}"
+                    rt = self.font.render(rarity_label, True, (160, 155, 140))
+                    self.screen.blit(rt, (275, iy + 36))
+                    # Mods summary (compact)
+                    mod_x = WIDTH - 550
+                    for mk, mv in w.mods.items():
+                        if mv:
+                            label = mk.replace("_", " ").title()
+                            mt = self.font.render(f"+{mv} {label}", True, (100, 200, 255))
+                            self.screen.blit(mt, (mod_x, iy + 8))
+                            mod_x += mt.get_width() + 15
+                            if mod_x > WIDTH - 350:
+                                break
+                    # Price
+                    price_color = C_GOLD if can_afford else (160, 60, 60)
+                    pt = self.bigfont.render(f"{price}g", True, price_color)
+                    self.screen.blit(pt, (WIDTH - 300, iy + 15))
+                    if not can_afford:
+                        reason = "Not enough gold" if p.gold < price else "Inventory full"
+                        rt2 = self.font.render(reason, True, (140, 60, 60))
+                        self.screen.blit(rt2, (WIDTH - 300, iy + 42))
+            else:
+                # Sell tab — show player inventory
+                if not p.inventory:
+                    no_inv = self.font.render("Your inventory is empty.", True, (120, 115, 100))
+                    self.screen.blit(no_inv, (WIDTH // 2 - no_inv.get_width() // 2, 250))
+                for i, w in enumerate(p.inventory):
+                    iy = 160 + i * 70 - scroll_sell
+                    if iy < 125 or iy > HEIGHT - 80:
+                        continue
+                    price = self._get_vendor_sell_price(w)
+                    wc = w.get_color()
+                    hovered = 200 <= mx <= WIDTH - 200 and iy <= my <= iy + 64
+                    bg = (35, 30, 22) if hovered else (22, 18, 14)
+                    pygame.draw.rect(self.screen, bg, (200, iy, WIDTH - 400, 64), border_radius=5)
+                    pygame.draw.rect(self.screen, wc if hovered else (50, 45, 35),
+                                     (200, iy, WIDTH - 400, 64), 1, border_radius=5)
+                    # Item icon
+                    pygame.draw.rect(self.screen, wc, (215, iy + 10, 44, 44), border_radius=5)
+                    icon_char = "B" if w.weapon_class == "bow" else "X"
+                    it = self.font.render(icon_char, True, (20, 15, 10))
+                    self.screen.blit(it, (237 - it.get_width() // 2, iy + 22))
+                    # Weapon info
+                    nt = self.bigfont.render(w.name, True, wc)
+                    self.screen.blit(nt, (275, iy + 5))
+                    rarity_label = f"[{RARITY_NAMES[w.rarity]}] {w.weapon_class.title()}  Dmg: {w.dmg_min}-{w.dmg_max}  Spd: {w.attack_speed:.1f}"
+                    rt = self.font.render(rarity_label, True, (160, 155, 140))
+                    self.screen.blit(rt, (275, iy + 36))
+                    # Sell price
+                    pt = self.bigfont.render(f"+{price}g", True, C_GOLD)
+                    self.screen.blit(pt, (WIDTH - 300, iy + 15))
+                    sell_label = self.font.render("Click to sell", True, (180, 170, 120) if hovered else (100, 95, 80))
+                    self.screen.blit(sell_label, (WIDTH - 300, iy + 42))
+
+            # Tooltip for hovered item
+            items_list = v.stock if tab == 0 else p.inventory
+            scroll = scroll_buy if tab == 0 else scroll_sell
+            for i, w in enumerate(items_list):
+                iy = 160 + i * 70 - scroll
+                if 200 <= mx <= WIDTH - 200 and iy <= my <= iy + 64 and 125 < iy < HEIGHT - 80:
+                    self._draw_weapon_tooltip(w, mx + 15, my)
+                    break
+
+            hint = self.font.render("[Tab] Switch Buy/Sell   [Click] Buy or Sell   [Scroll] Navigate   [V/Esc] Close",
+                                    True, (100, 95, 85))
+            self.screen.blit(hint, (WIDTH // 2 - hint.get_width() // 2, HEIGHT - 40))
+
+            pygame.display.flip()
+            self.clock.tick(30)
+
     def game_over(self):
         # Death effects
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
@@ -3773,6 +4147,8 @@ class Game:
                         self._inventory_screen()
                     if event.key == pygame.K_t:
                         self._skill_tree_screen()
+                    if event.key == pygame.K_v and self.show_vendor_hint:
+                        self._vendor_screen()
                     if event.key == pygame.K_F11:
                         self.fullscreen = not self.fullscreen
                         if self.fullscreen:
