@@ -4753,18 +4753,29 @@ class Game:
                                    f"Lost {gold_lost} gold", (200, 80, 80), 1.5)
         else:
             p.lives -= 1
+            # Ensure player is on a valid floor tile (knockback can push into walls)
+            tx, ty = int(p.pos.x // TILE), int(p.pos.y // TILE)
+            if (tx < 0 or tx >= MAP_W or ty < 0 or ty >= MAP_H
+                    or self.dungeon.tiles[tx][ty] != FLOOR
+                    or self._circle_collides(p.pos, p.radius)):
+                # Player is stuck in a wall — find nearest floor tile
+                safe = self._safe_loot_pos(p.pos, 60)
+                p.pos = safe
             # Clear nearby enemies so player doesn't immediately die again
-            safe_dist = 200
+            safe_dist = 250
             self.enemies = [e for e in self.enemies
                             if (e.pos - p.pos).length() > safe_dist or isinstance(e, TreasureGoblin)]
             self.projectiles = [pr for pr in self.projectiles if not pr.hostile]
-        # Restore HP and mana
+        # Restore HP, mana, and reset movement state
         p.hp = p.max_hp()
         p.mana = p.max_mana()
+        p.vel = Vec(0, 0)
         p.iframes = 2.0  # generous invincibility on respawn
         p.shield = 0
         p.dmg_timer = 0
         p.dmg_mult = 1.0
+        p.dash_timer = 0
+        p.dash_cd = 0
         self.play_sound("respawn")
         self.emit_particles(p.pos.x, p.pos.y, 30, (100, 200, 255), speed=80, life=1.0, gravity=-40)
         self.add_floating_text(p.pos.x, p.pos.y - 30,
