@@ -163,6 +163,182 @@ BIOME_PORTAL_COLORS = {
     "icecavern": (100, 180, 255), "swamp": (80, 200, 60),
 }
 
+# ============ D2 ITEM RARITY SYSTEM ============
+RARITY_NORMAL = "normal"
+RARITY_MAGIC = "magic"
+RARITY_RARE = "rare"
+RARITY_UNIQUE = "unique"
+RARITY_SET = "set"
+RARITY_COLORS = {
+    RARITY_NORMAL: (180, 180, 180),    # white/gray
+    RARITY_MAGIC: (100, 100, 255),     # blue
+    RARITY_RARE: (255, 255, 100),      # yellow
+    RARITY_UNIQUE: (180, 140, 60),     # gold/brown
+    RARITY_SET: (0, 220, 0),           # green
+}
+RARITY_NAMES = {
+    RARITY_NORMAL: "Normal", RARITY_MAGIC: "Magic", RARITY_RARE: "Rare",
+    RARITY_UNIQUE: "Unique", RARITY_SET: "Set",
+}
+RARITY_DROP_WEIGHTS = {
+    RARITY_NORMAL: 50, RARITY_MAGIC: 30, RARITY_RARE: 14,
+    RARITY_UNIQUE: 4, RARITY_SET: 2,
+}
+
+# ============ D2 CHARACTER STATS ============
+STAT_POINTS_PER_LEVEL = 5
+SKILL_POINTS_PER_LEVEL = 1
+BASE_STATS = {"strength": 10, "dexterity": 15, "vitality": 12, "energy": 8}
+# What each stat point gives:
+# Strength: +1% melee/bow dmg per pt, +2 carry capacity
+# Dexterity: +1% attack speed, +0.5% crit chance, +1% arrow speed
+# Vitality: +3 max HP, +0.5 HP regen/sec
+# Energy: +4 max Mana, +0.3 mana regen/sec, +1% skill dmg
+
+# ============ D2 BOW & CROSSBOW DATABASE ============
+# Base weapon types: (name, base_dmg_min, base_dmg_max, base_speed, weapon_class)
+# weapon_class: "bow" or "crossbow"
+# crossbows are slower but hit harder, bows are faster
+BOW_BASES = [
+    # --- Bows (faster, less damage) ---
+    ("Short Bow",       3,  7,  2.8, "bow",      1),   # ilvl 1+
+    ("Hunter's Bow",    5, 11,  2.6, "bow",      3),
+    ("Long Bow",        7, 15,  2.4, "bow",      6),
+    ("Composite Bow",  10, 19,  2.3, "bow",      9),
+    ("War Bow",        12, 24,  2.2, "bow",     12),
+    ("Gothic Bow",     15, 30,  2.1, "bow",     16),
+    ("Rune Bow",       20, 38,  2.0, "bow",     20),
+    ("Hydra Bow",      25, 50,  1.9, "bow",     25),
+    # --- Crossbows (slower, more damage) ---
+    ("Light Crossbow",  6, 12,  3.2, "crossbow",  1),
+    ("Crossbow",       10, 20,  3.0, "crossbow",  5),
+    ("Heavy Crossbow", 14, 28,  3.4, "crossbow",  8),
+    ("Repeating Xbow", 12, 22,  2.4, "crossbow", 12),
+    ("Siege Crossbow", 20, 40,  3.6, "crossbow", 16),
+    ("Ballista",       28, 55,  3.8, "crossbow", 22),
+    ("Demon Xbow",     32, 60,  3.0, "crossbow", 26),
+]
+
+# Affixes for magic/rare items
+PREFIXES = [
+    ("Fine",      {"dmg_min": (1, 3), "dmg_max": (2, 5)}),
+    ("Sharp",     {"dmg_max": (3, 8)}),
+    ("Deadly",    {"crit_chance": (3, 8)}),
+    ("Swift",     {"attack_speed": (-0.2, -0.4)}),  # negative = faster
+    ("Sturdy",    {"bonus_hp": (10, 30)}),
+    ("Arcane",    {"bonus_mana": (8, 20)}),
+    ("Vampiric",  {"life_steal": (2, 6)}),
+    ("Frozen",    {"ice_dmg": (3, 10)}),
+    ("Blazing",   {"fire_dmg": (4, 12)}),
+    ("Shocking",  {"lightning_dmg": (3, 14)}),
+    ("Cruel",     {"dmg_min": (3, 6), "dmg_max": (5, 12)}),
+    ("Massive",   {"knockback": (20, 50)}),
+]
+SUFFIXES = [
+    ("of Precision",  {"dexterity": (1, 4)}),
+    ("of Might",      {"strength": (1, 4)}),
+    ("of the Leech",  {"life_steal": (1, 4)}),
+    ("of Speed",      {"attack_speed": (-0.1, -0.3)}),
+    ("of the Titan",  {"bonus_hp": (8, 25)}),
+    ("of Wizardry",   {"bonus_mana": (6, 15), "energy": (1, 3)}),
+    ("of Piercing",   {"pierce": (1, 2)}),
+    ("of Multishot",  {"extra_arrows": (1, 2)}),
+    ("of Flame",      {"fire_dmg": (2, 8)}),
+    ("of Frost",      {"ice_dmg": (2, 8)}),
+    ("of Thunder",    {"lightning_dmg": (2, 10)}),
+    ("of the Fox",    {"vitality": (1, 3)}),
+]
+
+# Unique weapons (hand-crafted)
+UNIQUE_WEAPONS = [
+    {"base": "Long Bow",      "name": "Witherstring",     "rarity": RARITY_UNIQUE,
+     "fixed_mods": {"dmg_min": 5, "dmg_max": 12, "ice_dmg": 8, "life_steal": 4, "bonus_hp": 15}},
+    {"base": "War Bow",       "name": "Eaglehorn",        "rarity": RARITY_UNIQUE,
+     "fixed_mods": {"dmg_min": 8, "dmg_max": 18, "crit_chance": 10, "dexterity": 5, "pierce": 2}},
+    {"base": "Hydra Bow",     "name": "Windforce",        "rarity": RARITY_UNIQUE,
+     "fixed_mods": {"dmg_min": 12, "dmg_max": 25, "knockback": 40, "attack_speed": -0.4, "strength": 4}},
+    {"base": "Rune Bow",      "name": "Lycander's Aim",   "rarity": RARITY_UNIQUE,
+     "fixed_mods": {"dmg_min": 10, "dmg_max": 15, "dexterity": 6, "vitality": 3, "bonus_mana": 15}},
+    {"base": "Heavy Crossbow","name": "Hellrack",         "rarity": RARITY_UNIQUE,
+     "fixed_mods": {"dmg_min": 10, "dmg_max": 22, "fire_dmg": 15, "lightning_dmg": 10, "pierce": 1}},
+    {"base": "Ballista",      "name": "Buriza-Do Kyanon", "rarity": RARITY_UNIQUE,
+     "fixed_mods": {"dmg_min": 15, "dmg_max": 30, "ice_dmg": 20, "pierce": 3, "attack_speed": -0.3}},
+    {"base": "Demon Xbow",    "name": "Gut Siphon",       "rarity": RARITY_UNIQUE,
+     "fixed_mods": {"dmg_min": 18, "dmg_max": 25, "life_steal": 8, "crit_chance": 6, "bonus_hp": 25}},
+    {"base": "Gothic Bow",    "name": "Goldstrike Arch",  "rarity": RARITY_UNIQUE,
+     "fixed_mods": {"dmg_min": 8, "dmg_max": 16, "fire_dmg": 12, "lightning_dmg": 8, "extra_arrows": 1}},
+]
+
+# Set weapons (2 items form partial set)
+SET_WEAPONS = [
+    {"base": "Composite Bow", "name": "Vidala's Barb",    "rarity": RARITY_SET, "set_name": "Vidala's Rig",
+     "fixed_mods": {"dmg_min": 6, "dmg_max": 10, "dexterity": 3, "lightning_dmg": 6}},
+    {"base": "Repeating Xbow","name": "Iratha's Coil",    "rarity": RARITY_SET, "set_name": "Iratha's Finery",
+     "fixed_mods": {"dmg_min": 8, "dmg_max": 12, "fire_dmg": 5, "ice_dmg": 5, "attack_speed": -0.2}},
+    {"base": "Gothic Bow",    "name": "M'avina's Caster", "rarity": RARITY_SET, "set_name": "M'avina's Arsenal",
+     "fixed_mods": {"dmg_min": 10, "dmg_max": 18, "crit_chance": 8, "extra_arrows": 1, "dexterity": 4}},
+]
+
+# ============ SKILL TREE ============
+# Three trees: Bow Skills, Crossbow Skills, Passive Skills
+SKILL_TREES = {
+    "bow": {
+        "name": "Bow Mastery",
+        "skills": [
+            {"id": "rapid_fire",    "name": "Rapid Fire",     "row": 0, "col": 0, "max": 5,
+             "desc": "+8% bow attack speed per level", "req": None},
+            {"id": "power_shot",    "name": "Power Shot",     "row": 0, "col": 2, "max": 5,
+             "desc": "+15% single arrow damage per level", "req": None},
+            {"id": "multishot_up",  "name": "Arrow Spray",    "row": 1, "col": 1, "max": 5,
+             "desc": "+1 arrow per 2 levels in multishot", "req": "rapid_fire"},
+            {"id": "guided_arrow",  "name": "Guided Arrow",   "row": 2, "col": 0, "max": 5,
+             "desc": "+5% arrow homing strength per level", "req": "power_shot"},
+            {"id": "rain_of_arrows","name": "Rain of Arrows", "row": 2, "col": 2, "max": 5,
+             "desc": "RMB shoots upward, arrows rain in area", "req": "multishot_up"},
+            {"id": "strafe",        "name": "Strafe",         "row": 3, "col": 1, "max": 5,
+             "desc": "Hold LMB to auto-target nearby enemies", "req": "guided_arrow"},
+        ]
+    },
+    "crossbow": {
+        "name": "Crossbow Mastery",
+        "skills": [
+            {"id": "bolt_mastery",  "name": "Bolt Mastery",   "row": 0, "col": 0, "max": 5,
+             "desc": "+10% crossbow damage per level", "req": None},
+            {"id": "explosive_bolt","name": "Explosive Bolt", "row": 0, "col": 2, "max": 5,
+             "desc": "Bolts explode on hit for AoE dmg", "req": None},
+            {"id": "piercing_bolt", "name": "Piercing Bolt",  "row": 1, "col": 1, "max": 5,
+             "desc": "+1 pierce per 2 levels", "req": "bolt_mastery"},
+            {"id": "siege_mode",    "name": "Siege Mode",     "row": 2, "col": 0, "max": 5,
+             "desc": "Stand still for +30% dmg per level", "req": "explosive_bolt"},
+            {"id": "volley",        "name": "Volley",         "row": 2, "col": 2, "max": 5,
+             "desc": "RMB fires 3 heavy bolts in a line", "req": "piercing_bolt"},
+            {"id": "immolation",    "name": "Immolation Bolt","row": 3, "col": 1, "max": 5,
+             "desc": "Bolts leave fire trail, +fire dmg", "req": "siege_mode"},
+        ]
+    },
+    "passive": {
+        "name": "Passive & Magic",
+        "skills": [
+            {"id": "critical_eye",  "name": "Critical Eye",   "row": 0, "col": 0, "max": 5,
+             "desc": "+3% critical hit chance per level", "req": None},
+            {"id": "dodge",         "name": "Dodge",           "row": 0, "col": 2, "max": 5,
+             "desc": "+4% chance to avoid damage per level", "req": None},
+            {"id": "inner_sight",   "name": "Inner Sight",    "row": 1, "col": 1, "max": 5,
+             "desc": "+10% light radius, enemies glow", "req": "critical_eye"},
+            {"id": "life_leech",    "name": "Blood Arrows",   "row": 2, "col": 0, "max": 5,
+             "desc": "+2% life steal per level", "req": "dodge"},
+            {"id": "mana_regen",    "name": "Meditation",     "row": 2, "col": 2, "max": 5,
+             "desc": "+15% mana regen per level", "req": "inner_sight"},
+            {"id": "penetrate",     "name": "Penetrate",      "row": 3, "col": 1, "max": 5,
+             "desc": "+10% damage to elites/bosses per level", "req": "life_leech"},
+        ]
+    }
+}
+
+# Inventory grid size
+INV_COLS = 10
+INV_ROWS = 4
+
 Vec = pygame.math.Vector2
 
 # ======================= DATA CLASSES =======================
@@ -211,8 +387,35 @@ class Weapon:
     dmg_max: int
     attack_speed: float
     ranged: bool
+    rarity: str = RARITY_NORMAL
+    weapon_class: str = "bow"  # "bow" or "crossbow"
+    # Affix bonuses (accumulated from prefixes/suffixes)
+    mods: dict = field(default_factory=dict)
+    # Display info
+    base_name: str = ""
+    prefix: str = ""
+    suffix: str = ""
+    set_name: str = ""
+    ilvl: int = 1  # item level
     def roll_damage(self) -> int:
-        return random.randint(self.dmg_min, self.dmg_max)
+        base = random.randint(self.dmg_min, self.dmg_max)
+        base += self.mods.get("fire_dmg", 0) + self.mods.get("ice_dmg", 0) + self.mods.get("lightning_dmg", 0)
+        return base
+    def get_color(self) -> Tuple[int, int, int]:
+        return RARITY_COLORS.get(self.rarity, (180, 180, 180))
+    def get_tooltip_lines(self) -> List[str]:
+        lines = [self.name]
+        lines.append(f"{self.base_name or self.name}  ({self.weapon_class.title()})")
+        lines.append(f"Damage: {self.dmg_min}-{self.dmg_max}")
+        lines.append(f"Speed: {self.attack_speed:.1f}")
+        for k, v in self.mods.items():
+            if v and k not in ("dmg_min", "dmg_max", "attack_speed"):
+                label = k.replace("_", " ").title()
+                if isinstance(v, float):
+                    lines.append(f"  +{v:.1f} {label}")
+                else:
+                    lines.append(f"  +{v} {label}")
+        return lines
 
 @dataclass
 class Loot:
@@ -259,7 +462,8 @@ class Player(Entity):
     potions_mana: int = 1
     basic_cd: float = 0.0
     power_cd: float = 0.0
-    weapon: Weapon = field(default_factory=lambda: Weapon("Wooden Bow", 6, 10, 2.5, True))
+    weapon: Weapon = field(default_factory=lambda: Weapon("Wooden Bow", 6, 10, 2.5, True,
+                                                           weapon_class="bow", base_name="Short Bow"))
     dmg_mult: float = 1.0
     dmg_timer: float = 0.0
     shield: int = 0
@@ -270,6 +474,73 @@ class Player(Entity):
     levelup_flash: float = 0.0
     infusion_type: Optional[str] = None
     infusion_timer: float = 0.0
+    # Character stats (D2 style)
+    strength: int = BASE_STATS["strength"]
+    dexterity: int = BASE_STATS["dexterity"]
+    vitality: int = BASE_STATS["vitality"]
+    energy: int = BASE_STATS["energy"]
+    stat_points: int = 0  # unspent stat points
+    skill_points: int = 0  # unspent skill points
+    skills: dict = field(default_factory=dict)  # skill_id -> level
+    crit_chance: float = 5.0  # base 5% crit
+    # Inventory: list of Weapon items
+    inventory: list = field(default_factory=list)  # List[Weapon], max INV_COLS*INV_ROWS
+
+    def max_hp(self) -> int:
+        base = PLAYER_HP + 10 * self.level + self.vitality * 3
+        base += self.weapon.mods.get("bonus_hp", 0)
+        return base
+
+    def max_mana(self) -> int:
+        base = PLAYER_MANA + 8 * self.level + self.energy * 4
+        base += self.weapon.mods.get("bonus_mana", 0)
+        return base
+
+    def mana_regen(self) -> float:
+        base = MANA_REGEN_RATE + self.energy * 0.3
+        skill_bonus = 1.0 + 0.15 * self.skills.get("mana_regen", 0)
+        return base * skill_bonus
+
+    def calc_crit_chance(self) -> float:
+        c = self.crit_chance + self.dexterity * 0.5
+        c += self.weapon.mods.get("crit_chance", 0)
+        c += self.skills.get("critical_eye", 0) * 3.0
+        return min(c, 75.0)
+
+    def calc_attack_speed_mult(self) -> float:
+        m = 1.0 + self.dexterity * 0.01
+        m += abs(self.weapon.mods.get("attack_speed", 0)) * 0.5
+        if self.weapon.weapon_class == "bow":
+            m += self.skills.get("rapid_fire", 0) * 0.08
+        return m
+
+    def calc_dmg_mult(self) -> float:
+        m = self.dmg_mult + self.strength * 0.01
+        m += self.energy * 0.01
+        if self.weapon.weapon_class == "bow":
+            m += self.skills.get("power_shot", 0) * 0.15
+        elif self.weapon.weapon_class == "crossbow":
+            m += self.skills.get("bolt_mastery", 0) * 0.10
+        return m
+
+    def calc_life_steal(self) -> float:
+        ls = self.weapon.mods.get("life_steal", 0)
+        ls += self.skills.get("life_leech", 0) * 2.0
+        return ls
+
+    def calc_dodge_chance(self) -> float:
+        return self.skills.get("dodge", 0) * 4.0
+
+    def calc_multishot_count(self) -> int:
+        base = MULTISHOT_COUNT + self.weapon.mods.get("extra_arrows", 0)
+        base += self.skills.get("multishot_up", 0) // 2
+        return base
+
+    def calc_pierce(self) -> int:
+        base = BASIC_PIERCE + self.weapon.mods.get("pierce", 0)
+        if self.weapon.weapon_class == "crossbow":
+            base += self.skills.get("piercing_bolt", 0) // 2
+        return base
 
 @dataclass
 class Enemy(Entity):
@@ -487,6 +758,142 @@ class Dungeon:
                 cy = ty * TILE + TILE / 2
                 if (cx - pos.x) ** 2 + (cy - pos.y) ** 2 <= r2:
                     self.seen[tx][ty] = True
+
+# ======================= WEAPON GENERATOR =======================
+def _pick_rarity(depth: int = 1) -> str:
+    """Pick item rarity with depth-scaled chances (higher depth = better drops)."""
+    weights = dict(RARITY_DROP_WEIGHTS)
+    # Slightly increase rare/unique/set at higher depths
+    bonus = min(depth * 0.5, 15)
+    weights[RARITY_MAGIC] += bonus * 0.6
+    weights[RARITY_RARE] += bonus * 0.4
+    weights[RARITY_UNIQUE] += bonus * 0.15
+    weights[RARITY_SET] += bonus * 0.1
+    total = sum(weights.values())
+    roll = random.random() * total
+    cumulative = 0
+    for rarity, w in weights.items():
+        cumulative += w
+        if roll <= cumulative:
+            return rarity
+    return RARITY_NORMAL
+
+def _get_base_for_depth(depth: int) -> Tuple:
+    """Pick an appropriate base weapon for the current dungeon depth."""
+    eligible = [b for b in BOW_BASES if b[5] <= depth + 3]
+    if not eligible:
+        eligible = BOW_BASES[:2]
+    # Weight toward higher-level bases
+    weights = [1.0 + max(0, depth - b[5]) * 0.5 for b in eligible]
+    return random.choices(eligible, weights=weights, k=1)[0]
+
+def generate_weapon(depth: int = 1, force_rarity: Optional[str] = None) -> Weapon:
+    """Generate a random weapon with D2-style rarity and affixes."""
+    rarity = force_rarity or _pick_rarity(depth)
+    base = _get_base_for_depth(depth)
+    bname, bdmin, bdmax, bspd, bclass, bilvl = base
+
+    # Scale base damage slightly with depth
+    scale = 1.0 + max(0, depth - bilvl) * 0.06
+    dmg_min = int(bdmin * scale)
+    dmg_max = int(bdmax * scale)
+    speed = bspd
+    mods = {}
+    prefix_name = ""
+    suffix_name = ""
+    display_name = bname
+    set_name_str = ""
+
+    if rarity == RARITY_UNIQUE:
+        # Pick a matching unique if possible
+        eligible_uniques = [u for u in UNIQUE_WEAPONS if u["base"] == bname]
+        if not eligible_uniques:
+            eligible_uniques = UNIQUE_WEAPONS
+        u = random.choice(eligible_uniques)
+        display_name = u["name"]
+        bname = u["base"]
+        mods = dict(u["fixed_mods"])
+        dmg_min += mods.pop("dmg_min", 0)
+        dmg_max += mods.pop("dmg_max", 0)
+        speed += mods.pop("attack_speed", 0)
+
+    elif rarity == RARITY_SET:
+        eligible_sets = [s for s in SET_WEAPONS if s["base"] == bname]
+        if not eligible_sets:
+            eligible_sets = SET_WEAPONS
+        sw = random.choice(eligible_sets)
+        display_name = sw["name"]
+        bname = sw["base"]
+        set_name_str = sw.get("set_name", "")
+        mods = dict(sw["fixed_mods"])
+        dmg_min += mods.pop("dmg_min", 0)
+        dmg_max += mods.pop("dmg_max", 0)
+        speed += mods.pop("attack_speed", 0)
+
+    elif rarity == RARITY_RARE:
+        # 2 prefixes + 1 suffix (or 1+2)
+        num_pre = random.choice([1, 2])
+        num_suf = 3 - num_pre
+        chosen_pre = random.sample(PREFIXES, min(num_pre, len(PREFIXES)))
+        chosen_suf = random.sample(SUFFIXES, min(num_suf, len(SUFFIXES)))
+        # Build rare name: random fantasy name
+        rare_names = ["Doom", "Storm", "Shadow", "Blood", "Soul", "Bone", "Wrath",
+                      "Raven", "Wolf", "Viper", "Drake", "Grim", "Death", "Iron"]
+        rare_suffixes = ["bane", "mark", "song", "fury", "strike", "gaze", "fang",
+                         "claw", "horn", "bite", "wind", "fire", "bringer", "slayer"]
+        display_name = random.choice(rare_names) + random.choice(rare_suffixes)
+        for pname, pmod in chosen_pre:
+            for mk, (lo, hi) in pmod.items():
+                val = random.uniform(lo, hi) if isinstance(lo, float) else random.randint(lo, hi)
+                mods[mk] = mods.get(mk, 0) + val
+        for sname, smod in chosen_suf:
+            for mk, (lo, hi) in smod.items():
+                val = random.uniform(lo, hi) if isinstance(lo, float) else random.randint(lo, hi)
+                mods[mk] = mods.get(mk, 0) + val
+        dmg_min += int(mods.pop("dmg_min", 0))
+        dmg_max += int(mods.pop("dmg_max", 0))
+        speed += mods.pop("attack_speed", 0)
+
+    elif rarity == RARITY_MAGIC:
+        # 1 prefix and/or 1 suffix
+        has_pre = random.random() < 0.7
+        has_suf = random.random() < 0.7 if has_pre else True
+        if not has_pre and not has_suf:
+            has_pre = True
+        if has_pre:
+            pname, pmod = random.choice(PREFIXES)
+            prefix_name = pname
+            for mk, (lo, hi) in pmod.items():
+                val = random.uniform(lo, hi) if isinstance(lo, float) else random.randint(lo, hi)
+                mods[mk] = mods.get(mk, 0) + val
+        if has_suf:
+            sname, smod = random.choice(SUFFIXES)
+            suffix_name = sname
+            for mk, (lo, hi) in smod.items():
+                val = random.uniform(lo, hi) if isinstance(lo, float) else random.randint(lo, hi)
+                mods[mk] = mods.get(mk, 0) + val
+        dmg_min += int(mods.pop("dmg_min", 0))
+        dmg_max += int(mods.pop("dmg_max", 0))
+        speed += mods.pop("attack_speed", 0)
+        display_name = f"{prefix_name} {bname} {suffix_name}".strip()
+
+    # Clamp values
+    speed = max(0.5, speed)
+    dmg_min = max(1, dmg_min)
+    dmg_max = max(dmg_min + 1, dmg_max)
+    # Round float mods
+    for k in list(mods.keys()):
+        if isinstance(mods[k], float):
+            mods[k] = round(mods[k], 1)
+
+    return Weapon(
+        name=display_name, dmg_min=dmg_min, dmg_max=dmg_max,
+        attack_speed=round(speed, 2), ranged=True,
+        rarity=rarity, weapon_class=bclass, mods=mods,
+        base_name=bname, prefix=prefix_name, suffix=suffix_name,
+        set_name=set_name_str, ilvl=depth
+    )
+
 
 # ======================= GAME =======================
 class Game:
@@ -871,7 +1278,7 @@ class Game:
         small = self.font
         title_font = self.titlefont
         options = ["Easy", "Normal", "Hard"]
-        descs = ["For the cautious adventurer", "The true dungeon experience", "Embrace suffering and death"]
+        descs = ["For the cautious", "The true experience", "Embrace death"]
         idx = 1
         selecting = True
         t = 0.0
@@ -961,7 +1368,7 @@ class Game:
             # Bottom decorative line
             bot_y = HEIGHT - 140
             pygame.draw.line(screen, (50, 45, 35), (200, bot_y), (WIDTH - 200, bot_y), 1)
-            ver = small.render("Dungeon of the Damned v5.0", True, (60, 55, 45))
+            ver = small.render("Dungeon of the Damned v6.0", True, (60, 55, 45))
             screen.blit(ver, (WIDTH // 2 - ver.get_width() // 2, bot_y + 20))
 
             pygame.display.flip()
@@ -1197,15 +1604,9 @@ class Game:
 
         # Weapon
         if random.random() < CHEST_WEAPON_CHANCE:
-            tier = self.current_level
-            weapons = [
-                Weapon("Longbow", 8 + tier * 2, 14 + tier * 2, 2.2, True),
-                Weapon("Composite Bow", 10 + tier * 2, 16 + tier * 3, 2.0, True),
-                Weapon("War Bow", 12 + tier * 2, 20 + tier * 2, 2.4, True),
-                Weapon("Elven Bow", 9 + tier * 3, 18 + tier * 3, 1.8, True),
-            ]
+            w = generate_weapon(self.current_level)
             self.loots.append(Loot(pos=chest.pos + Vec(random.uniform(-8, 8), random.uniform(-8, 8)),
-                                   weapon=random.choice(weapons)))
+                                   weapon=w))
 
         # Boost pickups
         if random.random() < CHEST_BOOST_CHANCE:
@@ -1263,49 +1664,62 @@ class Game:
             self.shoot_power(aim_dir)
 
         # Potions
-        if keys[pygame.K_q] and self.player.potions_hp > 0 and self.player.hp < PLAYER_HP:
-            self.player.hp = min(PLAYER_HP + 10 * self.player.level, self.player.hp + POTION_HEAL)
+        if keys[pygame.K_q] and self.player.potions_hp > 0 and self.player.hp < self.player.max_hp():
+            self.player.hp = min(self.player.max_hp(), self.player.hp + POTION_HEAL)
             self.player.potions_hp -= 1
             self.emit_particles(self.player.pos.x, self.player.pos.y, 10, (100, 220, 100), speed=40, life=0.6, gravity=-60)
             self.add_floating_text(self.player.pos.x, self.player.pos.y - 20, f"+{POTION_HEAL}", (100, 255, 100))
-        if keys[pygame.K_e] and self.player.potions_mana > 0 and self.player.mana < PLAYER_MANA:
-            self.player.mana = min(PLAYER_MANA + 8 * self.player.level, self.player.mana + POTION_MANA)
+        if keys[pygame.K_e] and self.player.potions_mana > 0 and self.player.mana < self.player.max_mana():
+            self.player.mana = min(self.player.max_mana(), self.player.mana + POTION_MANA)
             self.player.potions_mana -= 1
             self.emit_particles(self.player.pos.x, self.player.pos.y, 10, C_MANA_LIGHT, speed=40, life=0.6, gravity=-60)
 
     # ---- Combat ----
     def shoot_basic(self, direction: Vec):
-        self.player.basic_cd = BASIC_CD
-        base = random.randint(*BASIC_DMG)
-        dmg = int(base * self.player.dmg_mult)
+        p = self.player
+        spd_mult = p.calc_attack_speed_mult()
+        self.player.basic_cd = BASIC_CD / spd_mult
+        base = p.weapon.roll_damage()
+        dmg = int(base * p.calc_dmg_mult())
+        # Critical hit
+        if random.random() * 100 < p.calc_crit_chance():
+            dmg = int(dmg * 1.8)
+            self.add_floating_text(p.pos.x, p.pos.y - 30, "CRIT!", (255, 255, 100), 0.8)
         ang = math.atan2(direction.y, direction.x)
-        proj = Projectile(pos=self.player.pos + direction * 20, vel=direction * PROJECTILE_SPEED,
-                          dmg=dmg, ttl=0.9, radius=BASIC_RADIUS, pierce=BASIC_PIERCE,
-                          is_arrow=True, angle=ang, infusion=self.player.infusion_type)
+        arrow_speed = PROJECTILE_SPEED * (1.0 + p.dexterity * 0.01)
+        proj = Projectile(pos=p.pos + direction * 20, vel=direction * arrow_speed,
+                          dmg=dmg, ttl=0.9, radius=BASIC_RADIUS, pierce=p.calc_pierce(),
+                          is_arrow=True, angle=ang, infusion=p.infusion_type)
         self.projectiles.append(proj)
         self.play_sound("arrow")
-        # Bowstring twang particles
-        self.emit_particles(self.player.pos.x + direction.x * 18,
-                            self.player.pos.y + direction.y * 18,
+        self.emit_particles(p.pos.x + direction.x * 18, p.pos.y + direction.y * 18,
                             3, (180, 160, 120), speed=40, life=0.25, gravity=0)
 
     def shoot_power(self, direction: Vec):
-        self.player.power_cd = POWER_CD
+        p = self.player
+        spd_mult = p.calc_attack_speed_mult()
+        self.player.power_cd = POWER_CD / spd_mult
         self.player.mana -= POWER_MANA_COST
-        base = random.randint(*POWER_DMG)
-        dmg = int(base * self.player.dmg_mult)
+        base = p.weapon.roll_damage()
+        dmg = int(base * p.calc_dmg_mult() * 1.3)
+        is_crit = random.random() * 100 < p.calc_crit_chance()
+        if is_crit:
+            dmg = int(dmg * 1.8)
         base_angle = math.atan2(direction.y, direction.x)
-        # Multishot fan of arrows
-        for i in range(MULTISHOT_COUNT):
-            offset = (i - MULTISHOT_COUNT // 2) * (MULTISHOT_SPREAD / max(1, MULTISHOT_COUNT - 1))
+        arrow_count = p.calc_multishot_count()
+        arrow_speed = PROJECTILE_SPEED * 0.92 * (1.0 + p.dexterity * 0.01)
+        for i in range(arrow_count):
+            offset = (i - arrow_count // 2) * (MULTISHOT_SPREAD / max(1, arrow_count - 1))
             a = base_angle + offset
             arrow_dir = Vec(math.cos(a), math.sin(a))
-            proj = Projectile(pos=self.player.pos + arrow_dir * 22,
-                              vel=arrow_dir * PROJECTILE_SPEED * 0.92,
-                              dmg=dmg, ttl=1.0, radius=BASIC_RADIUS, pierce=BASIC_PIERCE,
-                              is_arrow=True, angle=a, infusion=self.player.infusion_type)
+            proj = Projectile(pos=p.pos + arrow_dir * 22,
+                              vel=arrow_dir * arrow_speed,
+                              dmg=dmg, ttl=1.0, radius=BASIC_RADIUS, pierce=p.calc_pierce(),
+                              is_arrow=True, angle=a, infusion=p.infusion_type)
             self.projectiles.append(proj)
-        self.emit_particles(self.player.pos.x, self.player.pos.y, 8,
+        if is_crit:
+            self.add_floating_text(p.pos.x, p.pos.y - 30, "CRIT!", (255, 255, 100), 0.8)
+        self.emit_particles(p.pos.x, p.pos.y, 8,
                             (180, 200, 220), speed=60, life=0.4, gravity=0)
         self.add_screen_shake(2)
         self.play_sound("multishot")
@@ -1319,9 +1733,9 @@ class Game:
         p.iframes = max(0.0, p.iframes - dt)
         p.levelup_flash = max(0.0, p.levelup_flash - dt)
         # Passive mana regeneration
-        max_mana = PLAYER_MANA + 8 * p.level
+        max_mana = p.max_mana()
         if p.mana < max_mana:
-            p.mana = min(max_mana, p.mana + MANA_REGEN_RATE * dt)
+            p.mana = min(max_mana, p.mana + p.mana_regen() * dt)
         # Infusion timer
         if p.infusion_timer > 0:
             p.infusion_timer -= dt
@@ -1516,17 +1930,21 @@ class Game:
             # Touch damage
             if (e.pos - p.pos).length() < e.radius + p.radius and p.iframes <= 0:
                 if random.random() < 0.02:
-                    dmg = e.roll_damage()
-                    if p.shield > 0:
-                        absorb = min(p.shield, dmg)
-                        p.shield -= absorb
-                        dmg -= absorb
-                    if dmg > 0:
-                        p.hp -= dmg
-                        self.add_floating_text(p.pos.x, p.pos.y - 20, f"-{dmg}", (255, 60, 60), 1.2)
-                        self.add_screen_shake(4)
-                        self.emit_blood(p.pos.x, p.pos.y, 6)
-                        self.play_sound("hurt")
+                    # Dodge check
+                    if random.random() * 100 < p.calc_dodge_chance():
+                        self.add_floating_text(p.pos.x, p.pos.y - 20, "DODGE!", (140, 255, 140), 0.8)
+                    else:
+                        dmg = e.roll_damage()
+                        if p.shield > 0:
+                            absorb = min(p.shield, dmg)
+                            p.shield -= absorb
+                            dmg -= absorb
+                        if dmg > 0:
+                            p.hp -= dmg
+                            self.add_floating_text(p.pos.x, p.pos.y - 20, f"-{dmg}", (255, 60, 60), 1.2)
+                            self.add_screen_shake(4)
+                            self.emit_blood(p.pos.x, p.pos.y, 6)
+                            self.play_sound("hurt")
                     kb = (p.pos - e.pos).normalize() * 150
                     p.pos += kb * dt
             e.knockback = max(0.0, e.knockback - 200 * dt)
@@ -1557,6 +1975,11 @@ class Game:
                 continue
             if pr.hostile:
                 if (self.player.pos - pr.pos).length() < self.player.radius + pr.radius and self.player.iframes <= 0:
+                    # Dodge check
+                    if random.random() * 100 < self.player.calc_dodge_chance():
+                        self.add_floating_text(self.player.pos.x, self.player.pos.y - 20, "DODGE!", (140, 255, 140), 0.8)
+                        pr.ttl = 0
+                        continue
                     dmg = pr.dmg
                     if self.player.shield > 0:
                         absorb = min(self.player.shield, dmg)
@@ -1613,6 +2036,11 @@ class Game:
                                                scale=1.3 if damage > 20 else 1.0)
                         self.emit_blood(e.pos.x, e.pos.y, 4)
                         self.play_sound("hit")
+                        # Life steal
+                        ls = self.player.calc_life_steal()
+                        if ls > 0:
+                            heal = max(1, int(damage * ls / 100))
+                            self.player.hp = min(self.player.max_hp(), self.player.hp + heal)
                         if pr.infusion == "lightning":
                             self.play_sound("zap")
                         if damage > 15:
@@ -1659,8 +2087,22 @@ class Game:
                     self.player.potions_mana += 1
                     self.play_sound("pickup")
                 if l.weapon:
-                    self.player.weapon = l.weapon
-                    self.add_floating_text(l.pos.x, l.pos.y - 10, "New Weapon!", (255, 200, 80), 1.2)
+                    wc = l.weapon.get_color()
+                    # Auto-equip if better, otherwise add to inventory
+                    old_avg = (self.player.weapon.dmg_min + self.player.weapon.dmg_max) / 2
+                    new_avg = (l.weapon.dmg_min + l.weapon.dmg_max) / 2
+                    if new_avg > old_avg:
+                        # Stash old weapon in inventory
+                        if len(self.player.inventory) < INV_COLS * INV_ROWS:
+                            self.player.inventory.append(self.player.weapon)
+                        self.player.weapon = l.weapon
+                        self.add_floating_text(l.pos.x, l.pos.y - 10, l.weapon.name, wc, 1.5)
+                    else:
+                        if len(self.player.inventory) < INV_COLS * INV_ROWS:
+                            self.player.inventory.append(l.weapon)
+                            self.add_floating_text(l.pos.x, l.pos.y - 10, f"[Inv] {l.weapon.name}", wc, 1.2)
+                        else:
+                            self.add_floating_text(l.pos.x, l.pos.y - 10, "Inventory Full!", (200, 60, 60), 1.0)
                     self.play_sound("pickup")
                 if l.dmg_boost:
                     self.player.dmg_mult = DMG_BOOST_MULT
@@ -1691,8 +2133,10 @@ class Game:
             self.player.xp -= self.player.xp_to_next
             self.player.level += 1
             self.player.xp_to_next = int(self.player.xp_to_next * 1.35)
-            self.player.hp = min(PLAYER_HP + 10 * self.player.level, self.player.hp + 30)
-            self.player.mana = min(PLAYER_MANA + 8 * self.player.level, self.player.mana + 20)
+            self.player.hp = min(self.player.max_hp(), self.player.hp + 30)
+            self.player.mana = min(self.player.max_mana(), self.player.mana + 20)
+            self.player.stat_points += STAT_POINTS_PER_LEVEL
+            self.player.skill_points += SKILL_POINTS_PER_LEVEL
         if self.player.level > old_level:
             self.player.levelup_flash = 2.0
             self.add_floating_text(self.player.pos.x, self.player.pos.y - 30, "LEVEL UP!", C_GOLD, 1.5)
@@ -1748,14 +2192,13 @@ class Game:
             potion = random.choice(["hp", "mana"])
             drops.append(Loot(pos=e.pos.copy(), potion_hp=(potion == "hp"), potion_mana=(potion == "mana")))
         if random.random() < LOOT_DROP_CHANCE:
-            tier = self.current_level
-            bows = [
-                Weapon("Longbow", 8 + tier * 2, 14 + tier * 2, 2.2, True),
-                Weapon("Composite Bow", 10 + tier * 2, 16 + tier * 3, 2.0, True),
-                Weapon("War Bow", 12 + tier * 2, 20 + tier * 2, 2.4, True),
-                Weapon("Elven Bow", 9 + tier * 3, 18 + tier * 3, 1.8, True),
-            ]
-            drops.append(Loot(pos=e.pos.copy(), weapon=random.choice(bows)))
+            # Higher rarity chance from elites/bosses
+            force = None
+            if isinstance(e, Boss):
+                force = random.choice([RARITY_RARE, RARITY_UNIQUE, RARITY_SET])
+            elif isinstance(e, Elite):
+                force = RARITY_MAGIC if random.random() < 0.5 else RARITY_RARE
+            drops.append(Loot(pos=e.pos.copy(), weapon=generate_weapon(self.current_level, force)))
         if random.random() < DMG_PICKUP_DROP_CHANCE:
             drops.append(Loot(pos=e.pos.copy(), dmg_boost=True))
         if random.random() < SHIELD_PICKUP_DROP_CHANCE:
@@ -2084,9 +2527,15 @@ class Game:
             # glow under loot
             glow_alpha = int(30 + 15 * math.sin(l.bob_phase * 1.5))
             if l.weapon:
-                pygame.draw.circle(s, (glow_alpha + 20, glow_alpha + 10, 0), (vx, vy), 17)
-                pygame.draw.rect(s, (255, 225, 120), (vx - 8, vy - 8, 16, 16), border_radius=3)
-                pygame.draw.rect(s, (200, 170, 60), (vx - 8, vy - 8, 16, 16), 1, border_radius=3)
+                wc = l.weapon.get_color()
+                glow_c = (min(255, wc[0]//2 + glow_alpha), min(255, wc[1]//2 + glow_alpha), min(255, wc[2]//2))
+                pygame.draw.circle(s, glow_c, (vx, vy), 17)
+                pygame.draw.rect(s, wc, (vx - 8, vy - 8, 16, 16), border_radius=3)
+                pygame.draw.rect(s, (min(255, wc[0]+40), min(255, wc[1]+40), min(255, wc[2]+40)),
+                                 (vx - 8, vy - 8, 16, 16), 1, border_radius=3)
+                # Weapon name label with rarity color
+                wlabel = self.font.render(l.weapon.name, True, wc)
+                s.blit(wlabel, (vx - wlabel.get_width() // 2, vy - 22))
             elif l.potion_hp:
                 pygame.draw.circle(s, (glow_alpha, 0, 0), (vx, vy), 14)
                 pygame.draw.rect(s, (200, 40, 40), (vx - 7, vy - 7, 14, 14), border_radius=4)
@@ -2632,8 +3081,8 @@ class Game:
     # ---- Diablo-style UI ----
     def _draw_ui(self, s):
         p = self.player
-        max_hp = PLAYER_HP + 10 * p.level
-        max_mana = PLAYER_MANA + 8 * p.level
+        max_hp = p.max_hp()
+        max_mana = p.max_mana()
 
         # Bottom panel background
         panel_h = 100
@@ -2709,6 +3158,21 @@ class Game:
         gold_txt = self.font.render(f"Gold: {p.gold}", True, C_GOLD)
         s.blit(gold_txt, (140, HEIGHT - panel_h + 12))
 
+        # Weapon name with rarity color
+        wc = p.weapon.get_color()
+        wname_txt = self.font.render(f"{p.weapon.name} ({p.weapon.dmg_min}-{p.weapon.dmg_max})", True, wc)
+        s.blit(wname_txt, (WIDTH // 2 - wname_txt.get_width() // 2, HEIGHT - panel_h - 22))
+
+        # Stat point / skill point indicators
+        if p.stat_points > 0 or p.skill_points > 0:
+            notify_parts = []
+            if p.stat_points > 0:
+                notify_parts.append(f"[C] {p.stat_points} stat pts")
+            if p.skill_points > 0:
+                notify_parts.append(f"[T] {p.skill_points} skill pts")
+            notify_txt = self.font.render("  ".join(notify_parts), True, C_GOLD)
+            s.blit(notify_txt, (WIDTH // 2 - notify_txt.get_width() // 2, HEIGHT - panel_h - 42))
+
         # Active buffs
         buff_x = 140
         buff_y = HEIGHT - panel_h + 40
@@ -2734,7 +3198,7 @@ class Game:
         s.blit(info, (16, 12))
         wave_txt = self.font.render(f"Next wave: {self.spawn_timer:.1f}s", True, (140, 135, 120))
         s.blit(wave_txt, (16, 32))
-        hint = self.font.render("P=Pause  F1=Help", True, (90, 85, 75))
+        hint = self.font.render("C=Stats  I=Inventory  T=Skills  F1=Help", True, (90, 85, 75))
         s.blit(hint, (16, 52))
 
     def _draw_globe(self, s, cx, cy, r, frac, empty_color, fill_color, highlight_color, frame_color):
@@ -2801,6 +3265,9 @@ class Game:
             ("Right Click", "Multishot (fan of arrows, costs mana)"),
             ("Q / E", "Use HP / Mana Potion"),
             ("Left Shift", "Dash (grants invulnerability)"),
+            ("C", "Character Stats (allocate stat points)"),
+            ("I", "Inventory (equip/sell weapons)"),
+            ("T", "Skill Tree (spend skill points)"),
             ("F11", "Toggle Fullscreen"),
             ("P", "Pause"),
             ("Esc", "Quit"),
@@ -2830,6 +3297,414 @@ class Game:
                 if e.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN, pygame.QUIT):
                     waiting = False
 
+    # ---- CHARACTER STATS SCREEN (C key) ----
+    def _character_screen(self):
+        """D2-style character stat allocation screen."""
+        p = self.player
+        stats = ["strength", "dexterity", "vitality", "energy"]
+        stat_labels = {"strength": "Strength", "dexterity": "Dexterity",
+                       "vitality": "Vitality", "energy": "Energy"}
+        stat_colors = {"strength": (255, 140, 140), "dexterity": (140, 255, 140),
+                       "vitality": (255, 200, 100), "energy": (140, 180, 255)}
+        stat_desc = {
+            "strength": "+1% damage per point",
+            "dexterity": "+1% attack speed, +0.5% crit, +1% arrow speed",
+            "vitality": "+3 max HP, +0.5 HP regen per point",
+            "energy": "+4 max Mana, +0.3 mana regen, +1% skill dmg",
+        }
+        selected = 0
+        running = True
+        while running:
+            for ev in pygame.event.get():
+                if ev.type == pygame.QUIT:
+                    self.running = False
+                    return
+                if ev.type == pygame.KEYDOWN:
+                    if ev.key in (pygame.K_c, pygame.K_ESCAPE):
+                        running = False
+                    elif ev.key in (pygame.K_w, pygame.K_UP):
+                        selected = (selected - 1) % len(stats)
+                    elif ev.key in (pygame.K_s, pygame.K_DOWN):
+                        selected = (selected + 1) % len(stats)
+                    elif ev.key in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_RIGHT, pygame.K_d):
+                        if p.stat_points > 0:
+                            setattr(p, stats[selected], getattr(p, stats[selected]) + 1)
+                            p.stat_points -= 1
+                            self.play_sound("pickup")
+                if ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
+                    mx, my = ev.pos
+                    for i, st in enumerate(stats):
+                        btn_x = WIDTH // 2 + 180
+                        btn_y = 240 + i * 80
+                        if btn_x <= mx <= btn_x + 28 and btn_y <= my <= btn_y + 28 and p.stat_points > 0:
+                            setattr(p, st, getattr(p, st) + 1)
+                            p.stat_points -= 1
+                            self.play_sound("pickup")
+
+            # Draw
+            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 230))
+            self.screen.blit(overlay, (0, 0))
+
+            title = self.bigfont.render("- CHARACTER STATS -", True, C_GOLD)
+            self.screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 60))
+            pygame.draw.line(self.screen, C_GOTHIC_FRAME,
+                             (WIDTH // 2 - 200, 95), (WIDTH // 2 + 200, 95), 1)
+
+            # Level and points
+            lvl_txt = self.font.render(f"Level {p.level}   Stat Points: {p.stat_points}", True, C_GOLD)
+            self.screen.blit(lvl_txt, (WIDTH // 2 - lvl_txt.get_width() // 2, 110))
+
+            # Stats
+            for i, st in enumerate(stats):
+                y = 240 + i * 80
+                color = stat_colors[st]
+                is_sel = i == selected
+                # Highlight
+                if is_sel:
+                    pygame.draw.rect(self.screen, (40, 35, 25),
+                                     (WIDTH // 2 - 250, y - 8, 500, 65), border_radius=5)
+                    pygame.draw.rect(self.screen, color,
+                                     (WIDTH // 2 - 250, y - 8, 500, 65), 1, border_radius=5)
+
+                val = getattr(p, st)
+                name_txt = self.bigfont.render(f"{stat_labels[st]}: {val}", True, color)
+                self.screen.blit(name_txt, (WIDTH // 2 - 220, y))
+                desc_txt = self.font.render(stat_desc[st], True, (140, 135, 120))
+                self.screen.blit(desc_txt, (WIDTH // 2 - 220, y + 34))
+
+                # + button
+                if p.stat_points > 0:
+                    btn_x = WIDTH // 2 + 180
+                    pygame.draw.rect(self.screen, (60, 120, 60), (btn_x, y, 28, 28), border_radius=4)
+                    pygame.draw.rect(self.screen, (100, 200, 100), (btn_x, y, 28, 28), 1, border_radius=4)
+                    plus = self.font.render("+", True, (200, 255, 200))
+                    self.screen.blit(plus, (btn_x + 7, y + 2))
+
+            # Derived stats
+            y = 580
+            derived = [
+                f"Max HP: {p.max_hp()}",
+                f"Max Mana: {p.max_mana()}",
+                f"Crit Chance: {p.calc_crit_chance():.1f}%",
+                f"Attack Speed: {p.calc_attack_speed_mult():.2f}x",
+                f"Damage Mult: {p.calc_dmg_mult():.2f}x",
+                f"Life Steal: {p.calc_life_steal():.1f}%",
+                f"Dodge: {p.calc_dodge_chance():.1f}%",
+                f"Mana Regen: {p.mana_regen():.1f}/s",
+                f"Pierce: {p.calc_pierce()}",
+                f"Multishot: {p.calc_multishot_count()} arrows",
+            ]
+            dtitle = self.font.render("Derived Stats:", True, (180, 170, 140))
+            self.screen.blit(dtitle, (WIDTH // 2 - 220, y))
+            y += 28
+            for j, d in enumerate(derived):
+                col = j % 2
+                row = j // 2
+                dx = WIDTH // 2 - 220 + col * 280
+                dy = y + row * 24
+                dt = self.font.render(d, True, (160, 155, 140))
+                self.screen.blit(dt, (dx, dy))
+
+            hint = self.font.render("[W/S] Select   [Enter/D/Click +] Add Point   [C/Esc] Close", True, (100, 95, 85))
+            self.screen.blit(hint, (WIDTH // 2 - hint.get_width() // 2, HEIGHT - 60))
+
+            pygame.display.flip()
+            self.clock.tick(30)
+
+    # ---- INVENTORY SCREEN (I key) ----
+    def _inventory_screen(self):
+        """D2-style inventory with equipped weapon and grid."""
+        p = self.player
+        cell_w, cell_h = 60, 60
+        grid_x = WIDTH // 2 - (INV_COLS * cell_w) // 2
+        grid_y = 360
+        selected = -1  # -1 = equipped, 0+ = inventory slot
+        scroll = 0
+        running = True
+        while running:
+            mx, my = pygame.mouse.get_pos()
+            for ev in pygame.event.get():
+                if ev.type == pygame.QUIT:
+                    self.running = False
+                    return
+                if ev.type == pygame.KEYDOWN:
+                    if ev.key in (pygame.K_i, pygame.K_ESCAPE):
+                        running = False
+                if ev.type == pygame.MOUSEBUTTONDOWN:
+                    if ev.button == 1:  # Left click - equip
+                        for idx in range(len(p.inventory)):
+                            row = idx // INV_COLS
+                            col = idx % INV_COLS
+                            cx = grid_x + col * cell_w
+                            cy = grid_y + row * cell_h
+                            if cx <= mx <= cx + cell_w and cy <= my <= cy + cell_h:
+                                # Swap with equipped
+                                old = p.weapon
+                                p.weapon = p.inventory[idx]
+                                p.inventory[idx] = old
+                                self.play_sound("pickup")
+                                self.add_floating_text(p.pos.x, p.pos.y - 20,
+                                                       f"Equipped {p.weapon.name}", p.weapon.get_color(), 1.0)
+                    elif ev.button == 3:  # Right click - sell for gold
+                        for idx in range(len(p.inventory)):
+                            row = idx // INV_COLS
+                            col = idx % INV_COLS
+                            cx = grid_x + col * cell_w
+                            cy = grid_y + row * cell_h
+                            if cx <= mx <= cx + cell_w and cy <= my <= cy + cell_h:
+                                sell_price = max(1, (p.inventory[idx].dmg_min + p.inventory[idx].dmg_max) // 2)
+                                rarity_mult = {RARITY_NORMAL: 1, RARITY_MAGIC: 2, RARITY_RARE: 4,
+                                               RARITY_UNIQUE: 8, RARITY_SET: 6}
+                                sell_price *= rarity_mult.get(p.inventory[idx].rarity, 1)
+                                p.gold += sell_price
+                                self.add_floating_text(p.pos.x, p.pos.y - 20,
+                                                       f"+{sell_price}g (sold)", C_GOLD, 1.0)
+                                p.inventory.pop(idx)
+                                self.play_sound("gold")
+                                break
+
+            # Draw
+            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 230))
+            self.screen.blit(overlay, (0, 0))
+
+            title = self.bigfont.render("- INVENTORY -", True, C_GOLD)
+            self.screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 40))
+            pygame.draw.line(self.screen, C_GOTHIC_FRAME,
+                             (WIDTH // 2 - 160, 75), (WIDTH // 2 + 160, 75), 1)
+
+            # Equipped weapon display
+            eq_x = WIDTH // 2 - 250
+            eq_y = 100
+            self.screen.blit(self.font.render("Equipped:", True, (180, 170, 140)), (eq_x, eq_y))
+            w = p.weapon
+            wc = w.get_color()
+            pygame.draw.rect(self.screen, (30, 25, 20), (eq_x, eq_y + 28, 500, 120), border_radius=6)
+            pygame.draw.rect(self.screen, wc, (eq_x, eq_y + 28, 500, 120), 2, border_radius=6)
+            name_txt = self.bigfont.render(w.name, True, wc)
+            self.screen.blit(name_txt, (eq_x + 15, eq_y + 35))
+            rarity_txt = self.font.render(f"[{RARITY_NAMES[w.rarity]}] {w.weapon_class.title()}", True, wc)
+            self.screen.blit(rarity_txt, (eq_x + 15, eq_y + 65))
+            dmg_txt = self.font.render(f"Damage: {w.dmg_min}-{w.dmg_max}   Speed: {w.attack_speed:.1f}", True, (200, 190, 160))
+            self.screen.blit(dmg_txt, (eq_x + 15, eq_y + 90))
+            # Show mods
+            mod_x = eq_x + 280
+            mod_y = eq_y + 65
+            for mk, mv in w.mods.items():
+                if mv:
+                    label = mk.replace("_", " ").title()
+                    mod_color = (100, 200, 255) if mk.endswith("_dmg") else (200, 200, 140)
+                    mt = self.font.render(f"+{mv} {label}", True, mod_color)
+                    self.screen.blit(mt, (mod_x, mod_y))
+                    mod_y += 20
+
+            # Gold
+            gold_txt = self.font.render(f"Gold: {p.gold}", True, C_GOLD)
+            self.screen.blit(gold_txt, (eq_x + 360, eq_y))
+
+            # Inventory grid header
+            inv_title = self.font.render(f"Backpack ({len(p.inventory)}/{INV_COLS * INV_ROWS})", True, (180, 170, 140))
+            self.screen.blit(inv_title, (grid_x, grid_y - 28))
+
+            # Grid
+            for idx in range(INV_COLS * INV_ROWS):
+                row = idx // INV_COLS
+                col = idx % INV_COLS
+                cx = grid_x + col * cell_w
+                cy = grid_y + row * cell_h
+                # Cell background
+                pygame.draw.rect(self.screen, (20, 18, 14), (cx, cy, cell_w - 2, cell_h - 2), border_radius=3)
+                pygame.draw.rect(self.screen, (60, 50, 40), (cx, cy, cell_w - 2, cell_h - 2), 1, border_radius=3)
+                if idx < len(p.inventory):
+                    item = p.inventory[idx]
+                    ic = item.get_color()
+                    # Item icon (colored square)
+                    pygame.draw.rect(self.screen, ic, (cx + 8, cy + 8, cell_w - 18, cell_h - 18), border_radius=4)
+                    pygame.draw.rect(self.screen, (min(255, ic[0]+60), min(255, ic[1]+60), min(255, ic[2]+60)),
+                                     (cx + 8, cy + 8, cell_w - 18, cell_h - 18), 1, border_radius=4)
+                    # Weapon class icon
+                    icon_char = "B" if item.weapon_class == "bow" else "X"
+                    it = self.font.render(icon_char, True, (20, 15, 10))
+                    self.screen.blit(it, (cx + cell_w // 2 - it.get_width() // 2,
+                                          cy + cell_h // 2 - it.get_height() // 2))
+
+            # Tooltip for hovered item
+            for idx in range(len(p.inventory)):
+                row = idx // INV_COLS
+                col = idx % INV_COLS
+                cx = grid_x + col * cell_w
+                cy = grid_y + row * cell_h
+                if cx <= mx <= cx + cell_w and cy <= my <= cy + cell_h:
+                    item = p.inventory[idx]
+                    self._draw_weapon_tooltip(item, mx + 15, my)
+                    break
+
+            # Check hover on equipped
+            if eq_x <= mx <= eq_x + 500 and eq_y + 28 <= my <= eq_y + 148:
+                pass  # Already showing details above
+
+            hint = self.font.render("[Left Click] Equip   [Right Click] Sell for Gold   [I/Esc] Close", True, (100, 95, 85))
+            self.screen.blit(hint, (WIDTH // 2 - hint.get_width() // 2, HEIGHT - 50))
+
+            pygame.display.flip()
+            self.clock.tick(30)
+
+    def _draw_weapon_tooltip(self, w: Weapon, x: int, y: int):
+        """Draw a floating tooltip for a weapon."""
+        lines = w.get_tooltip_lines()
+        # Calculate size
+        max_w = 0
+        rendered = []
+        for i, line in enumerate(lines):
+            color = w.get_color() if i == 0 else (200, 190, 160)
+            if line.startswith("  +"):
+                color = (100, 200, 255)
+            t = self.font.render(line, True, color)
+            rendered.append(t)
+            max_w = max(max_w, t.get_width())
+        total_h = len(rendered) * 24 + 16
+        # Keep on screen
+        if x + max_w + 20 > WIDTH:
+            x = WIDTH - max_w - 25
+        if y + total_h > HEIGHT:
+            y = HEIGHT - total_h - 10
+        # Background
+        pygame.draw.rect(self.screen, (15, 12, 10), (x, y, max_w + 20, total_h), border_radius=5)
+        pygame.draw.rect(self.screen, w.get_color(), (x, y, max_w + 20, total_h), 1, border_radius=5)
+        for i, t in enumerate(rendered):
+            self.screen.blit(t, (x + 10, y + 8 + i * 24))
+
+    # ---- SKILL TREE SCREEN (T key) ----
+    def _skill_tree_screen(self):
+        """D2-style skill tree with three tabs."""
+        p = self.player
+        tabs = ["bow", "crossbow", "passive"]
+        tab_idx = 0
+        running = True
+        while running:
+            mx, my = pygame.mouse.get_pos()
+            for ev in pygame.event.get():
+                if ev.type == pygame.QUIT:
+                    self.running = False
+                    return
+                if ev.type == pygame.KEYDOWN:
+                    if ev.key in (pygame.K_t, pygame.K_ESCAPE):
+                        running = False
+                    elif ev.key == pygame.K_TAB:
+                        tab_idx = (tab_idx + 1) % len(tabs)
+                    elif ev.key in (pygame.K_1,):
+                        tab_idx = 0
+                    elif ev.key in (pygame.K_2,):
+                        tab_idx = 1
+                    elif ev.key in (pygame.K_3,):
+                        tab_idx = 2
+                if ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
+                    # Check skill buttons
+                    tree = SKILL_TREES[tabs[tab_idx]]
+                    for skill in tree["skills"]:
+                        sx = WIDTH // 2 - 200 + skill["col"] * 200
+                        sy = 220 + skill["row"] * 130
+                        if sx <= mx <= sx + 160 and sy <= my <= sy + 100:
+                            cur = p.skills.get(skill["id"], 0)
+                            if cur < skill["max"] and p.skill_points > 0:
+                                # Check requirement
+                                req = skill.get("req")
+                                if req is None or p.skills.get(req, 0) > 0:
+                                    p.skills[skill["id"]] = cur + 1
+                                    p.skill_points -= 1
+                                    self.play_sound("levelup")
+
+            # Draw
+            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 230))
+            self.screen.blit(overlay, (0, 0))
+
+            title = self.bigfont.render("- SKILL TREE -", True, C_GOLD)
+            self.screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 20))
+            pts_txt = self.font.render(f"Skill Points: {p.skill_points}", True, C_GOLD)
+            self.screen.blit(pts_txt, (WIDTH // 2 - pts_txt.get_width() // 2, 55))
+
+            # Tabs
+            tab_colors = [(200, 160, 100), (160, 140, 200), (140, 200, 140)]
+            for i, tab in enumerate(tabs):
+                tx = WIDTH // 2 - 300 + i * 200
+                ty = 85
+                is_active = i == tab_idx
+                color = tab_colors[i] if is_active else (80, 70, 60)
+                pygame.draw.rect(self.screen, (30, 25, 20) if is_active else (15, 12, 10),
+                                 (tx, ty, 190, 34), border_radius=5)
+                pygame.draw.rect(self.screen, color, (tx, ty, 190, 34), 2 if is_active else 1, border_radius=5)
+                tab_name = SKILL_TREES[tab]["name"]
+                tt = self.font.render(f"{i+1}. {tab_name}", True, color)
+                self.screen.blit(tt, (tx + 10, ty + 6))
+
+            # Draw current tree
+            tree = SKILL_TREES[tabs[tab_idx]]
+            for skill in tree["skills"]:
+                sx = WIDTH // 2 - 200 + skill["col"] * 200
+                sy = 220 + skill["row"] * 130
+                cur = p.skills.get(skill["id"], 0)
+                maxl = skill["max"]
+                req = skill.get("req")
+                can_learn = p.skill_points > 0 and cur < maxl
+                if req and p.skills.get(req, 0) == 0:
+                    can_learn = False
+                locked = req and p.skills.get(req, 0) == 0
+
+                # Draw connection line to required skill
+                if req:
+                    for rs in tree["skills"]:
+                        if rs["id"] == req:
+                            rx = WIDTH // 2 - 200 + rs["col"] * 200 + 80
+                            ry = 220 + rs["row"] * 130 + 100
+                            pygame.draw.line(self.screen, (60, 55, 45), (rx, ry), (sx + 80, sy), 2)
+                            break
+
+                # Skill box
+                bg_color = (40, 35, 25) if cur > 0 else (20, 18, 14)
+                border_color = C_GOLD if cur > 0 else ((80, 70, 55) if not locked else (40, 35, 30))
+                if locked:
+                    bg_color = (12, 10, 8)
+                pygame.draw.rect(self.screen, bg_color, (sx, sy, 160, 100), border_radius=6)
+                pygame.draw.rect(self.screen, border_color, (sx, sy, 160, 100), 2 if cur > 0 else 1,
+                                 border_radius=6)
+
+                # Skill name
+                name_color = C_GOLD if cur > 0 else ((180, 170, 140) if not locked else (80, 75, 65))
+                nt = self.font.render(skill["name"], True, name_color)
+                self.screen.blit(nt, (sx + 80 - nt.get_width() // 2, sy + 8))
+
+                # Level indicator
+                level_txt = self.font.render(f"{cur}/{maxl}", True, C_GOLD if cur > 0 else (120, 115, 100))
+                self.screen.blit(level_txt, (sx + 80 - level_txt.get_width() // 2, sy + 32))
+
+                # Pips
+                pip_total_w = maxl * 14
+                pip_start = sx + 80 - pip_total_w // 2
+                for pi in range(maxl):
+                    pc = C_GOLD if pi < cur else (50, 45, 35)
+                    pygame.draw.rect(self.screen, pc, (pip_start + pi * 14, sy + 56, 10, 6), border_radius=2)
+
+                # Description on hover
+                if sx <= mx <= sx + 160 and sy <= my <= sy + 100:
+                    desc_bg = pygame.Surface((320, 30), pygame.SRCALPHA)
+                    desc_bg.fill((10, 8, 6, 220))
+                    self.screen.blit(desc_bg, (sx - 80, sy + 102))
+                    dt = self.font.render(skill["desc"], True, (200, 190, 160))
+                    self.screen.blit(dt, (sx - 80 + 10, sy + 106))
+
+                # + indicator
+                if can_learn:
+                    plus = self.font.render("+", True, (100, 255, 100))
+                    self.screen.blit(plus, (sx + 140, sy + 4))
+
+            hint = self.font.render("[Click] Learn Skill   [Tab/1-3] Switch Tree   [T/Esc] Close", True, (100, 95, 85))
+            self.screen.blit(hint, (WIDTH // 2 - hint.get_width() // 2, HEIGHT - 40))
+
+            pygame.display.flip()
+            self.clock.tick(30)
+
     def game_over(self):
         # Death effects
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
@@ -2853,11 +3728,12 @@ class Game:
         self.screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, HEIGHT // 2 - 60))
 
         # Stats
+        p = self.player
         stats = [
-            f"Level {self.player.level}  -  Depth {self.current_level} ({BIOME_NAMES.get(self.current_biome, '')})  -  Wave {self.wave}",
-            f"Gold collected: {self.player.gold}",
-            f"Enemies slain: {self.kills}",
-            f"Difficulty: {self.difficulty_name}",
+            f"Level {p.level}  -  Depth {self.current_level} ({BIOME_NAMES.get(self.current_biome, '')})  -  Wave {self.wave}",
+            f"Gold: {p.gold}   Kills: {self.kills}   Difficulty: {self.difficulty_name}",
+            f"Weapon: {p.weapon.name} [{RARITY_NAMES[p.weapon.rarity]}]",
+            f"STR {p.strength}  DEX {p.dexterity}  VIT {p.vitality}  ENR {p.energy}",
         ]
         y = HEIGHT // 2 + 10
         for line in stats:
@@ -2891,6 +3767,12 @@ class Game:
                         self.paused = not self.paused
                     if event.key == pygame.K_F1:
                         self._help_overlay()
+                    if event.key == pygame.K_c:
+                        self._character_screen()
+                    if event.key == pygame.K_i:
+                        self._inventory_screen()
+                    if event.key == pygame.K_t:
+                        self._skill_tree_screen()
                     if event.key == pygame.K_F11:
                         self.fullscreen = not self.fullscreen
                         if self.fullscreen:
