@@ -3,3 +3,4 @@ __pycache__/
 build/
 dist/
 *.spec
+dungeon_crawl_save.json

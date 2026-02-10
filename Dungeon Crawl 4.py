@@ -1,5 +1,7 @@
 
+import json
 import math
+import os
 import random
 import sys
 import time
@@ -490,6 +492,9 @@ class Player(Entity):
     crit_chance: float = 5.0  # base 5% crit
     # Inventory: list of Weapon items
     inventory: list = field(default_factory=list)  # List[Weapon], max INV_COLS*INV_ROWS
+    # Lives / respawn
+    lives: int = 3
+    max_lives: int = 3
 
     def max_hp(self) -> int:
         base = PLAYER_HP + 10 * self.level + self.vitality * 3
@@ -923,14 +928,17 @@ class Game:
         self.titlefont = pygame.font.SysFont(FONT_NAME, 72, bold=True)
         self.subfont = pygame.font.SysFont(FONT_NAME, 28)
 
-        self.difficulty_name = self._difficulty_select()
-        self.diff = DIFFICULTY[self.difficulty_name]
-        global MAX_ACTIVE_ENEMIES
-        MAX_ACTIVE_ENEMIES = self.diff["max_enemies"]
+        # Check if save file exists for "Continue" option
+        self._has_save = os.path.exists(self._get_save_path())
+        menu_choice = self._title_menu()
 
+        # Initialize all game state first (needed before _load_game)
         self.current_level = 1
         self.current_biome = "crypt"
-        self.dungeon = Dungeon(level=self.current_level, biome=self.current_biome)
+        self.difficulty_name = "Normal"
+        self.diff = DIFFICULTY["Normal"]
+        global MAX_ACTIVE_ENEMIES
+        self.dungeon = Dungeon(level=1, biome="crypt")
         rx, ry = self.dungeon.center(self.dungeon.rooms[0]) if self.dungeon.rooms else (MAP_W // 2, MAP_H // 2)
         self.player = Player(pos=Vec(rx * TILE + TILE / 2, ry * TILE + TILE / 2), vel=Vec(0, 0), radius=20)
         self.enemies: List[Enemy] = []
@@ -953,17 +961,35 @@ class Game:
         self.kills = 0
         self.treasure_goblin: Optional[TreasureGoblin] = None
         self.lightning_chains: List[Tuple[Vec, Vec, float]] = []  # (start, end, life)
-        self.dungeon.mark_seen_radius(self.player.pos)
+        self.portal_angle = 0.0
+        self.chests: List[Chest] = []
+        self.vendor: Optional[Vendor] = None
+        self.show_vendor_hint = False
 
+        if menu_choice == "continue":
+            # Load saved game
+            if not self._load_game():
+                # Failed to load, start fresh
+                self.difficulty_name = self._difficulty_select()
+                self.diff = DIFFICULTY[self.difficulty_name]
+                MAX_ACTIVE_ENEMIES = self.diff["max_enemies"]
+                self.dungeon = Dungeon(level=1, biome="crypt")
+                rx, ry = self.dungeon.center(self.dungeon.rooms[0]) if self.dungeon.rooms else (MAP_W // 2, MAP_H // 2)
+                self.player.pos = Vec(rx * TILE + TILE / 2, ry * TILE + TILE / 2)
+                self._spawn_chests()
+                self._spawn_vendor()
+            MAX_ACTIVE_ENEMIES = self.diff["max_enemies"]
+        else:
+            self.difficulty_name = menu_choice
+            self.diff = DIFFICULTY[self.difficulty_name]
+            MAX_ACTIVE_ENEMIES = self.diff["max_enemies"]
+            self._spawn_chests()
+            self._spawn_vendor()
+
+        self.dungeon.mark_seen_radius(self.player.pos)
         self._build_texture_cache(self.current_biome)
         self._build_light_surfaces()
         self.light_map = pygame.Surface((WIDTH, HEIGHT))
-        self.portal_angle = 0.0
-        self.chests: List[Chest] = []
-        self._spawn_chests()
-        self.vendor: Optional[Vendor] = None
-        self._spawn_vendor()
-        self.show_vendor_hint = False
 
     # ---- Texture generation ----
     def _build_texture_cache(self, biome: str = "crypt"):
@@ -1339,6 +1365,18 @@ class Game:
         boss_death += noise(0.35, 0.15) * np.exp(-t * 5)
         self.sounds["death_boss"] = make_sound(boss_death)
 
+        # Respawn - angelic rising tone
+        r1 = fade_out(tone(440, 0.1, 0.2))
+        r2 = fade_out(tone(660, 0.1, 0.2))
+        r3 = fade_out(tone(880, 0.15, 0.25))
+        rp = np.zeros(int(rate * 0.03))
+        self.sounds["respawn"] = make_sound(np.concatenate([r1, rp, r2, rp, r3]))
+
+        # Save confirm - soft chime
+        sv = fade_out(tone(1000, 0.06, 0.15))
+        sv2 = fade_out(tone(1500, 0.08, 0.2))
+        self.sounds["save"] = make_sound(np.concatenate([sv, np.zeros(int(rate * 0.02)), sv2]))
+
         # Set volumes
         for s in self.sounds.values():
             s.set_volume(0.4)
@@ -1363,6 +1401,85 @@ class Game:
             snd.play()
 
     # ---- Difficulty menu (gothic) ----
+    def _title_menu(self) -> str:
+        """Show title menu with Continue/New Game. Returns 'continue' or goes to difficulty select."""
+        screen = self.screen
+        small = self.font
+        title_font = self.titlefont
+        has_save = self._has_save
+        if not has_save:
+            # No save, go straight to difficulty select
+            return self._difficulty_select()
+        # Load save info for display
+        save_info = ""
+        try:
+            with open(self._get_save_path(), "r") as f:
+                data = json.load(f)
+            pd = data["player"]
+            gd = data["game"]
+            save_info = (f"Level {pd['level']}  |  Depth {gd['current_level']}  |  "
+                        f"{gd.get('difficulty', 'Normal')}  |  "
+                        f"Kills: {gd.get('kills', 0)}  |  Gold: {pd.get('gold', 0)}")
+        except Exception:
+            save_info = "Saved game found"
+
+        options = [("Continue", "continue"), ("New Game", "new")]
+        idx = 0
+        t = 0.0
+        while True:
+            dt = 16 / 1000.0
+            t += dt
+            for ev in pygame.event.get():
+                if ev.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit(0)
+                if ev.type == pygame.KEYDOWN:
+                    if ev.key in (pygame.K_UP, pygame.K_w):
+                        idx = (idx - 1) % len(options)
+                    elif ev.key in (pygame.K_DOWN, pygame.K_s):
+                        idx = (idx + 1) % len(options)
+                    elif ev.key in (pygame.K_RETURN, pygame.K_SPACE):
+                        if options[idx][1] == "continue":
+                            return "continue"
+                        else:
+                            return self._difficulty_select()
+
+            screen.fill(C_GOTHIC_BG)
+            # Ambient particles
+            for _ in range(2):
+                px = random.randint(0, WIDTH)
+                py = random.randint(0, HEIGHT)
+                a = random.randint(15, 40)
+                pygame.draw.circle(screen, (a, a - 2, a + 5), (px, py), random.randint(1, 2))
+            # Title
+            flicker = 0.9 + 0.1 * math.sin(t * 3.0)
+            tc = tuple(min(255, int(c * flicker)) for c in (200, 160, 80))
+            title = title_font.render("DUNGEON OF THE DAMNED", True, tc)
+            title_y = HEIGHT // 5
+            screen.blit(title, (WIDTH // 2 - title.get_width() // 2, title_y))
+            # Decorative line
+            ly = title_y + title.get_height() + 20
+            pygame.draw.line(screen, C_GOTHIC_FRAME, (WIDTH // 2 - 320, ly), (WIDTH // 2 + 320, ly), 2)
+            pygame.draw.circle(screen, C_GOLD_DARK, (WIDTH // 2, ly), 6)
+            pygame.draw.circle(screen, C_GOLD, (WIDTH // 2, ly), 4)
+
+            y = HEIGHT // 2 - 40
+            for i, (label, _) in enumerate(options):
+                is_sel = (i == idx)
+                col = C_GOLD if is_sel else (140, 130, 110)
+                marker = "> " if is_sel else "  "
+                ot = self.bigfont.render(f"{marker}{label}", True, col)
+                screen.blit(ot, (WIDTH // 2 - 100, y))
+                if i == 0 and is_sel and save_info:
+                    si = small.render(save_info, True, (140, 130, 100))
+                    screen.blit(si, (WIDTH // 2 - si.get_width() // 2, y + 40))
+                y += 65
+
+            hint = small.render("[W/S] or [Arrows] to choose  -  [Enter] to select", True, (100, 95, 80))
+            screen.blit(hint, (WIDTH // 2 - hint.get_width() // 2, HEIGHT * 2 // 3 + 60))
+            pygame.display.flip()
+            pygame.time.delay(16)
+
     def _difficulty_select(self) -> str:
         screen = self.screen
         font = self.bigfont
@@ -3603,8 +3720,12 @@ class Game:
         s.blit(info, (16, 12))
         wave_txt = self.font.render(f"Next wave: {self.spawn_timer:.1f}s", True, (140, 135, 120))
         s.blit(wave_txt, (16, 32))
-        hint = self.font.render("C=Stats  I=Inventory  T=Skills  F1=Help", True, (90, 85, 75))
-        s.blit(hint, (16, 52))
+        # Lives display
+        lives_col = (100, 200, 100) if p.lives > 1 else ((220, 180, 60) if p.lives == 1 else (200, 60, 60))
+        lives_txt = self.font.render(f"Lives: {p.lives}/{p.max_lives}", True, lives_col)
+        s.blit(lives_txt, (16, 52))
+        hint = self.font.render("C=Stats  I=Inventory  T=Skills  Esc=Menu  F1=Help", True, (90, 85, 75))
+        s.blit(hint, (16, 72))
 
     def _draw_globe(self, s, cx, cy, r, frac, empty_color, fill_color, highlight_color, frame_color):
         # Empty globe
@@ -3646,14 +3767,70 @@ class Game:
 
     # ---- Overlays ----
     def _pause_screen(self):
-        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 180))
-        self.screen.blit(overlay, (0, 0))
-        txt = self.titlefont.render("PAUSED", True, C_GOLD)
-        self.screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, HEIGHT // 2 - 40))
-        sub = self.subfont.render("Press P to resume", True, (160, 150, 130))
-        self.screen.blit(sub, (WIDTH // 2 - sub.get_width() // 2, HEIGHT // 2 + 20))
-        pygame.display.flip()
+        idx = 0
+        options = [
+            ("Resume", "resume"),
+            ("Save Game", "save"),
+            ("Save & Quit", "save_quit"),
+            ("Quit (no save)", "quit"),
+        ]
+        while True:
+            self.clock.tick(30)
+            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 200))
+            self.screen.blit(overlay, (0, 0))
+
+            txt = self.titlefont.render("PAUSED", True, C_GOLD)
+            self.screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, HEIGHT // 2 - 120))
+
+            # Lives display
+            p = self.player
+            lives_str = f"Lives: {p.lives}/{p.max_lives}   Depth: {self.current_level}   Level: {p.level}"
+            info = self.font.render(lives_str, True, (160, 150, 130))
+            self.screen.blit(info, (WIDTH // 2 - info.get_width() // 2, HEIGHT // 2 - 55))
+
+            y = HEIGHT // 2 - 15
+            for i, (label, _) in enumerate(options):
+                is_sel = (i == idx)
+                col = C_GOLD if is_sel else (140, 130, 110)
+                marker = "> " if is_sel else "  "
+                ot = self.bigfont.render(f"{marker}{label}", True, col)
+                self.screen.blit(ot, (WIDTH // 2 - 120, y))
+                y += 45
+
+            pygame.display.flip()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                    self.paused = False
+                    return
+                if event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_UP, pygame.K_w):
+                        idx = (idx - 1) % len(options)
+                    elif event.key in (pygame.K_DOWN, pygame.K_s):
+                        idx = (idx + 1) % len(options)
+                    elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                        action = options[idx][1]
+                        if action == "resume":
+                            self.paused = False
+                            return
+                        elif action == "save":
+                            self._save_game()
+                            self.paused = False
+                            return
+                        elif action == "save_quit":
+                            self._save_game()
+                            self.running = False
+                            self.paused = False
+                            return
+                        elif action == "quit":
+                            self.running = False
+                            self.paused = False
+                            return
+                    elif event.key in (pygame.K_p, pygame.K_ESCAPE):
+                        self.paused = False
+                        return
 
     def _help_overlay(self):
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
@@ -3674,8 +3851,7 @@ class Game:
             ("I", "Inventory (equip/sell weapons)"),
             ("T", "Skill Tree (spend skill points)"),
             ("F11", "Toggle Fullscreen"),
-            ("P", "Pause"),
-            ("Esc", "Quit"),
+            ("P / Esc", "Pause Menu (Resume, Save, Quit)"),
             ("", ""),
             ("Shoot Chests", "Break open for gold, potions, weapons, boosts"),
             ("Infusions", "Pick up Fire/Ice/Lightning arrows for timed buffs"),
@@ -3686,6 +3862,8 @@ class Game:
             ("Creatures", "Skeletons, Demons, Spiders, Wraiths - each with unique sounds"),
             ("Treasure Goblin", "Chase it! Drops gold as it flees, jackpot on kill"),
             ("Elites", "Lead packs with auras: Haste / Frenzy / Guardian"),
+            ("Lives", "3 respawns in place, then return to start of depth"),
+            ("Save", "Auto-saves on quit; continue from title screen"),
             ("Goal", "Explore endless depths, hunt goblins, slay bosses"),
         ]
         y = 140
@@ -4308,52 +4486,291 @@ class Game:
             pygame.display.flip()
             self.clock.tick(30)
 
-    def game_over(self):
-        # Death effects
+    def _get_save_path(self) -> str:
+        """Return save file path in the same directory as the game."""
+        game_dir = os.path.dirname(os.path.abspath(sys.argv[0])) if sys.argv[0] else os.getcwd()
+        return os.path.join(game_dir, "dungeon_crawl_save.json")
+
+    def _save_game(self):
+        """Save character and game state to JSON file."""
+        p = self.player
+        save_data = {
+            "version": 1,
+            "player": {
+                "level": p.level,
+                "xp": p.xp,
+                "xp_to_next": p.xp_to_next,
+                "gold": p.gold,
+                "hp": p.hp,
+                "mana": p.mana,
+                "potions_hp": p.potions_hp,
+                "potions_mana": p.potions_mana,
+                "strength": p.strength,
+                "dexterity": p.dexterity,
+                "vitality": p.vitality,
+                "energy": p.energy,
+                "stat_points": p.stat_points,
+                "skill_points": p.skill_points,
+                "skills": p.skills,
+                "crit_chance": p.crit_chance,
+                "lives": p.lives,
+                "max_lives": p.max_lives,
+                "weapon": {
+                    "name": p.weapon.name,
+                    "dmg_min": p.weapon.dmg_min,
+                    "dmg_max": p.weapon.dmg_max,
+                    "attack_speed": p.weapon.attack_speed,
+                    "ranged": p.weapon.ranged,
+                    "rarity": p.weapon.rarity,
+                    "weapon_class": p.weapon.weapon_class,
+                    "mods": p.weapon.mods,
+                    "base_name": p.weapon.base_name,
+                    "prefix": p.weapon.prefix,
+                    "suffix": p.weapon.suffix,
+                    "set_name": p.weapon.set_name,
+                    "ilvl": p.weapon.ilvl,
+                },
+                "inventory": [
+                    {
+                        "name": w.name, "dmg_min": w.dmg_min, "dmg_max": w.dmg_max,
+                        "attack_speed": w.attack_speed, "ranged": w.ranged,
+                        "rarity": w.rarity, "weapon_class": w.weapon_class,
+                        "mods": w.mods, "base_name": w.base_name,
+                        "prefix": w.prefix, "suffix": w.suffix,
+                        "set_name": w.set_name, "ilvl": w.ilvl,
+                    }
+                    for w in p.inventory
+                ],
+            },
+            "game": {
+                "current_level": self.current_level,
+                "current_biome": self.current_biome,
+                "wave": self.wave,
+                "kills": self.kills,
+                "difficulty": self.difficulty_name,
+            },
+        }
+        try:
+            with open(self._get_save_path(), "w") as f:
+                json.dump(save_data, f, indent=2)
+            self.play_sound("save")
+            self.add_floating_text(self.player.pos.x, self.player.pos.y - 30,
+                                   "Game Saved!", (100, 255, 100), 1.5)
+            return True
+        except Exception:
+            self.add_floating_text(self.player.pos.x, self.player.pos.y - 30,
+                                   "Save Failed!", (255, 80, 80), 1.5)
+            return False
+
+    def _weapon_from_dict(self, d: dict) -> Weapon:
+        """Reconstruct a Weapon from a save dict."""
+        return Weapon(
+            name=d["name"], dmg_min=d["dmg_min"], dmg_max=d["dmg_max"],
+            attack_speed=d["attack_speed"], ranged=d["ranged"],
+            rarity=d.get("rarity", RARITY_NORMAL),
+            weapon_class=d.get("weapon_class", "bow"),
+            mods=d.get("mods", {}), base_name=d.get("base_name", ""),
+            prefix=d.get("prefix", ""), suffix=d.get("suffix", ""),
+            set_name=d.get("set_name", ""), ilvl=d.get("ilvl", 1),
+        )
+
+    def _load_game(self) -> bool:
+        """Load saved game. Returns True if loaded successfully."""
+        path = self._get_save_path()
+        if not os.path.exists(path):
+            return False
+        try:
+            with open(path, "r") as f:
+                data = json.load(f)
+            if data.get("version") != 1:
+                return False
+            pd = data["player"]
+            gd = data["game"]
+            # Restore game state
+            self.difficulty_name = gd.get("difficulty", "Normal")
+            self.diff = DIFFICULTY.get(self.difficulty_name, DIFFICULTY["Normal"])
+            global MAX_ACTIVE_ENEMIES
+            MAX_ACTIVE_ENEMIES = self.diff["max_enemies"]
+            self.current_level = gd["current_level"]
+            self.current_biome = gd["current_biome"]
+            self.wave = gd["wave"]
+            self.kills = gd["kills"]
+            # Rebuild dungeon for current level
+            self.dungeon = Dungeon(level=self.current_level, biome=self.current_biome)
+            rx, ry = self.dungeon.center(self.dungeon.rooms[0]) if self.dungeon.rooms else (MAP_W // 2, MAP_H // 2)
+            self.player.pos = Vec(rx * TILE + TILE / 2, ry * TILE + TILE / 2)
+            # Restore player stats
+            p = self.player
+            p.level = pd["level"]
+            p.xp = pd["xp"]
+            p.xp_to_next = pd["xp_to_next"]
+            p.gold = pd["gold"]
+            p.strength = pd["strength"]
+            p.dexterity = pd["dexterity"]
+            p.vitality = pd["vitality"]
+            p.energy = pd["energy"]
+            p.stat_points = pd.get("stat_points", 0)
+            p.skill_points = pd.get("skill_points", 0)
+            p.skills = pd.get("skills", {})
+            p.crit_chance = pd.get("crit_chance", 5.0)
+            p.lives = pd.get("lives", 3)
+            p.max_lives = pd.get("max_lives", 3)
+            p.potions_hp = pd.get("potions_hp", 1)
+            p.potions_mana = pd.get("potions_mana", 1)
+            p.hp = min(pd.get("hp", p.max_hp()), p.max_hp())
+            p.mana = min(pd.get("mana", p.max_mana()), p.max_mana())
+            p.weapon = self._weapon_from_dict(pd["weapon"])
+            p.inventory = [self._weapon_from_dict(w) for w in pd.get("inventory", [])]
+            # Rebuild level
+            self._build_texture_cache(self.current_biome)
+            self.enemies.clear()
+            self.projectiles.clear()
+            self.loots.clear()
+            self.particles.clear()
+            self.floating_texts.clear()
+            self.corpses.clear()
+            self.chests.clear()
+            self.lightning_chains.clear()
+            self._spawn_chests()
+            self._spawn_vendor()
+            self.dungeon.mark_seen_radius(self.player.pos)
+            self.boss_spawned = False
+            self.spawn_timer = SPAWN_INTERVAL
+            return True
+        except Exception:
+            return False
+
+    def _delete_save(self):
+        """Delete the save file."""
+        path = self._get_save_path()
+        if os.path.exists(path):
+            try:
+                os.remove(path)
+            except Exception:
+                pass
+
+    def _death_screen(self) -> str:
+        """Show death screen. Returns 'respawn', 'quit', or 'start'."""
+        p = self.player
+        # Death fade
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        # Fade to red-black
         for i in range(30):
             for ev in pygame.event.get():
-                pass  # drain events during fade
+                pass
             overlay.fill((0, 0, 0, 8))
             self.screen.blit(overlay, (0, 0))
             pygame.display.flip()
             self.clock.tick(30)
 
-        self.screen.fill((8, 4, 4))
-        # Blood drip effect
-        for i in range(20):
-            x = random.randint(100, WIDTH - 100)
-            h = random.randint(20, 120)
-            pygame.draw.line(self.screen, (random.randint(60, 100), 5, 5), (x, 0), (x, h), random.randint(1, 3))
-
-        txt = self.titlefont.render("YOU HAVE DIED", True, (180, 30, 30))
-        self.screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, HEIGHT // 2 - 60))
-
-        # Stats
-        p = self.player
-        stats = [
-            f"Level {p.level}  -  Depth {self.current_level} ({BIOME_NAMES.get(self.current_biome, '')})  -  Wave {self.wave}",
-            f"Gold: {p.gold}   Kills: {self.kills}   Difficulty: {self.difficulty_name}",
-            f"Weapon: {p.weapon.name} [{RARITY_NAMES[p.weapon.rarity]}]",
-            f"STR {p.strength}  DEX {p.dexterity}  VIT {p.vitality}  ENR {p.energy}",
-        ]
-        y = HEIGHT // 2 + 10
-        for line in stats:
-            st = self.subfont.render(line, True, (140, 100, 100))
-            self.screen.blit(st, (WIDTH // 2 - st.get_width() // 2, y))
-            y += 30
-
-        sub = self.font.render("Press any key to quit", True, (120, 90, 90))
-        self.screen.blit(sub, (WIDTH // 2 - sub.get_width() // 2, y + 20))
-        pygame.display.flip()
-
-        waiting = True
-        while waiting:
+        selecting = True
+        idx = 0
+        while selecting:
             self.clock.tick(30)
+            self.screen.fill((8, 4, 4))
+            # Blood drip effect
+            for i in range(20):
+                x = random.randint(100, WIDTH - 100)
+                h = random.randint(20, 120)
+                pygame.draw.line(self.screen, (random.randint(60, 100), 5, 5),
+                                 (x, 0), (x, h), random.randint(1, 3))
+
+            txt = self.titlefont.render("YOU HAVE DIED", True, (180, 30, 30))
+            self.screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, HEIGHT // 2 - 120))
+
+            # Stats
+            stats = [
+                f"Level {p.level}  -  Depth {self.current_level} ({BIOME_NAMES.get(self.current_biome, '')})  -  Wave {self.wave}",
+                f"Gold: {p.gold}   Kills: {self.kills}   Difficulty: {self.difficulty_name}",
+                f"Weapon: {p.weapon.name} [{RARITY_NAMES[p.weapon.rarity]}]",
+            ]
+            y = HEIGHT // 2 - 50
+            for line in stats:
+                st = self.subfont.render(line, True, (140, 100, 100))
+                self.screen.blit(st, (WIDTH // 2 - st.get_width() // 2, y))
+                y += 30
+
+            # Lives info
+            lives_text = f"Lives remaining: {p.lives}"
+            lives_col = (100, 200, 100) if p.lives > 0 else (200, 60, 60)
+            lt = self.bigfont.render(lives_text, True, lives_col)
+            self.screen.blit(lt, (WIDTH // 2 - lt.get_width() // 2, y + 10))
+            y += 55
+
+            # Options
+            options = []
+            if p.lives > 0:
+                options.append(("Respawn Here", "respawn",
+                               f"Continue from where you died ({p.lives} {'lives' if p.lives != 1 else 'life'} left)"))
+            else:
+                options.append(("Return to Start", "start",
+                               "No lives left - return to the beginning of this depth"))
+            options.append(("Save & Quit", "quit", "Save your character and exit"))
+
+            for i, (label, action, desc) in enumerate(options):
+                is_sel = (i == idx)
+                col = C_GOLD if is_sel else (120, 100, 90)
+                marker = "> " if is_sel else "  "
+                ot = self.bigfont.render(f"{marker}{label}", True, col)
+                self.screen.blit(ot, (WIDTH // 2 - 160, y))
+                if is_sel:
+                    dt = self.font.render(desc, True, (160, 140, 120))
+                    self.screen.blit(dt, (WIDTH // 2 - 160, y + 36))
+                y += 55
+
+            pygame.display.flip()
+
             for event in pygame.event.get():
-                if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN, pygame.QUIT):
-                    waiting = False
+                if event.type == pygame.QUIT:
+                    return "quit"
+                if event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_UP, pygame.K_w):
+                        idx = (idx - 1) % len(options)
+                    elif event.key in (pygame.K_DOWN, pygame.K_s):
+                        idx = (idx + 1) % len(options)
+                    elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                        return options[idx][1]
+                    elif event.key == pygame.K_ESCAPE:
+                        return "quit"
+
+        return "quit"
+
+    def _respawn_player(self, at_start: bool = False):
+        """Respawn the player, restoring HP/mana."""
+        p = self.player
+        if at_start:
+            # Go back to room 0 of current level, reset lives
+            p.lives = p.max_lives
+            rx, ry = self.dungeon.center(self.dungeon.rooms[0]) if self.dungeon.rooms else (MAP_W // 2, MAP_H // 2)
+            p.pos = Vec(rx * TILE + TILE / 2, ry * TILE + TILE / 2)
+            # Clear enemies to give breathing room
+            self.enemies.clear()
+            self.projectiles.clear()
+            self.spawn_timer = SPAWN_INTERVAL * 2
+            # Lose some gold as penalty
+            gold_lost = p.gold // 4
+            p.gold -= gold_lost
+            self.add_floating_text(p.pos.x, p.pos.y - 40,
+                                   f"Lost {gold_lost} gold", (200, 80, 80), 1.5)
+        else:
+            p.lives -= 1
+            # Clear nearby enemies so player doesn't immediately die again
+            safe_dist = 200
+            self.enemies = [e for e in self.enemies
+                            if (e.pos - p.pos).length() > safe_dist or isinstance(e, TreasureGoblin)]
+            self.projectiles = [pr for pr in self.projectiles if not pr.hostile]
+        # Restore HP and mana
+        p.hp = p.max_hp()
+        p.mana = p.max_mana()
+        p.iframes = 2.0  # generous invincibility on respawn
+        p.shield = 0
+        p.dmg_timer = 0
+        p.dmg_mult = 1.0
+        self.play_sound("respawn")
+        self.emit_particles(p.pos.x, p.pos.y, 30, (100, 200, 255), speed=80, life=1.0, gravity=-40)
+        self.add_floating_text(p.pos.x, p.pos.y - 30,
+                               "RESPAWNED!" if not at_start else "RETURNED TO START!",
+                               (100, 200, 255), 1.5)
+        self.dungeon.mark_seen_radius(p.pos)
 
     # ---- Main Loop ----
     def run(self):
@@ -4365,7 +4782,7 @@ class Game:
                     self.running = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        self.running = False
+                        self.paused = True
                     if event.key == pygame.K_p:
                         self.paused = not self.paused
                     if event.key == pygame.K_F1:
@@ -4403,8 +4820,15 @@ class Game:
             # Update lightning chains
             self.lightning_chains = [(s, e, l - dt) for s, e, l in self.lightning_chains if l - dt > 0]
             if self.player.hp <= 0:
-                self.game_over()
-                return
+                result = self._death_screen()
+                if result == "respawn":
+                    self._respawn_player(at_start=False)
+                elif result == "start":
+                    self._respawn_player(at_start=True)
+                else:  # quit
+                    self._save_game()
+                    self.running = False
+                    continue
             self.draw()
 
 
