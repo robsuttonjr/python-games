@@ -87,6 +87,12 @@ CHEST_GOLD_DROP = (8, 25)
 CHEST_POTION_CHANCE = 0.35
 CHEST_WEAPON_CHANCE = 0.10
 CHEST_BOOST_CHANCE = 0.12
+CRATE_HP = 1
+CRATE_EXPLODE_CHANCE = 0.30  # chance a crate explodes on break
+CRATE_EXPLODE_DMG = (4, 10)
+CRATE_EXPLODE_RADIUS = 80
+CRATE_DROP_CHANCE = 0.25  # much less than chests
+
 MANA_REGEN_RATE = 3.0  # mana per second
 
 INFUSION_DURATION = 15.0
@@ -175,7 +181,7 @@ RARITY_COLORS = {
     RARITY_NORMAL: (180, 180, 180),    # white/gray
     RARITY_MAGIC: (100, 100, 255),     # blue
     RARITY_RARE: (255, 255, 100),      # yellow
-    RARITY_UNIQUE: (180, 140, 60),     # gold/brown
+    RARITY_UNIQUE: (255, 190, 50),     # bright gold
     RARITY_SET: (0, 220, 0),           # green
 }
 RARITY_NAMES = {
@@ -254,21 +260,29 @@ SUFFIXES = [
 # Unique weapons (hand-crafted)
 UNIQUE_WEAPONS = [
     {"base": "Long Bow",      "name": "Witherstring",     "rarity": RARITY_UNIQUE,
-     "fixed_mods": {"dmg_min": 5, "dmg_max": 12, "ice_dmg": 8, "life_steal": 4, "bonus_hp": 15}},
+     "fixed_mods": {"dmg_min": 15, "dmg_max": 28, "ice_dmg": 22, "life_steal": 8,
+                    "bonus_hp": 40, "crit_chance": 6, "dexterity": 4}},
     {"base": "War Bow",       "name": "Eaglehorn",        "rarity": RARITY_UNIQUE,
-     "fixed_mods": {"dmg_min": 8, "dmg_max": 18, "crit_chance": 10, "dexterity": 5, "pierce": 2}},
+     "fixed_mods": {"dmg_min": 20, "dmg_max": 40, "crit_chance": 18, "dexterity": 10,
+                    "pierce": 3, "attack_speed": -0.5, "strength": 5}},
     {"base": "Hydra Bow",     "name": "Windforce",        "rarity": RARITY_UNIQUE,
-     "fixed_mods": {"dmg_min": 12, "dmg_max": 25, "knockback": 40, "attack_speed": -0.4, "strength": 4}},
+     "fixed_mods": {"dmg_min": 30, "dmg_max": 55, "knockback": 60, "attack_speed": -0.7,
+                    "strength": 10, "life_steal": 6, "bonus_hp": 30, "crit_chance": 8}},
     {"base": "Rune Bow",      "name": "Lycander's Aim",   "rarity": RARITY_UNIQUE,
-     "fixed_mods": {"dmg_min": 10, "dmg_max": 15, "dexterity": 6, "vitality": 3, "bonus_mana": 15}},
+     "fixed_mods": {"dmg_min": 22, "dmg_max": 38, "dexterity": 12, "vitality": 8,
+                    "bonus_mana": 40, "bonus_hp": 30, "crit_chance": 7}},
     {"base": "Heavy Crossbow","name": "Hellrack",         "rarity": RARITY_UNIQUE,
-     "fixed_mods": {"dmg_min": 10, "dmg_max": 22, "fire_dmg": 15, "lightning_dmg": 10, "pierce": 1}},
+     "fixed_mods": {"dmg_min": 25, "dmg_max": 48, "fire_dmg": 30, "lightning_dmg": 25,
+                    "pierce": 2, "crit_chance": 10, "strength": 6}},
     {"base": "Ballista",      "name": "Buriza-Do Kyanon", "rarity": RARITY_UNIQUE,
-     "fixed_mods": {"dmg_min": 15, "dmg_max": 30, "ice_dmg": 20, "pierce": 3, "attack_speed": -0.3}},
+     "fixed_mods": {"dmg_min": 35, "dmg_max": 65, "ice_dmg": 40, "pierce": 5,
+                    "attack_speed": -0.5, "dexterity": 8, "crit_chance": 12, "bonus_hp": 25}},
     {"base": "Demon Xbow",    "name": "Gut Siphon",       "rarity": RARITY_UNIQUE,
-     "fixed_mods": {"dmg_min": 18, "dmg_max": 25, "life_steal": 8, "crit_chance": 6, "bonus_hp": 25}},
+     "fixed_mods": {"dmg_min": 38, "dmg_max": 58, "life_steal": 15, "crit_chance": 14,
+                    "bonus_hp": 60, "strength": 8, "vitality": 6}},
     {"base": "Gothic Bow",    "name": "Goldstrike Arch",  "rarity": RARITY_UNIQUE,
-     "fixed_mods": {"dmg_min": 8, "dmg_max": 16, "fire_dmg": 12, "lightning_dmg": 8, "extra_arrows": 1}},
+     "fixed_mods": {"dmg_min": 20, "dmg_max": 35, "fire_dmg": 25, "lightning_dmg": 20,
+                    "extra_arrows": 2, "crit_chance": 10, "dexterity": 6}},
 ]
 
 # Set weapons (2 items form partial set)
@@ -597,6 +611,13 @@ class Chest:
     hit_flash: float = 0.0
 
 @dataclass
+class Crate:
+    pos: Vec
+    hp: int = CRATE_HP
+    alive: bool = True
+    hit_flash: float = 0.0
+
+@dataclass
 class Vendor:
     pos: Vec
     stock: list = field(default_factory=list)  # List[Weapon]
@@ -616,6 +637,7 @@ class Dungeon:
         self.blood_stains: List[Tuple[float, float, float]] = []
         self.portal_positions: List[Tuple[int, int, str]] = []  # (tx, ty, dest_biome)
         self.chest_positions: List[Tuple[int, int]] = []
+        self.crate_positions: List[Tuple[int, int]] = []  # breakable crates
         self.hazard_pools: List[Tuple[int, int]] = []  # lava, poison, ice based on biome
         self.tile_variants = [[random.randint(0, 7) for _ in range(MAP_H)] for _ in range(MAP_W)]
         self.generate()
@@ -653,6 +675,8 @@ class Dungeon:
                 else:
                     stype = 'pillar' if rng.random() < 0.6 else 'crate'
                 self.scenery.append((tx, ty, stype))
+                if stype == 'crate':
+                    self.crate_positions.append((tx, ty))
             self._place_torches(new, rng)
         # Place treasure chests in rooms
         for room in self.rooms[1:]:  # skip first room (player spawn)
@@ -676,6 +700,20 @@ class Dungeon:
                         if not too_close:
                             self.chest_positions.append((tx, ty))
                             break
+        # Place additional breakable crates in rooms (on floor, not walls)
+        for room in self.rooms[1:]:
+            num_crates = rng.randint(0, 3)
+            for _ in range(num_crates):
+                for _ in range(15):
+                    tx = rng.randint(room.left + 1, room.right - 2)
+                    ty = rng.randint(room.top + 1, room.bottom - 2)
+                    if self.tiles[tx][ty] == FLOOR:
+                        too_close = (any(abs(cx - tx) + abs(cy - ty) < 2 for cx, cy in self.crate_positions)
+                                     or any(abs(cx - tx) + abs(cy - ty) < 2 for cx, cy in self.chest_positions))
+                        if not too_close:
+                            self.crate_positions.append((tx, ty))
+                            break
+
         # Place hazard pools based on biome
         hazard_chance = 0.20 if self.biome in ("swamp", "firepit") else 0.12
         for room in self.rooms[2:]:
@@ -963,6 +1001,7 @@ class Game:
         self.lightning_chains: List[Tuple[Vec, Vec, float]] = []  # (start, end, life)
         self.portal_angle = 0.0
         self.chests: List[Chest] = []
+        self.crates: List[Crate] = []
         self.vendor: Optional[Vendor] = None
         self.show_vendor_hint = False
 
@@ -977,6 +1016,7 @@ class Game:
                 rx, ry = self.dungeon.center(self.dungeon.rooms[0]) if self.dungeon.rooms else (MAP_W // 2, MAP_H // 2)
                 self.player.pos = Vec(rx * TILE + TILE / 2, ry * TILE + TILE / 2)
                 self._spawn_chests()
+                self._spawn_crates()
                 self._spawn_vendor()
             MAX_ACTIVE_ENEMIES = self.diff["max_enemies"]
         else:
@@ -984,6 +1024,7 @@ class Game:
             self.diff = DIFFICULTY[self.difficulty_name]
             MAX_ACTIVE_ENEMIES = self.diff["max_enemies"]
             self._spawn_chests()
+            self._spawn_crates()
             self._spawn_vendor()
 
         self.dungeon.mark_seen_radius(self.player.pos)
@@ -1274,6 +1315,13 @@ class Game:
         chest_brk = noise(0.12, 0.2) * np.exp(-t * 20)
         chest_brk += np.sin(2 * np.pi * 300 * t) * 0.15 * np.exp(-t * 25)
         self.sounds["chest"] = make_sound(chest_brk)
+
+        # Crate explosion - loud boom
+        t = np.linspace(0, 0.2, int(rate * 0.2), endpoint=False)
+        boom = np.sin(2 * np.pi * 60 * t) * 0.35 * np.exp(-t * 12)
+        boom += np.sin(2 * np.pi * 120 * t) * 0.2 * np.exp(-t * 15)
+        boom += noise(0.2, 0.25) * np.exp(-t * 10)
+        self.sounds["crate_explode"] = make_sound(boom)
 
         # Dash - quick whoosh
         t = np.linspace(0, 0.1, int(rate * 0.1), endpoint=False)
@@ -1829,6 +1877,83 @@ class Game:
             kind = "gold" if random.random() < 0.15 else "wood"
             self.chests.append(Chest(pos=pos, kind=kind))
 
+    def _spawn_crates(self):
+        """Create crate objects from dungeon crate positions."""
+        self.crates = []
+        for tx, ty in self.dungeon.crate_positions:
+            pos = Vec(tx * TILE + TILE / 2, ty * TILE + TILE / 2)
+            self.crates.append(Crate(pos=pos))
+
+    def _on_crate_broken(self, crate: Crate):
+        """Handle crate breaking - possible explosion and loot."""
+        explodes = random.random() < CRATE_EXPLODE_CHANCE
+        if explodes:
+            # Explosion effect
+            self.emit_death_burst(crate.pos.x, crate.pos.y, (255, 140, 40), 25)
+            self.emit_particles(crate.pos.x, crate.pos.y, 20, (255, 100, 30),
+                                speed=120, life=0.6, gravity=60)
+            self.add_screen_shake(6)
+            self.add_floating_text(crate.pos.x, crate.pos.y - 15, "BOOM!", (255, 160, 40), 1.0)
+            self.play_sound("crate_explode")
+            # Damage nearby enemies
+            for e in self.enemies:
+                if not e.alive:
+                    continue
+                dist = (e.pos - crate.pos).length()
+                if dist < CRATE_EXPLODE_RADIUS:
+                    dmg = random.randint(*CRATE_EXPLODE_DMG)
+                    falloff = 1.0 - dist / CRATE_EXPLODE_RADIUS
+                    dmg = max(1, int(dmg * falloff))
+                    e.hp -= dmg
+                    e.hit_flash = 0.15
+                    e.vel += (e.pos - crate.pos).normalize() * 200
+                    self.add_floating_text(e.pos.x, e.pos.y - e.radius - 5,
+                                           str(dmg), (255, 160, 40), 0.8)
+                    if e.hp <= 0 and e.alive:
+                        e.alive = False
+                        self.on_enemy_dead(e)
+            # Light damage to player if close
+            p = self.player
+            pdist = (p.pos - crate.pos).length()
+            if pdist < CRATE_EXPLODE_RADIUS and p.iframes <= 0:
+                pdmg = max(1, int(random.randint(*CRATE_EXPLODE_DMG) * (1.0 - pdist / CRATE_EXPLODE_RADIUS)))
+                if p.shield > 0:
+                    absorb = min(p.shield, pdmg)
+                    p.shield -= absorb
+                    pdmg -= absorb
+                if pdmg > 0:
+                    p.hp -= pdmg
+                    self.add_floating_text(p.pos.x, p.pos.y - 20, f"-{pdmg}", (255, 100, 40), 1.0)
+                    p.iframes = max(p.iframes, 0.3)
+        else:
+            # Normal break - wood splinters
+            self.emit_particles(crate.pos.x, crate.pos.y, 8, (140, 100, 50),
+                                speed=60, life=0.4, gravity=80)
+            self.add_screen_shake(2)
+            self.play_sound("chest")  # reuse chest break sound
+
+        # Loot drop (less common than chests)
+        if random.random() < CRATE_DROP_CHANCE:
+            roll = random.random()
+            if roll < 0.35:
+                self.loots.append(Loot(pos=self._safe_loot_pos(crate.pos),
+                                       gold=random.randint(2, 10)))
+            elif roll < 0.60:
+                pt = random.choice(["hp", "mana"])
+                self.loots.append(Loot(pos=self._safe_loot_pos(crate.pos),
+                                       potion_hp=(pt == "hp"), potion_mana=(pt == "mana")))
+            elif roll < 0.80:
+                self.loots.append(Loot(pos=self._safe_loot_pos(crate.pos),
+                                       dmg_boost=True))
+            elif roll < 0.92:
+                self.loots.append(Loot(pos=self._safe_loot_pos(crate.pos),
+                                       infusion=random.choice(INFUSION_TYPES)))
+            else:
+                # Rare weapon from crate
+                w_rarity = RARITY_NORMAL if random.random() < 0.7 else RARITY_MAGIC
+                self.loots.append(Loot(pos=self._safe_loot_pos(crate.pos),
+                                       weapon=generate_weapon(self.current_level, w_rarity)))
+
     def _safe_loot_pos(self, center: Vec, spread: float = 25.0) -> Vec:
         """Return a loot position guaranteed to be on a floor tile."""
         for _ in range(20):
@@ -1904,6 +2029,11 @@ class Game:
         for chest in self.chests:
             if chest.alive:
                 chest.hit_flash = max(0.0, chest.hit_flash - dt)
+
+    def update_crates(self, dt: float):
+        for crate in self.crates:
+            if crate.alive:
+                crate.hit_flash = max(0.0, crate.hit_flash - dt)
 
     # ---- Input ----
     def handle_input(self, dt: float):
@@ -2378,6 +2508,25 @@ class Game:
                         self._on_chest_broken(chest)
                     break
 
+        # Projectile-crate collision (player projectiles only)
+        for pr in self.projectiles:
+            if pr.hostile or pr.ttl <= 0:
+                continue
+            for crate in self.crates:
+                if not crate.alive:
+                    continue
+                if (crate.pos - pr.pos).length() < 20 + pr.radius:
+                    crate.hp -= 1
+                    crate.hit_flash = 0.12
+                    self.emit_sparks(crate.pos.x, crate.pos.y, 3)
+                    pr.pierce -= 1
+                    if pr.pierce <= 0:
+                        pr.ttl = 0
+                    if crate.hp <= 0:
+                        crate.alive = False
+                        self._on_crate_broken(crate)
+                    break
+
         self.projectiles = [pr for pr in self.projectiles if pr.ttl > 0]
 
     def update_loot(self, dt: float):
@@ -2650,10 +2799,12 @@ class Game:
         self.floating_texts.clear()
         self.corpses.clear()
         self.chests.clear()
+        self.crates.clear()
         self.treasure_goblin = None
         self.lightning_chains.clear()
         self._build_texture_cache(self.current_biome)
         self._spawn_chests()
+        self._spawn_crates()
         self.wave = 1
         self.spawn_timer = SPAWN_INTERVAL
         self.dungeon.mark_seen_radius(self.player.pos)
@@ -2681,6 +2832,7 @@ class Game:
         self._draw_torches(s, ox, oy)
         self._draw_corpses(s, ox, oy)
         self._draw_chests(s, ox, oy)
+        self._draw_crates(s, ox, oy)
         self._draw_vendor(s, ox, oy)
         self._draw_loot(s, ox, oy)
         self._draw_projectiles(s, ox, oy)
@@ -2749,8 +2901,9 @@ class Game:
                 s.blit(self.ice_crystal_surf, (px, py))
             elif t == 'mushroom':
                 s.blit(self.mushroom_surf, (px, py))
-            else:
-                s.blit(self.crate_surf, (px, py))
+            elif t == 'crate':
+                # Scenery crates handled by _draw_crates; skip here
+                pass
 
     def _draw_portals(self, s, ox, oy):
         self.portal_angle += 0.05
@@ -2871,6 +3024,24 @@ class Game:
                 pip_x = cx - (CHEST_HP * 6) // 2 + i * 12
                 pygame.draw.rect(s, (200, 180, 80), (pip_x, cy - TILE // 2 - 8, 8, 5))
 
+    def _draw_crates(self, s, ox, oy):
+        for crate in self.crates:
+            if not crate.alive:
+                continue
+            cx = int(crate.pos.x - self.cam_x + ox)
+            cy = int(crate.pos.y - self.cam_y + oy)
+            if not (-TILE < cx < WIDTH + TILE and -TILE < cy < HEIGHT + TILE):
+                continue
+            # Shadow
+            pygame.draw.ellipse(s, (10, 8, 12), (cx - 14, cy + 12, 28, 8))
+            # Crate sprite (or flash)
+            if crate.hit_flash > 0:
+                flash_surf = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
+                flash_surf.fill((255, 255, 255, 180))
+                s.blit(flash_surf, (cx - TILE // 2, cy - TILE // 2))
+            else:
+                s.blit(self.crate_surf, (cx - TILE // 2, cy - TILE // 2))
+
     def _draw_vendor(self, s, ox, oy):
         """Draw the vendor NPC in the world."""
         if not self.vendor:
@@ -2927,6 +3098,28 @@ class Game:
             glow_alpha = int(30 + 15 * math.sin(l.bob_phase * 1.5))
             if l.weapon:
                 wc = l.weapon.get_color()
+                is_unique = l.weapon.rarity == RARITY_UNIQUE
+                is_set = l.weapon.rarity == RARITY_SET
+                # Unique/Set weapons get a pulsing golden aura
+                if is_unique or is_set:
+                    aura_pulse = 0.6 + 0.4 * math.sin(self.game_time * 4)
+                    aura_r = 24 + int(4 * math.sin(self.game_time * 3))
+                    ac = wc if is_unique else (0, 220, 0)
+                    pygame.draw.circle(s, (int(ac[0] * 0.3 * aura_pulse),
+                                           int(ac[1] * 0.3 * aura_pulse),
+                                           int(ac[2] * 0.15 * aura_pulse)), (vx, vy), aura_r)
+                    # Sparkle particles
+                    for i in range(3):
+                        ang = self.game_time * 2.5 + i * math.tau / 3
+                        sx = vx + int(math.cos(ang) * 18)
+                        sy = vy + int(math.sin(ang) * 14)
+                        pygame.draw.circle(s, (255, 240, 150) if is_unique else (120, 255, 120),
+                                           (sx, sy), 2)
+                    # Column of light for uniques
+                    if is_unique:
+                        beam_alpha = int(40 * aura_pulse)
+                        pygame.draw.line(s, (beam_alpha, beam_alpha - 5, 0),
+                                         (vx, vy - 30), (vx, vy + 15), 2)
                 glow_c = (min(255, wc[0]//2 + glow_alpha), min(255, wc[1]//2 + glow_alpha), min(255, wc[2]//2))
                 pygame.draw.circle(s, glow_c, (vx, vy), 17)
                 pygame.draw.rect(s, wc, (vx - 8, vy - 8, 16, 16), border_radius=3)
@@ -4630,8 +4823,10 @@ class Game:
             self.floating_texts.clear()
             self.corpses.clear()
             self.chests.clear()
+            self.crates.clear()
             self.lightning_chains.clear()
             self._spawn_chests()
+            self._spawn_crates()
             self._spawn_vendor()
             self.dungeon.mark_seen_radius(self.player.pos)
             self.boss_spawned = False
@@ -4825,6 +5020,7 @@ class Game:
             self.update_particles(dt)
             self.update_floating_texts(dt)
             self.update_chests(dt)
+            self.update_crates(dt)
             self.update_corpses(dt)
             self.update_blood_stains(dt)
             self.update_screen_shake(dt)
