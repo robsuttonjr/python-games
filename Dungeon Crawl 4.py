@@ -1273,6 +1273,72 @@ class Game:
         zap += np.sin(2 * np.pi * 3000 * t) * 0.1 * np.exp(-t * 50)
         self.sounds["zap"] = make_sound(zap)
 
+        # --- Creature-specific hit/death sounds ---
+        # Kind 0: Skeleton - bone rattle
+        t = np.linspace(0, 0.08, int(rate * 0.08), endpoint=False)
+        bone_hit = noise(0.08, 0.2) * np.exp(-t * 40)
+        bone_hit += np.sin(2 * np.pi * 800 * t) * 0.1 * np.exp(-t * 50)
+        bone_hit += np.sin(2 * np.pi * 1200 * t) * 0.08 * np.exp(-t * 55)
+        self.sounds["hit_skeleton"] = make_sound(bone_hit)
+        t = np.linspace(0, 0.2, int(rate * 0.2), endpoint=False)
+        bone_death = noise(0.2, 0.18) * np.exp(-t * 12)
+        bone_death += np.sin(2 * np.pi * 400 * t) * 0.12 * np.exp(-t * 15)
+        bone_death += np.sin(2 * np.pi * 900 * t) * 0.08 * np.exp(-t * 20)
+        self.sounds["death_skeleton"] = make_sound(bone_death)
+
+        # Kind 1: Demon - deep growl
+        t = np.linspace(0, 0.1, int(rate * 0.1), endpoint=False)
+        demon_hit = np.sin(2 * np.pi * 80 * t) * 0.25 * np.exp(-t * 25)
+        demon_hit += np.sin(2 * np.pi * 160 * t) * 0.15 * np.exp(-t * 30)
+        demon_hit += noise(0.1, 0.08) * np.exp(-t * 35)
+        self.sounds["hit_demon"] = make_sound(demon_hit)
+        t = np.linspace(0, 0.25, int(rate * 0.25), endpoint=False)
+        demon_death = np.sin(2 * np.pi * 60 * t) * 0.3 * np.exp(-t * 10)
+        demon_death += np.sin(2 * np.pi * (60 + 80 * t / 0.25) * t) * 0.15
+        demon_death *= np.exp(-t * 8)
+        demon_death += noise(0.25, 0.12) * np.exp(-t * 10)
+        self.sounds["death_demon"] = make_sound(demon_death)
+
+        # Kind 2: Spider - chittering hiss
+        t = np.linspace(0, 0.07, int(rate * 0.07), endpoint=False)
+        spider_hit = noise(0.07, 0.22) * np.exp(-t * 45)
+        spider_hit += np.sin(2 * np.pi * 2200 * t) * 0.12 * np.exp(-t * 50)
+        spider_hit += np.sin(2 * np.pi * 3400 * t) * 0.06 * np.exp(-t * 55)
+        self.sounds["hit_spider"] = make_sound(spider_hit)
+        t = np.linspace(0, 0.18, int(rate * 0.18), endpoint=False)
+        spider_death = noise(0.18, 0.2) * np.exp(-t * 15)
+        spider_death += np.sin(2 * np.pi * 1800 * t) * 0.1 * np.exp(-t * 18)
+        freq_sweep = 2500 - 1500 * t / 0.18
+        spider_death += np.sin(2 * np.pi * freq_sweep * t) * 0.08
+        spider_death *= np.exp(-t * 12)
+        self.sounds["death_spider"] = make_sound(spider_death)
+
+        # Kind 3: Wraith - ethereal wail
+        t = np.linspace(0, 0.1, int(rate * 0.1), endpoint=False)
+        wraith_hit = np.sin(2 * np.pi * 500 * t) * 0.15
+        wraith_hit += np.sin(2 * np.pi * 750 * t) * 0.1
+        wraith_hit *= np.exp(-t * 20)
+        wraith_hit = fade_in_out(wraith_hit, 0.2)
+        self.sounds["hit_wraith"] = make_sound(wraith_hit)
+        t = np.linspace(0, 0.3, int(rate * 0.3), endpoint=False)
+        wraith_death = np.sin(2 * np.pi * (600 - 200 * t / 0.3) * t) * 0.2
+        wraith_death += np.sin(2 * np.pi * (900 - 400 * t / 0.3) * t) * 0.1
+        wraith_death *= np.exp(-t * 6)
+        wraith_death = fade_in_out(wraith_death, 0.15)
+        self.sounds["death_wraith"] = make_sound(wraith_death)
+
+        # Boss hit/death - thunderous impact
+        t = np.linspace(0, 0.12, int(rate * 0.12), endpoint=False)
+        boss_hit = np.sin(2 * np.pi * 100 * t) * 0.3 * np.exp(-t * 25)
+        boss_hit += np.sin(2 * np.pi * 200 * t) * 0.2 * np.exp(-t * 30)
+        boss_hit += noise(0.12, 0.15) * np.exp(-t * 35)
+        self.sounds["hit_boss"] = make_sound(boss_hit)
+        t = np.linspace(0, 0.35, int(rate * 0.35), endpoint=False)
+        boss_death = np.sin(2 * np.pi * 50 * t) * 0.35 * np.exp(-t * 6)
+        boss_death += np.sin(2 * np.pi * 120 * t) * 0.2 * np.exp(-t * 8)
+        boss_death += noise(0.35, 0.15) * np.exp(-t * 5)
+        self.sounds["death_boss"] = make_sound(boss_death)
+
         # Set volumes
         for s in self.sounds.values():
             s.set_volume(0.4)
@@ -1280,6 +1346,16 @@ class Game:
         self.sounds["goblin"].set_volume(0.5)
         self.sounds["jackpot"].set_volume(0.6)
         self.sounds["levelup"].set_volume(0.5)
+        self.sounds["death_boss"].set_volume(0.6)
+        self.sounds["hit_boss"].set_volume(0.5)
+
+    _CREATURE_SOUND_MAP = {0: "skeleton", 1: "demon", 2: "spider", 3: "wraith"}
+
+    def _creature_sound_name(self, e) -> str:
+        """Get sound suffix for an enemy kind."""
+        if isinstance(e, Boss):
+            return "boss"
+        return self._CREATURE_SOUND_MAP.get(e.kind, "skeleton")
 
     def play_sound(self, name):
         snd = self.sounds.get(name)
@@ -1636,8 +1712,25 @@ class Game:
             kind = "gold" if random.random() < 0.15 else "wood"
             self.chests.append(Chest(pos=pos, kind=kind))
 
+    def _safe_loot_pos(self, center: Vec, spread: float = 25.0) -> Vec:
+        """Return a loot position guaranteed to be on a floor tile."""
+        for _ in range(20):
+            p = center + Vec(random.uniform(-spread, spread), random.uniform(-spread, spread))
+            tx, ty = int(p.x // TILE), int(p.y // TILE)
+            if 0 <= tx < MAP_W and 0 <= ty < MAP_H and self.dungeon.tiles[tx][ty] == FLOOR:
+                return p
+        # Fallback: search outward in a grid
+        cx, cy = int(center.x // TILE), int(center.y // TILE)
+        for r in range(1, 6):
+            for dx in range(-r, r + 1):
+                for dy in range(-r, r + 1):
+                    nx, ny = cx + dx, cy + dy
+                    if 0 <= nx < MAP_W and 0 <= ny < MAP_H and self.dungeon.tiles[nx][ny] == FLOOR:
+                        return Vec(nx * TILE + TILE / 2, ny * TILE + TILE / 2)
+        return center.copy()
+
     def _on_chest_broken(self, chest: Chest):
-        """Handle chest breaking - spawn loot."""
+        """Handle chest breaking - spawn loot: always 2-3 items + weapon."""
         # Burst effect
         color = C_GOLD if chest.kind == "gold" else (160, 120, 60)
         self.emit_death_burst(chest.pos.x, chest.pos.y, color, 15)
@@ -1648,36 +1741,47 @@ class Game:
         # Gold drop (always)
         gold_mult = 3 if chest.kind == "gold" else 1
         gold = random.randint(*CHEST_GOLD_DROP) * gold_mult
-        self.loots.append(Loot(pos=chest.pos.copy(), gold=gold))
+        self.loots.append(Loot(pos=self._safe_loot_pos(chest.pos), gold=gold))
 
-        # Potions
-        if random.random() < CHEST_POTION_CHANCE:
-            potion_type = random.choice(["hp", "mana"])
-            self.loots.append(Loot(pos=chest.pos + Vec(random.uniform(-10, 10), random.uniform(-10, 10)),
-                                   potion_hp=(potion_type == "hp"), potion_mana=(potion_type == "mana")))
-        # Extra potion from gold chests
-        if chest.kind == "gold" and random.random() < 0.5:
-            self.loots.append(Loot(pos=chest.pos + Vec(random.uniform(-12, 12), random.uniform(-12, 12)),
-                                   potion_hp=True))
-
-        # Weapon — chests drop normal or magic, gold chests have magic+ chance
-        if random.random() < CHEST_WEAPON_CHANCE:
-            if chest.kind == "gold":
-                chest_rarity = RARITY_MAGIC if random.random() < 0.7 else RARITY_RARE
+        # Always drop 2-3 consumables (potions, boosts, infusions)
+        num_drops = random.randint(2, 3)
+        for _ in range(num_drops):
+            roll = random.random()
+            if roll < 0.35:
+                pt = random.choice(["hp", "mana"])
+                self.loots.append(Loot(pos=self._safe_loot_pos(chest.pos),
+                                       potion_hp=(pt == "hp"), potion_mana=(pt == "mana")))
+            elif roll < 0.55:
+                self.loots.append(Loot(pos=self._safe_loot_pos(chest.pos), dmg_boost=True))
+            elif roll < 0.75:
+                self.loots.append(Loot(pos=self._safe_loot_pos(chest.pos), shield_boost=True))
+            elif roll < 0.88:
+                self.loots.append(Loot(pos=self._safe_loot_pos(chest.pos),
+                                       infusion=random.choice(INFUSION_TYPES)))
             else:
-                chest_rarity = RARITY_NORMAL if random.random() < 0.65 else RARITY_MAGIC
-            w = generate_weapon(self.current_level, chest_rarity)
-            self.loots.append(Loot(pos=chest.pos + Vec(random.uniform(-8, 8), random.uniform(-8, 8)),
-                                   weapon=w))
+                self.loots.append(Loot(pos=self._safe_loot_pos(chest.pos),
+                                       gold=random.randint(5, 20) * gold_mult))
 
-        # Boost pickups
-        if random.random() < CHEST_BOOST_CHANCE:
-            if random.random() < 0.5:
-                self.loots.append(Loot(pos=chest.pos + Vec(random.uniform(-10, 10), random.uniform(-10, 10)),
-                                       dmg_boost=True))
+        # Always drop a weapon — same rarity chances as a normal monster
+        roll = random.random()
+        depth = self.current_level
+        if chest.kind == "gold":
+            # Gold chests slightly better
+            if roll < 0.05 + depth * 0.005:
+                w_rarity = RARITY_RARE
+            elif roll < 0.45:
+                w_rarity = RARITY_MAGIC
             else:
-                self.loots.append(Loot(pos=chest.pos + Vec(random.uniform(-10, 10), random.uniform(-10, 10)),
-                                       shield_boost=True))
+                w_rarity = RARITY_NORMAL
+        else:
+            if roll < 0.03 + depth * 0.005:
+                w_rarity = RARITY_RARE
+            elif roll < 0.35:
+                w_rarity = RARITY_MAGIC
+            else:
+                w_rarity = RARITY_NORMAL
+        self.loots.append(Loot(pos=self._safe_loot_pos(chest.pos),
+                               weapon=generate_weapon(depth, w_rarity)))
 
     def update_chests(self, dt: float):
         for chest in self.chests:
@@ -1903,29 +2007,48 @@ class Game:
                     self.emit_particles(e.pos.x, e.pos.y, 20, C_GOLD, speed=80, life=0.6, gravity=-30)
                     self.add_floating_text(e.pos.x, e.pos.y - 20, "ESCAPED!", (200, 180, 60), 1.2)
                     continue
-                # Flee from player
+                # Flee from player — with wall avoidance
                 flee_dir = (e.pos - p.pos)
                 if flee_dir.length_squared() > 0:
                     flee_dir = flee_dir.normalize()
                 else:
                     flee_dir = Vec(1, 0)
-                jitter = Vec(random.uniform(-0.4, 0.4), random.uniform(-0.4, 0.4))
+                # Wall avoidance: probe ahead and to sides, redirect if blocked
+                probe_dist = TILE * 1.5
+                probe_ahead = e.pos + flee_dir * probe_dist
+                if self.dungeon.is_solid_at_px(probe_ahead):
+                    # Try perpendicular directions to find open path
+                    perp1 = Vec(-flee_dir.y, flee_dir.x)
+                    perp2 = Vec(flee_dir.y, -flee_dir.x)
+                    p1_ok = not self.dungeon.is_solid_at_px(e.pos + perp1 * probe_dist)
+                    p2_ok = not self.dungeon.is_solid_at_px(e.pos + perp2 * probe_dist)
+                    if p1_ok and p2_ok:
+                        flee_dir = random.choice([perp1, perp2])
+                    elif p1_ok:
+                        flee_dir = perp1
+                    elif p2_ok:
+                        flee_dir = perp2
+                    else:
+                        # Fully blocked, try random direction
+                        ang = random.uniform(0, math.tau)
+                        flee_dir = Vec(math.cos(ang), math.sin(ang))
+                jitter = Vec(random.uniform(-0.3, 0.3), random.uniform(-0.3, 0.3))
                 acc = (flee_dir + jitter).normalize() * (e.speed * 1.1)
-                e.vel += (acc - e.vel) * 0.15
+                e.vel += (acc - e.vel) * 0.2
                 # Drop loot periodically
                 e.loot_drop_timer -= dt
                 if e.loot_drop_timer <= 0:
                     e.loot_drop_timer = GOBLIN_LOOT_INTERVAL
-                    offset = Vec(random.uniform(-8, 8), random.uniform(-8, 8))
-                    self.loots.append(Loot(pos=e.pos + offset, gold=random.randint(3, 10)))
+                    drop_pos = self._safe_loot_pos(e.pos)
+                    self.loots.append(Loot(pos=drop_pos, gold=random.randint(3, 10)))
                     self.emit_particles(e.pos.x, e.pos.y, 3, C_GOLD, speed=30, life=0.3, gravity=-20)
-                # Continue to wall collision below (skip normal movement calc)
+                # Wall collision with sliding
                 new_epos = e.pos + e.vel * dt
                 test_x = Vec(new_epos.x, e.pos.y)
                 if not self._circle_collides(test_x, e.radius):
                     e.pos.x = test_x.x
                 else:
-                    e.vel.x = 0
+                    e.vel.x *= -0.5  # bounce off instead of stop
                 test_y = Vec(e.pos.x, new_epos.y)
                 if not self._circle_collides(test_y, e.radius):
                     e.pos.y = test_y.y
@@ -2104,7 +2227,7 @@ class Game:
                                                str(damage), dmg_col,
                                                scale=1.3 if damage > 20 else 1.0)
                         self.emit_blood(e.pos.x, e.pos.y, 4)
-                        self.play_sound("hit")
+                        self.play_sound(f"hit_{self._creature_sound_name(e)}")
                         # Life steal
                         ls = self.player.calc_life_steal()
                         if ls > 0:
@@ -2222,20 +2345,18 @@ class Game:
             self.add_floating_text(e.pos.x, e.pos.y - 30, "JACKPOT!", C_GOLD, 2.0)
             self.play_sound("jackpot")
             for _ in range(10):
-                offset = Vec(random.uniform(-40, 40), random.uniform(-40, 40))
-                self.loots.append(Loot(pos=e.pos + offset, gold=random.randint(12, 35)))
-            self.loots.append(Loot(pos=e.pos + Vec(25, 0), dmg_boost=True))
-            self.loots.append(Loot(pos=e.pos + Vec(-25, 0), shield_boost=True))
+                self.loots.append(Loot(pos=self._safe_loot_pos(e.pos, 40), gold=random.randint(12, 35)))
+            self.loots.append(Loot(pos=self._safe_loot_pos(e.pos), dmg_boost=True))
+            self.loots.append(Loot(pos=self._safe_loot_pos(e.pos), shield_boost=True))
             # Guaranteed infusion drop
             inf = random.choice(INFUSION_TYPES)
-            self.loots.append(Loot(pos=e.pos + Vec(0, 20), infusion=inf))
+            self.loots.append(Loot(pos=self._safe_loot_pos(e.pos), infusion=inf))
             if random.random() < 0.5:
-                self.loots.append(Loot(pos=e.pos + Vec(0, -20), potion_hp=True))
+                self.loots.append(Loot(pos=self._safe_loot_pos(e.pos), potion_hp=True))
             # Goblin weapon drops: 2-3 weapons, magic to rare range
             for gi in range(random.randint(2, 3)):
                 gob_rarity = random.choice([RARITY_MAGIC, RARITY_MAGIC, RARITY_RARE])
-                goff = Vec(random.uniform(-35, 35), random.uniform(-35, 35))
-                self.loots.append(Loot(pos=e.pos + goff,
+                self.loots.append(Loot(pos=self._safe_loot_pos(e.pos, 35),
                                        weapon=generate_weapon(self.current_level, gob_rarity)))
             self.corpses.append(Corpse(x=e.pos.x, y=e.pos.y, radius=e.radius, kind=e.kind,
                                        color=C_GOLD, is_boss=False, is_elite=False))
@@ -2253,7 +2374,7 @@ class Game:
             self.add_floating_text(e.pos.x, e.pos.y - 30, "BOSS SLAIN!", (255, 200, 60), 2.0)
         else:
             self.emit_death_burst(e.pos.x, e.pos.y, death_color, 15)
-        self.play_sound("death")
+        self.play_sound(f"death_{self._creature_sound_name(e)}")
 
         # corpse
         self.corpses.append(Corpse(x=e.pos.x, y=e.pos.y, radius=e.radius, kind=e.kind,
@@ -2261,11 +2382,12 @@ class Game:
                                    is_elite=isinstance(e, Elite)))
 
         drops: List[Loot] = []
+        sp = lambda: self._safe_loot_pos(e.pos)
         if random.random() < 0.9:
-            drops.append(Loot(pos=e.pos.copy(), gold=random.randint(*GOLD_DROP)))
+            drops.append(Loot(pos=sp(), gold=random.randint(*GOLD_DROP)))
         if random.random() < POTION_DROP_CHANCE:
             potion = random.choice(["hp", "mana"])
-            drops.append(Loot(pos=e.pos.copy(), potion_hp=(potion == "hp"), potion_mana=(potion == "mana")))
+            drops.append(Loot(pos=sp(), potion_hp=(potion == "hp"), potion_mana=(potion == "mana")))
         if random.random() < LOOT_DROP_CHANCE:
             # Tiered drop system:
             # Normal monsters: normal or magic (occasional rare at high depth)
@@ -2297,32 +2419,32 @@ class Game:
                     force = RARITY_MAGIC
                 else:
                     force = RARITY_NORMAL
-            drops.append(Loot(pos=e.pos.copy(), weapon=generate_weapon(self.current_level, force)))
+            drops.append(Loot(pos=sp(), weapon=generate_weapon(self.current_level, force)))
         if random.random() < DMG_PICKUP_DROP_CHANCE:
-            drops.append(Loot(pos=e.pos.copy(), dmg_boost=True))
+            drops.append(Loot(pos=sp(), dmg_boost=True))
         if random.random() < SHIELD_PICKUP_DROP_CHANCE:
-            drops.append(Loot(pos=e.pos.copy(), shield_boost=True))
+            drops.append(Loot(pos=sp(), shield_boost=True))
         if random.random() < INFUSION_DROP_CHANCE:
-            drops.append(Loot(pos=e.pos.copy(), infusion=random.choice(INFUSION_TYPES)))
+            drops.append(Loot(pos=sp(), infusion=random.choice(INFUSION_TYPES)))
         if isinstance(e, Elite):
-            drops.append(Loot(pos=e.pos.copy(), gold=random.randint(15, 35)))
+            drops.append(Loot(pos=sp(), gold=random.randint(15, 35)))
             if random.random() < 0.5:
-                drops.append(Loot(pos=e.pos.copy(), dmg_boost=True))
+                drops.append(Loot(pos=sp(), dmg_boost=True))
             else:
-                drops.append(Loot(pos=e.pos.copy(), shield_boost=True))
+                drops.append(Loot(pos=sp(), shield_boost=True))
             # Elites always drop at least magic gear
             if not any(d.weapon for d in drops):
                 elite_rarity = RARITY_MAGIC if random.random() < 0.6 else RARITY_RARE
-                drops.append(Loot(pos=e.pos + Vec(random.uniform(-15, 15), random.uniform(-15, 15)),
+                drops.append(Loot(pos=self._safe_loot_pos(e.pos, 15),
                                   weapon=generate_weapon(self.current_level, elite_rarity)))
         if isinstance(e, Boss):
             # Bosses always drop 2 weapons: one rare+, one magic+
-            drops.append(Loot(pos=e.pos + Vec(30, 0),
+            drops.append(Loot(pos=self._safe_loot_pos(e.pos, 30),
                               weapon=generate_weapon(self.current_level,
                                   RARITY_UNIQUE if random.random() < 0.25 else RARITY_RARE)))
-            drops.append(Loot(pos=e.pos + Vec(-30, 0),
+            drops.append(Loot(pos=self._safe_loot_pos(e.pos, 30),
                               weapon=generate_weapon(self.current_level, RARITY_MAGIC)))
-            drops.append(Loot(pos=e.pos.copy(), gold=random.randint(40, 100)))
+            drops.append(Loot(pos=sp(), gold=random.randint(40, 100)))
         self.loots.extend(drops)
 
     def update_spawning(self, dt: float):
@@ -2872,53 +2994,159 @@ class Game:
             pygame.draw.polygon(s, (180, 130, 30), pts, 2)
             # Mouth
             pygame.draw.arc(s, (0, 0, 0), (ex - 12, ey + 4, 24, 14), 3.14, 6.28, 2)
+        elif e.kind == 4:  # Treasure Goblin
+            shimmer = 0.7 + 0.3 * math.sin(self.game_time * 8)
+            gcol = (int(255 * shimmer), int(215 * shimmer), int(40 * shimmer))
+            pygame.draw.circle(s, gcol, (ex, ey), e.radius)
+            pygame.draw.circle(s, (200, 170, 30), (ex, ey), e.radius, 2)
+            # Loot bag on back
+            pygame.draw.circle(s, (180, 150, 50), (ex - 5, ey - 8), 8)
+            pygame.draw.circle(s, (160, 130, 40), (ex - 5, ey - 8), 8, 1)
+            pygame.draw.line(s, (140, 110, 40), (ex - 5, ey - 16), (ex - 5, ey - 10), 2)
+            # Eyes (excited)
+            pygame.draw.circle(s, (255, 255, 200), (ex - 3, ey - 2), 3)
+            pygame.draw.circle(s, (255, 255, 200), (ex + 5, ey - 2), 3)
+            pygame.draw.circle(s, (40, 20, 10), (ex - 3, ey - 2), 1)
+            pygame.draw.circle(s, (40, 20, 10), (ex + 5, ey - 2), 1)
+            # Timer arc
+            if isinstance(e, TreasureGoblin):
+                timer_frac = max(0, e.portal_timer / GOBLIN_DESPAWN_TIME)
+                if timer_frac < 1.0:
+                    pygame.draw.arc(s, C_GOLD, (ex - e.radius - 4, ey - e.radius - 4,
+                                    (e.radius + 4) * 2, (e.radius + 4) * 2),
+                                    0, math.tau * timer_frac, 2)
         else:
-            # Regular enemy body
-            pygame.draw.circle(s, (max(0, body_col[0] - 40), max(0, body_col[1] - 40), max(0, body_col[2] - 30)),
-                               (ex, ey), e.radius + 1)
-            pygame.draw.circle(s, body_col, (ex, ey), e.radius)
+            # --- Kind 0: SKELETON - bony, pale, skull-shaped ---
+            if e.kind == 0:
+                bone_col = (220, 210, 180) if e.hit_flash <= 0 else (255, 255, 255)
+                bone_dark = (180, 165, 130) if e.hit_flash <= 0 else (240, 240, 240)
+                # Skull body (slightly oval)
+                pygame.draw.ellipse(s, bone_dark, (ex - e.radius, ey - e.radius + 2,
+                                    e.radius * 2, int(e.radius * 1.8)))
+                pygame.draw.ellipse(s, bone_col, (ex - e.radius + 2, ey - e.radius + 3,
+                                    e.radius * 2 - 4, int(e.radius * 1.8) - 4))
+                # Eye sockets (dark holes)
+                pygame.draw.circle(s, (15, 10, 10), (ex - 6, ey - 3), 5)
+                pygame.draw.circle(s, (15, 10, 10), (ex + 6, ey - 3), 5)
+                # Glowing red pupils
+                glow = 0.7 + 0.3 * math.sin(self.game_time * 5)
+                eye_r = int(200 * glow)
+                pygame.draw.circle(s, (eye_r, 30, 20), (ex - 6, ey - 3), 2)
+                pygame.draw.circle(s, (eye_r, 30, 20), (ex + 6, ey - 3), 2)
+                # Nose hole
+                pygame.draw.polygon(s, (15, 10, 10), [(ex, ey + 2), (ex - 2, ey + 5), (ex + 2, ey + 5)])
+                # Jaw / teeth
+                for tx in range(-7, 8, 3):
+                    pygame.draw.rect(s, bone_col, (ex + tx, ey + 7, 2, 4))
+                pygame.draw.line(s, bone_dark, (ex - 8, ey + 7), (ex + 8, ey + 7), 1)
+                # Rib lines below
+                for ry in range(12, 18, 3):
+                    pygame.draw.line(s, bone_dark, (ex - 8, ey + ry), (ex + 8, ey + ry), 1)
 
-            if e.kind == 0:  # Eyes demon
-                pygame.draw.circle(s, (220, 40, 20), (ex - 6, ey - 4), 4)
-                pygame.draw.circle(s, (220, 40, 20), (ex + 6, ey - 4), 4)
-                pygame.draw.circle(s, (255, 200, 60), (ex - 6, ey - 4), 2)
-                pygame.draw.circle(s, (255, 200, 60), (ex + 6, ey - 4), 2)
-            elif e.kind == 1:  # Horned
-                pygame.draw.polygon(s, (140, 110, 80), [(ex - 12, ey - 14), (ex - 6, ey - 3), (ex - 17, ey - 3)])
-                pygame.draw.polygon(s, (140, 110, 80), [(ex + 12, ey - 14), (ex + 6, ey - 3), (ex + 17, ey - 3)])
-                pygame.draw.circle(s, (200, 40, 20), (ex - 4, ey - 3), 3)
-                pygame.draw.circle(s, (200, 40, 20), (ex + 4, ey - 3), 3)
-            elif e.kind == 2:  # Mandibles
-                pygame.draw.line(s, (160, 120, 80), (ex - 6, ey + 6), (ex - 14, ey + 17), 3)
-                pygame.draw.line(s, (160, 120, 80), (ex + 6, ey + 6), (ex + 14, ey + 17), 3)
-                pygame.draw.circle(s, (200, 40, 20), (ex - 4, ey - 3), 3)
-                pygame.draw.circle(s, (200, 40, 20), (ex + 4, ey - 3), 3)
-            elif e.kind == 3:  # Spitter
-                pygame.draw.circle(s, (30, 30, 50), (ex, ey), 6)
-                pygame.draw.circle(s, (200, 60, 255), (ex, ey), 3)
-                pygame.draw.circle(s, (200, 40, 20), (ex + 8, ey - 5), 3)
-                pygame.draw.circle(s, (255, 200, 60), (ex + 8, ey - 5), 1)
-            elif e.kind == 4:  # Treasure Goblin
-                shimmer = 0.7 + 0.3 * math.sin(self.game_time * 8)
-                gcol = (int(255 * shimmer), int(215 * shimmer), int(40 * shimmer))
-                pygame.draw.circle(s, gcol, (ex, ey), e.radius)
-                pygame.draw.circle(s, (200, 170, 30), (ex, ey), e.radius, 2)
-                # Loot bag on back
-                pygame.draw.circle(s, (180, 150, 50), (ex - 5, ey - 8), 8)
-                pygame.draw.circle(s, (160, 130, 40), (ex - 5, ey - 8), 8, 1)
-                pygame.draw.line(s, (140, 110, 40), (ex - 5, ey - 16), (ex - 5, ey - 10), 2)
-                # Eyes (excited)
-                pygame.draw.circle(s, (255, 255, 200), (ex - 3, ey - 2), 3)
-                pygame.draw.circle(s, (255, 255, 200), (ex + 5, ey - 2), 3)
-                pygame.draw.circle(s, (40, 20, 10), (ex - 3, ey - 2), 1)
-                pygame.draw.circle(s, (40, 20, 10), (ex + 5, ey - 2), 1)
-                # Timer arc
-                if isinstance(e, TreasureGoblin):
-                    timer_frac = max(0, e.portal_timer / GOBLIN_DESPAWN_TIME)
-                    if timer_frac < 1.0:
-                        pygame.draw.arc(s, C_GOLD, (ex - e.radius - 4, ey - e.radius - 4,
-                                        (e.radius + 4) * 2, (e.radius + 4) * 2),
-                                        0, math.tau * timer_frac, 2)
+            # --- Kind 1: DEMON - red/dark, horns, muscular ---
+            elif e.kind == 1:
+                dcol = (180, 40, 30) if e.hit_flash <= 0 else (255, 255, 255)
+                dcol_dark = (120, 20, 15) if e.hit_flash <= 0 else (240, 240, 240)
+                # Muscular body
+                pygame.draw.circle(s, dcol_dark, (ex, ey), e.radius + 2)
+                pygame.draw.circle(s, dcol, (ex, ey), e.radius)
+                # Inner body shading
+                pygame.draw.circle(s, (min(255, dcol[0] + 30), dcol[1], dcol[2]),
+                                   (ex - 3, ey - 3), e.radius - 5)
+                # Horns (curved)
+                horn_col = (100, 80, 50)
+                pygame.draw.polygon(s, horn_col, [
+                    (ex - 10, ey - 12), (ex - 18, ey - 28), (ex - 14, ey - 26), (ex - 6, ey - 10)])
+                pygame.draw.polygon(s, horn_col, [
+                    (ex + 10, ey - 12), (ex + 18, ey - 28), (ex + 14, ey - 26), (ex + 6, ey - 10)])
+                # Angry eyes
+                pygame.draw.line(s, (255, 200, 40), (ex - 9, ey - 6), (ex - 3, ey - 4), 3)
+                pygame.draw.line(s, (255, 200, 40), (ex + 3, ey - 4), (ex + 9, ey - 6), 3)
+                pygame.draw.circle(s, (255, 255, 100), (ex - 6, ey - 4), 2)
+                pygame.draw.circle(s, (255, 255, 100), (ex + 6, ey - 4), 2)
+                # Fanged mouth
+                pygame.draw.arc(s, (50, 10, 10), (ex - 7, ey + 2, 14, 10), 3.14, 6.28, 2)
+                pygame.draw.polygon(s, (255, 240, 200), [(ex - 5, ey + 5), (ex - 4, ey + 9), (ex - 3, ey + 5)])
+                pygame.draw.polygon(s, (255, 240, 200), [(ex + 3, ey + 5), (ex + 4, ey + 9), (ex + 5, ey + 5)])
+
+            # --- Kind 2: SPIDER - dark, multiple legs, mandibles ---
+            elif e.kind == 2:
+                sp_col = (50, 40, 60) if e.hit_flash <= 0 else (255, 255, 255)
+                sp_light = (70, 55, 80) if e.hit_flash <= 0 else (240, 240, 240)
+                # Body (two segments: abdomen + head)
+                pygame.draw.ellipse(s, sp_col, (ex - e.radius + 2, ey - 4,
+                                    e.radius * 2 - 4, e.radius + 6))  # abdomen
+                pygame.draw.circle(s, sp_light, (ex, ey - 6), e.radius - 6)  # head
+                # Hourglass marking on abdomen
+                pygame.draw.polygon(s, (200, 30, 30), [
+                    (ex, ey + 2), (ex - 3, ey + 6), (ex, ey + 10), (ex + 3, ey + 6)])
+                # 8 legs (4 per side, animated)
+                walk = math.sin(self.game_time * 8) * 3
+                leg_col = sp_col
+                for i, ang in enumerate([-0.8, -0.4, 0.1, 0.5]):
+                    ofs = walk if i % 2 == 0 else -walk
+                    # Left legs
+                    lx1 = ex - e.radius + 2
+                    ly1 = ey + int(ang * 12) + int(ofs)
+                    lx2 = lx1 - 14
+                    ly2 = ly1 + 8
+                    pygame.draw.line(s, leg_col, (lx1, ly1), (lx2, ly2), 2)
+                    pygame.draw.line(s, leg_col, (lx2, ly2), (lx2 - 4, ly2 + 6), 2)
+                    # Right legs
+                    rx1 = ex + e.radius - 2
+                    ry1 = ey + int(ang * 12) + int(ofs)
+                    rx2 = rx1 + 14
+                    ry2 = ry1 + 8
+                    pygame.draw.line(s, leg_col, (rx1, ry1), (rx2, ry2), 2)
+                    pygame.draw.line(s, leg_col, (rx2, ry2), (rx2 + 4, ry2 + 6), 2)
+                # Multiple eyes (cluster)
+                for dx, dy in [(-5, -8), (-2, -10), (2, -10), (5, -8), (-3, -6), (3, -6)]:
+                    pygame.draw.circle(s, (180, 0, 0), (ex + dx, ey + dy), 2)
+                    pygame.draw.circle(s, (255, 100, 100), (ex + dx, ey + dy), 1)
+                # Mandibles / fangs
+                pygame.draw.line(s, (160, 140, 100), (ex - 4, ey - 2), (ex - 8, ey + 6), 2)
+                pygame.draw.line(s, (160, 140, 100), (ex + 4, ey - 2), (ex + 8, ey + 6), 2)
+
+            # --- Kind 3: WRAITH - translucent, floating, purple wispy ---
+            elif e.kind == 3:
+                float_ofs = math.sin(self.game_time * 3) * 4
+                wy = ey + int(float_ofs)
+                # Wispy trailing tail
+                for i in range(5):
+                    t_alpha = 0.3 - i * 0.05
+                    t_col = (int(100 * t_alpha), int(50 * t_alpha), int(160 * t_alpha))
+                    trail_y = wy + 8 + i * 5
+                    trail_w = e.radius - i * 2
+                    if trail_w > 0:
+                        pygame.draw.ellipse(s, t_col, (ex - trail_w, trail_y, trail_w * 2, 6))
+                # Ghostly body (translucent-look with layered circles)
+                if e.hit_flash > 0:
+                    wr_col = (255, 255, 255)
+                else:
+                    pulse = 0.6 + 0.4 * math.sin(self.game_time * 4)
+                    wr_col = (int(80 * pulse), int(40 * pulse), int(150 * pulse))
+                pygame.draw.circle(s, wr_col, (ex, wy), e.radius)
+                # Inner glow
+                glow_col = (int(min(255, wr_col[0] + 60)), int(min(255, wr_col[1] + 40)),
+                            int(min(255, wr_col[2] + 50)))
+                pygame.draw.circle(s, glow_col, (ex, wy), e.radius - 5)
+                # Hollow eyes (bright glowing)
+                pygame.draw.circle(s, (200, 180, 255), (ex - 6, wy - 3), 4)
+                pygame.draw.circle(s, (200, 180, 255), (ex + 6, wy - 3), 4)
+                pygame.draw.circle(s, (255, 255, 255), (ex - 6, wy - 3), 2)
+                pygame.draw.circle(s, (255, 255, 255), (ex + 6, wy - 3), 2)
+                # Ghostly mouth (open wail)
+                pygame.draw.ellipse(s, (40, 20, 60), (ex - 4, wy + 4, 8, 6))
+                # Wispy particles around
+                for i in range(3):
+                    ang = self.game_time * 2 + i * math.tau / 3
+                    wx = ex + int(math.cos(ang) * (e.radius + 6))
+                    wwy = wy + int(math.sin(ang) * (e.radius + 4))
+                    pygame.draw.circle(s, (100, 70, 180), (wx, wwy), 2)
+
+            else:
+                # Fallback generic body
+                pygame.draw.circle(s, body_col, (ex, ey), e.radius)
 
         # HP bar above enemy
         if ratio < 1.0:
@@ -3455,6 +3683,7 @@ class Game:
             ("", ""),
             ("Portals", "Step into colored portals to enter new biomes"),
             ("Vendor NPC", "Buy/sell weapons in the starting room"),
+            ("Creatures", "Skeletons, Demons, Spiders, Wraiths - each with unique sounds"),
             ("Treasure Goblin", "Chase it! Drops gold as it flees, jackpot on kill"),
             ("Elites", "Lead packs with auras: Haste / Frenzy / Guardian"),
             ("Goal", "Explore endless depths, hunt goblins, slay bosses"),
