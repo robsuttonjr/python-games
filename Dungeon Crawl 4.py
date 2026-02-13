@@ -100,10 +100,11 @@ INFUSION_TYPES = ["fire", "ice", "lightning"]
 INFUSION_DROP_CHANCE = 0.07
 INFUSION_COLORS = {"fire": (255, 140, 40), "ice": (140, 200, 255), "lightning": (255, 255, 100)}
 
-GOBLIN_SPAWN_CHANCE = 0.06  # per wave
+GOBLIN_SPAWN_CHANCE = 0.03  # per wave (reduced - cooldown enforced below)
 GOBLIN_SPEED_MULT = 1.5
 GOBLIN_DESPAWN_TIME = 18.0
 GOBLIN_LOOT_INTERVAL = 0.6
+GOBLIN_MIN_INTERVAL = 660.0  # minimum 11 minutes between goblin spawns
 
 TILE = 48
 MAP_W, MAP_H = 180, 140
@@ -137,7 +138,43 @@ BIOME_NAMES = {
 BIOME_HAZARD = {
     "crypt": "poison", "cave": None, "firepit": "lava", "icecavern": "ice", "swamp": "poison",
 }
-PORTALS_PER_LEVEL = 2
+PORTALS_PER_LEVEL = 1  # single portal to next area (linear progression)
+
+# ============ D2R ACT PROGRESSION SYSTEM ============
+# Linear progression through 5 acts, each with a fixed biome and boss
+LEVELS_PER_ACT = 5
+ACTS = {
+    1: {"name": "Act I: The Sightless Eye", "biome": "crypt",
+        "desc": "Darkness stirs beneath the Monastery",
+        "boss_name": "Blood Raven", "boss_title": "The Corrupted Rogue"},
+    2: {"name": "Act II: The Secret of the Vizjerei", "biome": "cave",
+        "desc": "Ancient tombs guard forgotten secrets",
+        "boss_name": "Radament", "boss_title": "The Risen Horror"},
+    3: {"name": "Act III: The Infernal Gate", "biome": "swamp",
+        "desc": "The jungle hides a gateway to Hell",
+        "boss_name": "Mephisto", "boss_title": "Lord of Hatred"},
+    4: {"name": "Act IV: The Harrowing", "biome": "firepit",
+        "desc": "Descend into the Burning Hells",
+        "boss_name": "Diablo", "boss_title": "Lord of Terror"},
+    5: {"name": "Act V: Lord of Destruction", "biome": "icecavern",
+        "desc": "Storm the summit of Mount Arreat",
+        "boss_name": "Baal", "boss_title": "Lord of Destruction"},
+}
+# Difficulty tiers after completing all acts (D2R style)
+DIFFICULTY_TIERS = ["Normal", "Nightmare", "Hell"]
+DIFFICULTY_TIER_SCALE = {
+    "Normal":    {"hp": 1.0, "dmg": 1.0, "speed": 1.0, "drop_bonus": 0},
+    "Nightmare": {"hp": 2.0, "dmg": 1.6, "speed": 1.1, "drop_bonus": 5},
+    "Hell":      {"hp": 3.5, "dmg": 2.2, "speed": 1.2, "drop_bonus": 12},
+}
+# Area names within each act (for flavor text)
+ACT_AREAS = {
+    1: ["Blood Moor", "Cold Plains", "Stony Field", "Dark Wood", "Catacombs"],
+    2: ["Sewers", "Rocky Waste", "Far Oasis", "Lost City", "Tal Rasha's Tomb"],
+    3: ["Spider Forest", "Flayer Jungle", "Lower Kurast", "Travincal", "Durance of Hate"],
+    4: ["Outer Steppes", "Plains of Despair", "City of the Damned", "River of Flame", "Chaos Sanctuary"],
+    5: ["Bloody Foothills", "Frigid Highlands", "Glacial Trail", "Arreat Summit", "Worldstone Keep"],
+}
 
 # ============ VISUAL CONFIG ============
 AMBIENT_LIGHT = (20, 17, 25)
@@ -189,8 +226,8 @@ RARITY_NAMES = {
     RARITY_UNIQUE: "Unique", RARITY_SET: "Set",
 }
 RARITY_DROP_WEIGHTS = {
-    RARITY_NORMAL: 50, RARITY_MAGIC: 30, RARITY_RARE: 14,
-    RARITY_UNIQUE: 4, RARITY_SET: 2,
+    RARITY_NORMAL: 55, RARITY_MAGIC: 28, RARITY_RARE: 12,
+    RARITY_UNIQUE: 2, RARITY_SET: 3,
 }
 
 # ============ D2 CHARACTER STATS ============
@@ -257,32 +294,69 @@ SUFFIXES = [
     ("of the Fox",    {"vitality": (1, 3)}),
 ]
 
-# Unique weapons (hand-crafted)
+# Unique weapons (hand-crafted D2R-accurate legendary items)
+# min_depth: minimum dungeon depth for this item to drop (prevents early godly finds)
 UNIQUE_WEAPONS = [
-    {"base": "Long Bow",      "name": "Witherstring",     "rarity": RARITY_UNIQUE,
-     "fixed_mods": {"dmg_min": 15, "dmg_max": 28, "ice_dmg": 22, "life_steal": 8,
-                    "bonus_hp": 40, "crit_chance": 6, "dexterity": 4}},
-    {"base": "War Bow",       "name": "Eaglehorn",        "rarity": RARITY_UNIQUE,
-     "fixed_mods": {"dmg_min": 20, "dmg_max": 40, "crit_chance": 18, "dexterity": 10,
-                    "pierce": 3, "attack_speed": -0.5, "strength": 5}},
-    {"base": "Hydra Bow",     "name": "Windforce",        "rarity": RARITY_UNIQUE,
-     "fixed_mods": {"dmg_min": 30, "dmg_max": 55, "knockback": 60, "attack_speed": -0.7,
-                    "strength": 10, "life_steal": 6, "bonus_hp": 30, "crit_chance": 8}},
-    {"base": "Rune Bow",      "name": "Lycander's Aim",   "rarity": RARITY_UNIQUE,
-     "fixed_mods": {"dmg_min": 22, "dmg_max": 38, "dexterity": 12, "vitality": 8,
-                    "bonus_mana": 40, "bonus_hp": 30, "crit_chance": 7}},
-    {"base": "Heavy Crossbow","name": "Hellrack",         "rarity": RARITY_UNIQUE,
+    # --- ACT 1-2 TIER (early/mid uniques) ---
+    {"base": "Short Bow",     "name": "Pluckeye",         "rarity": RARITY_UNIQUE, "min_depth": 1,
+     "fixed_mods": {"dmg_min": 5, "dmg_max": 10, "life_steal": 3, "bonus_hp": 15,
+                    "bonus_mana": 10, "dexterity": 2}},
+    {"base": "Hunter's Bow",  "name": "Witherstring",     "rarity": RARITY_UNIQUE, "min_depth": 3,
+     "fixed_mods": {"dmg_min": 8, "dmg_max": 16, "ice_dmg": 8, "life_steal": 4,
+                    "bonus_hp": 20, "crit_chance": 4, "dexterity": 3}},
+    {"base": "Light Crossbow","name": "Leadcrow",         "rarity": RARITY_UNIQUE, "min_depth": 1,
+     "fixed_mods": {"dmg_min": 6, "dmg_max": 14, "fire_dmg": 5, "knockback": 15,
+                    "strength": 3, "bonus_hp": 15}},
+    # --- ACT 2-3 TIER (mid uniques) ---
+    {"base": "Long Bow",      "name": "Raven Claw",       "rarity": RARITY_UNIQUE, "min_depth": 6,
+     "fixed_mods": {"dmg_min": 12, "dmg_max": 24, "lightning_dmg": 12, "crit_chance": 6,
+                    "attack_speed": -0.3, "dexterity": 5, "bonus_hp": 25}},
+    {"base": "Crossbow",      "name": "Ichorsting",       "rarity": RARITY_UNIQUE, "min_depth": 5,
+     "fixed_mods": {"dmg_min": 14, "dmg_max": 28, "ice_dmg": 15, "pierce": 2,
+                    "bonus_mana": 20, "vitality": 4, "crit_chance": 5}},
+    {"base": "Composite Bow", "name": "Kuko Shakaku",     "rarity": RARITY_UNIQUE, "min_depth": 9,
+     "fixed_mods": {"dmg_min": 15, "dmg_max": 28, "fire_dmg": 20, "extra_arrows": 1,
+                    "attack_speed": -0.2, "pierce": 2, "dexterity": 4}},
+    # --- ACT 3-4 TIER (upper-mid uniques) ---
+    {"base": "Gothic Bow",    "name": "Goldstrike Arch",  "rarity": RARITY_UNIQUE, "min_depth": 14,
+     "fixed_mods": {"dmg_min": 22, "dmg_max": 38, "fire_dmg": 25, "lightning_dmg": 20,
+                    "extra_arrows": 2, "crit_chance": 12, "dexterity": 6,
+                    "bonus_hp": 30, "life_steal": 4}},
+    {"base": "Heavy Crossbow","name": "Hellrack",         "rarity": RARITY_UNIQUE, "min_depth": 12,
      "fixed_mods": {"dmg_min": 25, "dmg_max": 48, "fire_dmg": 30, "lightning_dmg": 25,
-                    "pierce": 2, "crit_chance": 10, "strength": 6}},
-    {"base": "Ballista",      "name": "Buriza-Do Kyanon", "rarity": RARITY_UNIQUE,
-     "fixed_mods": {"dmg_min": 35, "dmg_max": 65, "ice_dmg": 40, "pierce": 5,
-                    "attack_speed": -0.5, "dexterity": 8, "crit_chance": 12, "bonus_hp": 25}},
-    {"base": "Demon Xbow",    "name": "Gut Siphon",       "rarity": RARITY_UNIQUE,
-     "fixed_mods": {"dmg_min": 38, "dmg_max": 58, "life_steal": 15, "crit_chance": 14,
-                    "bonus_hp": 60, "strength": 8, "vitality": 6}},
-    {"base": "Gothic Bow",    "name": "Goldstrike Arch",  "rarity": RARITY_UNIQUE,
-     "fixed_mods": {"dmg_min": 20, "dmg_max": 35, "fire_dmg": 25, "lightning_dmg": 20,
-                    "extra_arrows": 2, "crit_chance": 10, "dexterity": 6}},
+                    "pierce": 2, "crit_chance": 10, "strength": 6, "bonus_hp": 25}},
+    {"base": "War Bow",       "name": "Witchwild String", "rarity": RARITY_UNIQUE, "min_depth": 12,
+     "fixed_mods": {"dmg_min": 18, "dmg_max": 36, "crit_chance": 15, "extra_arrows": 1,
+                    "pierce": 2, "vitality": 5, "strength": 4, "dexterity": 5}},
+    # --- ACT 4-5 TIER (endgame uniques, the legendary items) ---
+    {"base": "Rune Bow",      "name": "Lycander's Aim",   "rarity": RARITY_UNIQUE, "min_depth": 18,
+     "fixed_mods": {"dmg_min": 28, "dmg_max": 48, "dexterity": 15, "vitality": 10,
+                    "bonus_mana": 40, "bonus_hp": 40, "crit_chance": 10,
+                    "attack_speed": -0.4, "life_steal": 5}},
+    {"base": "Hydra Bow",     "name": "Windforce",        "rarity": RARITY_UNIQUE, "min_depth": 22,
+     "fixed_mods": {"dmg_min": 40, "dmg_max": 75, "knockback": 80, "attack_speed": -0.8,
+                    "strength": 12, "life_steal": 8, "bonus_hp": 50, "crit_chance": 12,
+                    "dexterity": 8}},
+    {"base": "Hydra Bow",     "name": "Eaglehorn",        "rarity": RARITY_UNIQUE, "min_depth": 20,
+     "fixed_mods": {"dmg_min": 35, "dmg_max": 65, "crit_chance": 22, "dexterity": 15,
+                    "pierce": 4, "attack_speed": -0.6, "strength": 8,
+                    "bonus_hp": 35, "extra_arrows": 1}},
+    {"base": "Ballista",      "name": "Buriza-Do Kyanon", "rarity": RARITY_UNIQUE, "min_depth": 20,
+     "fixed_mods": {"dmg_min": 45, "dmg_max": 85, "ice_dmg": 50, "pierce": 5,
+                    "attack_speed": -0.6, "dexterity": 12, "crit_chance": 15,
+                    "bonus_hp": 35, "knockback": 40}},
+    {"base": "Demon Xbow",    "name": "Gut Siphon",       "rarity": RARITY_UNIQUE, "min_depth": 22,
+     "fixed_mods": {"dmg_min": 50, "dmg_max": 80, "life_steal": 18, "crit_chance": 16,
+                    "bonus_hp": 80, "strength": 10, "vitality": 8,
+                    "attack_speed": -0.3}},
+    {"base": "Siege Crossbow","name": "Pus Spitter",      "rarity": RARITY_UNIQUE, "min_depth": 16,
+     "fixed_mods": {"dmg_min": 28, "dmg_max": 50, "fire_dmg": 15, "ice_dmg": 15,
+                    "lightning_dmg": 15, "crit_chance": 8, "strength": 5,
+                    "pierce": 3, "bonus_hp": 20}},
+    {"base": "Repeating Xbow","name": "Demon Machine",    "rarity": RARITY_UNIQUE, "min_depth": 12,
+     "fixed_mods": {"dmg_min": 18, "dmg_max": 32, "extra_arrows": 2, "pierce": 2,
+                    "attack_speed": -0.4, "fire_dmg": 10, "crit_chance": 6,
+                    "dexterity": 4}},
 ]
 
 # Set weapons (2 items form partial set)
@@ -730,17 +804,14 @@ class Dungeon:
             self.tiles[0][y] = WALL
             self.tiles[MAP_W - 1][y] = WALL
 
-        # Place biome portals in later rooms
-        if len(self.rooms) >= 3:
-            available_biomes = [b for b in BIOMES if b != self.biome]
-            portal_rooms = list(self.rooms[len(self.rooms) // 2:])
-            rng.shuffle(portal_rooms)
-            for i in range(min(PORTALS_PER_LEVEL, len(portal_rooms), len(available_biomes))):
-                room = portal_rooms[i]
-                px, py = self.center(room)
-                dest = available_biomes[i]
-                self.portal_positions.append((px, py, dest))
-                self.tiles[px][py] = FLOOR
+        # Place portal to next area (linear progression like D2R)
+        if len(self.rooms) >= 2:
+            # Portal goes in the LAST room (furthest from start)
+            portal_room = self.rooms[-1]
+            px, py = self.center(portal_room)
+            # dest_biome is set by the Game class based on act progression
+            self.portal_positions.append((px, py, "next"))
+            self.tiles[px][py] = FLOOR
 
     def _place_torches(self, room: pygame.Rect, rng):
         walls = []
@@ -815,15 +886,15 @@ class Dungeon:
                     self.seen[tx][ty] = True
 
 # ======================= WEAPON GENERATOR =======================
-def _pick_rarity(depth: int = 1) -> str:
+def _pick_rarity(depth: int = 1, tier_bonus: int = 0) -> str:
     """Pick item rarity with depth-scaled chances (higher depth = better drops)."""
     weights = dict(RARITY_DROP_WEIGHTS)
-    # Slightly increase rare/unique/set at higher depths
-    bonus = min(depth * 0.5, 15)
-    weights[RARITY_MAGIC] += bonus * 0.6
+    # Increase rare/unique/set at higher depths and difficulty tiers
+    bonus = min(depth * 0.5 + tier_bonus, 20)
+    weights[RARITY_MAGIC] += bonus * 0.5
     weights[RARITY_RARE] += bonus * 0.4
-    weights[RARITY_UNIQUE] += bonus * 0.15
-    weights[RARITY_SET] += bonus * 0.1
+    weights[RARITY_UNIQUE] += bonus * 0.12
+    weights[RARITY_SET] += bonus * 0.08
     total = sum(weights.values())
     roll = random.random() * total
     cumulative = 0
@@ -842,14 +913,14 @@ def _get_base_for_depth(depth: int) -> Tuple:
     weights = [1.0 + max(0, depth - b[5]) * 0.5 for b in eligible]
     return random.choices(eligible, weights=weights, k=1)[0]
 
-def generate_weapon(depth: int = 1, force_rarity: Optional[str] = None) -> Weapon:
+def generate_weapon(depth: int = 1, force_rarity: Optional[str] = None, tier_bonus: int = 0) -> Weapon:
     """Generate a random weapon with D2-style rarity and affixes."""
-    rarity = force_rarity or _pick_rarity(depth)
+    rarity = force_rarity or _pick_rarity(depth, tier_bonus)
     base = _get_base_for_depth(depth)
     bname, bdmin, bdmax, bspd, bclass, bilvl = base
 
-    # Scale base damage slightly with depth
-    scale = 1.0 + max(0, depth - bilvl) * 0.06
+    # Scale base damage with depth (more aggressive scaling for later acts)
+    scale = 1.0 + max(0, depth - bilvl) * 0.10 + max(0, depth - 15) * 0.04
     dmg_min = int(bdmin * scale)
     dmg_max = int(bdmax * scale)
     speed = bspd
@@ -860,11 +931,20 @@ def generate_weapon(depth: int = 1, force_rarity: Optional[str] = None) -> Weapo
     set_name_str = ""
 
     if rarity == RARITY_UNIQUE:
-        # Pick a matching unique if possible
-        eligible_uniques = [u for u in UNIQUE_WEAPONS if u["base"] == bname]
+        # Pick a matching unique that can drop at this depth
+        eligible_uniques = [u for u in UNIQUE_WEAPONS
+                           if u["base"] == bname and depth >= u.get("min_depth", 1)]
         if not eligible_uniques:
-            eligible_uniques = UNIQUE_WEAPONS
-        u = random.choice(eligible_uniques)
+            # Fallback: any unique valid for this depth
+            eligible_uniques = [u for u in UNIQUE_WEAPONS if depth >= u.get("min_depth", 1)]
+        if not eligible_uniques:
+            # Very early game: allow lowest-tier uniques
+            eligible_uniques = [u for u in UNIQUE_WEAPONS if u.get("min_depth", 1) <= 3]
+        if not eligible_uniques:
+            eligible_uniques = UNIQUE_WEAPONS[:3]  # safety fallback
+        # Weight toward higher-tier uniques slightly at deeper levels
+        weights = [1.0 + max(0, depth - u.get("min_depth", 1)) * 0.3 for u in eligible_uniques]
+        u = random.choices(eligible_uniques, weights=weights, k=1)[0]
         display_name = u["name"]
         bname = u["base"]
         mods = dict(u["fixed_mods"])
@@ -973,8 +1053,12 @@ class Game:
         # Initialize all game state first (needed before _load_game)
         self.current_level = 1
         self.current_biome = "crypt"
+        self.current_act = 1
+        self.current_act_level = 1  # level within current act (1-5)
+        self.difficulty_tier = "Normal"  # Normal / Nightmare / Hell
         self.difficulty_name = "Normal"
         self.diff = DIFFICULTY["Normal"]
+        self.goblin_cooldown = 0.0  # seconds until goblin can spawn again
         global MAX_ACTIVE_ENEMIES
         self.dungeon = Dungeon(level=1, biome="crypt")
         rx, ry = self.dungeon.center(self.dungeon.rooms[0]) if self.dungeon.rooms else (MAP_W // 2, MAP_H // 2)
@@ -1465,7 +1549,11 @@ class Game:
                 data = json.load(f)
             pd = data["player"]
             gd = data["game"]
-            save_info = (f"Level {pd['level']}  |  Depth {gd['current_level']}  |  "
+            act_num = gd.get('current_act', 1)
+            tier = gd.get('difficulty_tier', 'Normal')
+            tier_str = f"  [{tier}]" if tier != "Normal" else ""
+            act_name = ACTS.get(act_num, ACTS[1])["name"]
+            save_info = (f"Level {pd['level']}  |  {act_name}{tier_str}  |  "
                         f"{gd.get('difficulty', 'Normal')}  |  "
                         f"Kills: {gd.get('kills', 0)}  |  Gold: {pd.get('gold', 0)}")
         except Exception:
@@ -1505,8 +1593,12 @@ class Game:
             title = title_font.render("DUNGEON OF THE DAMNED", True, tc)
             title_y = HEIGHT // 5
             screen.blit(title, (WIDTH // 2 - title.get_width() // 2, title_y))
+            # Subtitle
+            sub_col = tuple(min(255, int(c * flicker * 0.6)) for c in (180, 140, 80))
+            sub = small.render("Five Acts of Darkness Await", True, sub_col)
+            screen.blit(sub, (WIDTH // 2 - sub.get_width() // 2, title_y + title.get_height() + 5))
             # Decorative line
-            ly = title_y + title.get_height() + 20
+            ly = title_y + title.get_height() + 30
             pygame.draw.line(screen, C_GOTHIC_FRAME, (WIDTH // 2 - 320, ly), (WIDTH // 2 + 320, ly), 2)
             pygame.draw.circle(screen, C_GOLD_DARK, (WIDTH // 2, ly), 6)
             pygame.draw.circle(screen, C_GOLD, (WIDTH // 2, ly), 4)
@@ -1701,11 +1793,12 @@ class Game:
         if len(self.enemies) >= MAX_ACTIVE_ENEMIES:
             return
         pos = self._random_floor_pos(near_player)
+        tier = self._get_tier_scale()
         scale = (WAVE_SCALE ** (self.wave - 1)) * (1.0 + 0.1 * (self.current_level - 1))
-        hp = int(ENEMY_BASE_HP * scale * self.diff["enemy_hp"])
-        dmg_min = int(ENEMY_BASE_DMG[0] * scale * self.diff["enemy_dmg"])
-        dmg_max = int(ENEMY_BASE_DMG[1] * scale * self.diff["enemy_dmg"])
-        speed = ENEMY_SPEED * (0.95 + 0.1 * random.random()) * self.diff["enemy_speed"]
+        hp = int(ENEMY_BASE_HP * scale * self.diff["enemy_hp"] * tier["hp"])
+        dmg_min = int(ENEMY_BASE_DMG[0] * scale * self.diff["enemy_dmg"] * tier["dmg"])
+        dmg_max = int(ENEMY_BASE_DMG[1] * scale * self.diff["enemy_dmg"] * tier["dmg"])
+        speed = ENEMY_SPEED * (0.95 + 0.1 * random.random()) * self.diff["enemy_speed"] * tier["speed"]
         kind = kind_override if kind_override is not None else random.choices([0, 1, 2, 3], [0.35, 0.25, 0.25, 0.15])[0]
         e = Enemy(pos=pos, vel=Vec(0, 0), radius=20, hp=hp, max_hp=hp,
                   dmg_min=dmg_min, dmg_max=dmg_max, speed=speed, kind=kind)
@@ -1738,10 +1831,11 @@ class Game:
             return
         pos = self._random_floor_pos(near_player=True)
         scale = (WAVE_SCALE ** (self.wave - 1)) * (1.0 + 0.1 * (self.current_level - 1))
-        hp = int(ENEMY_BASE_HP * ELITE_MULT["hp"] * scale * self.diff["enemy_hp"])
-        dmg_min = int(ENEMY_BASE_DMG[0] * ELITE_MULT["dmg"] * scale * self.diff["enemy_dmg"])
-        dmg_max = int(ENEMY_BASE_DMG[1] * ELITE_MULT["dmg"] * scale * self.diff["enemy_dmg"])
-        spd = ENEMY_SPEED * ELITE_MULT["spd"] * self.diff["enemy_speed"]
+        tier = self._get_tier_scale()
+        hp = int(ENEMY_BASE_HP * ELITE_MULT["hp"] * scale * self.diff["enemy_hp"] * tier["hp"])
+        dmg_min = int(ENEMY_BASE_DMG[0] * ELITE_MULT["dmg"] * scale * self.diff["enemy_dmg"] * tier["dmg"])
+        dmg_max = int(ENEMY_BASE_DMG[1] * ELITE_MULT["dmg"] * scale * self.diff["enemy_dmg"] * tier["dmg"])
+        spd = ENEMY_SPEED * ELITE_MULT["spd"] * self.diff["enemy_speed"] * tier["speed"]
         aura_name = random.choice(list(AURAS.keys()))
         elite = Elite(pos=pos, vel=Vec(0, 0), radius=ELITE_MULT["radius"], hp=hp, max_hp=hp,
                       dmg_min=dmg_min, dmg_max=dmg_max, speed=spd, kind=1, aura=aura_name)
@@ -1777,8 +1871,9 @@ class Game:
         if self.treasure_goblin is not None:
             return
         pos = self._random_floor_pos(near_player=True)
+        tier = self._get_tier_scale()
         scale = 1.0 + 0.1 * (self.current_level - 1)
-        hp = int(50 * scale)
+        hp = int(50 * scale * tier["hp"])
         goblin = TreasureGoblin(
             pos=pos, vel=Vec(0, 0), radius=16,
             hp=hp, max_hp=hp, dmg_min=0, dmg_max=0,
@@ -1793,22 +1888,32 @@ class Game:
         self.add_screen_shake(4)
 
     def spawn_boss(self):
-        if self.current_level % 5 != 0 or self.boss_spawned:
+        if not self._is_act_boss_level() or self.boss_spawned:
             return
         center_tx, center_ty = self.dungeon.center(self.dungeon.rooms[-1])
         pos = Vec(center_tx * TILE + TILE / 2, center_ty * TILE + TILE / 2)
-        boss_scale = 1.0 + (self.current_level // 5 - 1) * 0.3
+        # Boss scales with act number and difficulty tier
+        act_scale = 1.0 + (self.current_act - 1) * 0.4
+        tier_scale = self._get_tier_scale()
+        boss_scale = act_scale * tier_scale["hp"]
         hp = int(BOSS_HP * self.diff["enemy_hp"] * boss_scale)
-        dmg_min = int(BOSS_DMG[0] * self.diff["enemy_dmg"] * boss_scale)
-        dmg_max = int(BOSS_DMG[1] * self.diff["enemy_dmg"] * boss_scale)
+        dmg_min = int(BOSS_DMG[0] * self.diff["enemy_dmg"] * act_scale * tier_scale["dmg"])
+        dmg_max = int(BOSS_DMG[1] * self.diff["enemy_dmg"] * act_scale * tier_scale["dmg"])
         b = Boss(pos=pos, vel=Vec(0, 0), radius=34, hp=hp, max_hp=hp,
                  dmg_min=dmg_min, dmg_max=dmg_max,
-                 speed=ENEMY_SPEED * 0.9 * self.diff["enemy_speed"],
+                 speed=ENEMY_SPEED * 0.9 * self.diff["enemy_speed"] * tier_scale["speed"],
                  kind=1, shot_cd=random.uniform(*BOSS_SHOT_CD))
         self.enemies.append(b)
         self.boss_spawned = True
         self.add_screen_shake(12)
         self.emit_death_burst(pos.x, pos.y, (180, 60, 60), 30)
+        # Announce boss with D2R name
+        act_info = self._get_act_info()
+        boss_name = act_info.get("boss_name", "Boss")
+        boss_title = act_info.get("boss_title", "")
+        self.add_floating_text(pos.x, pos.y - 40, boss_name, (255, 80, 60), 2.5)
+        if boss_title:
+            self.add_floating_text(pos.x, pos.y - 15, boss_title, (200, 160, 80), 2.0)
 
     def spawn_pickup_near_player(self):
         base_tx = int(self.player.pos.x // TILE)
@@ -1854,7 +1959,8 @@ class Game:
                 rarity = RARITY_MAGIC
             else:
                 rarity = RARITY_NORMAL
-            stock.append(generate_weapon(depth, rarity))
+            stock.append(generate_weapon(depth, rarity,
+                                        tier_bonus=self._get_tier_scale()["drop_bonus"]))
         return stock
 
     def _get_vendor_buy_price(self, w: Weapon) -> int:
@@ -1952,7 +2058,7 @@ class Game:
                 # Rare weapon from crate
                 w_rarity = RARITY_NORMAL if random.random() < 0.7 else RARITY_MAGIC
                 self.loots.append(Loot(pos=self._safe_loot_pos(crate.pos),
-                                       weapon=generate_weapon(self.current_level, w_rarity)))
+                                       weapon=self._gen_weapon(w_rarity)))
 
     def _safe_loot_pos(self, center: Vec, spread: float = 25.0) -> Vec:
         """Return a loot position guaranteed to be on a floor tile."""
@@ -2023,7 +2129,7 @@ class Game:
             else:
                 w_rarity = RARITY_NORMAL
         self.loots.append(Loot(pos=self._safe_loot_pos(chest.pos),
-                               weapon=generate_weapon(depth, w_rarity)))
+                               weapon=self._gen_weapon(w_rarity)))
 
     def update_chests(self, dt: float):
         for chest in self.chests:
@@ -2210,10 +2316,10 @@ class Game:
                             self.emit_particles(p.pos.x, p.pos.y, 2, hcol, speed=20, life=0.4, gravity=-40)
 
         # Portal collision
-        for ptx, pty, dest_biome in self.dungeon.portal_positions:
+        for ptx, pty, _dest in self.dungeon.portal_positions:
             portal_pos = Vec(ptx * TILE + TILE / 2, pty * TILE + TILE / 2)
             if (portal_pos - p.pos).length() < 24:
-                self.next_level(dest_biome)
+                self.next_level()
                 break
 
     def _circle_collides(self, pos: Vec, radius: int) -> bool:
@@ -2623,7 +2729,7 @@ class Game:
             for gi in range(random.randint(2, 3)):
                 gob_rarity = random.choice([RARITY_MAGIC, RARITY_MAGIC, RARITY_RARE])
                 self.loots.append(Loot(pos=self._safe_loot_pos(e.pos, 35),
-                                       weapon=generate_weapon(self.current_level, gob_rarity)))
+                                       weapon=self._gen_weapon(gob_rarity)))
             self.corpses.append(Corpse(x=e.pos.x, y=e.pos.y, radius=e.radius, kind=e.kind,
                                        color=C_GOLD, is_boss=False, is_elite=False))
             return
@@ -2637,7 +2743,14 @@ class Game:
         elif isinstance(e, Boss):
             self.emit_death_burst(e.pos.x, e.pos.y, (255, 100, 40), 50)
             self.add_screen_shake(15)
-            self.add_floating_text(e.pos.x, e.pos.y - 30, "BOSS SLAIN!", (255, 200, 60), 2.0)
+            act_info = self._get_act_info()
+            boss_name = act_info.get("boss_name", "Boss")
+            self.add_floating_text(e.pos.x, e.pos.y - 50,
+                                   f"{boss_name} SLAIN!", (255, 200, 60), 2.5)
+            if self._is_act_boss_level():
+                self.add_floating_text(e.pos.x, e.pos.y - 20,
+                                       f"{act_info['name']} Complete!", C_GOLD, 3.0)
+                self.play_sound("levelup")
         else:
             self.emit_death_burst(e.pos.x, e.pos.y, death_color, 15)
         self.play_sound(f"death_{self._creature_sound_name(e)}")
@@ -2685,7 +2798,7 @@ class Game:
                     force = RARITY_MAGIC
                 else:
                     force = RARITY_NORMAL
-            drops.append(Loot(pos=sp(), weapon=generate_weapon(self.current_level, force)))
+            drops.append(Loot(pos=sp(), weapon=self._gen_weapon(force)))
         if random.random() < DMG_PICKUP_DROP_CHANCE:
             drops.append(Loot(pos=sp(), dmg_boost=True))
         if random.random() < SHIELD_PICKUP_DROP_CHANCE:
@@ -2702,16 +2815,29 @@ class Game:
             if not any(d.weapon for d in drops):
                 elite_rarity = RARITY_MAGIC if random.random() < 0.6 else RARITY_RARE
                 drops.append(Loot(pos=self._safe_loot_pos(e.pos, 15),
-                                  weapon=generate_weapon(self.current_level, elite_rarity)))
+                                  weapon=self._gen_weapon(elite_rarity)))
         if isinstance(e, Boss):
-            # Bosses always drop 2 weapons: one rare+, one magic+
+            # Act bosses drop better loot at higher acts
+            unique_chance = 0.15 + self.current_act * 0.06  # 21% to 45%
             drops.append(Loot(pos=self._safe_loot_pos(e.pos, 30),
-                              weapon=generate_weapon(self.current_level,
-                                  RARITY_UNIQUE if random.random() < 0.25 else RARITY_RARE)))
+                              weapon=self._gen_weapon(
+                                  RARITY_UNIQUE if random.random() < unique_chance else RARITY_RARE)))
             drops.append(Loot(pos=self._safe_loot_pos(e.pos, 30),
-                              weapon=generate_weapon(self.current_level, RARITY_MAGIC)))
-            drops.append(Loot(pos=sp(), gold=random.randint(40, 100)))
+                              weapon=self._gen_weapon(
+                                  RARITY_RARE if random.random() < 0.5 else RARITY_MAGIC)))
+            drops.append(Loot(pos=sp(), gold=random.randint(40 + self.current_act * 15, 100 + self.current_act * 25)))
+            # Extra drops for later act bosses
+            if self.current_act >= 3:
+                drops.append(Loot(pos=self._safe_loot_pos(e.pos, 35),
+                                  weapon=self._gen_weapon(RARITY_MAGIC)))
         self.loots.extend(drops)
+        # Unique drop announcement (D2R style)
+        for d in drops:
+            if d.weapon and d.weapon.rarity == RARITY_UNIQUE:
+                self.add_floating_text(d.pos.x, d.pos.y - 30,
+                                       f"UNIQUE: {d.weapon.name}", RARITY_COLORS[RARITY_UNIQUE], 3.0)
+                self.add_screen_shake(4)
+                self.play_sound("jackpot")
 
     def update_spawning(self, dt: float):
         self.spawn_timer -= dt
@@ -2729,9 +2855,13 @@ class Game:
                     self.spawn_enemy(near_player=True)
             if random.random() < PICKUP_SPAWN_CHANCE:
                 self.spawn_pickup_near_player()
-            # Treasure goblin chance
-            if self.treasure_goblin is None and random.random() < GOBLIN_SPAWN_CHANCE:
+            # Treasure goblin chance (with cooldown timer)
+            if self.goblin_cooldown > 0:
+                self.goblin_cooldown -= SPAWN_INTERVAL
+            if (self.treasure_goblin is None and self.goblin_cooldown <= 0
+                    and random.random() < GOBLIN_SPAWN_CHANCE):
                 self.spawn_treasure_goblin()
+                self.goblin_cooldown = GOBLIN_MIN_INTERVAL
             self.wave += 1
             self.spawn_timer = SPAWN_INTERVAL
             self.spawn_boss()
@@ -2784,11 +2914,52 @@ class Game:
             self.shake_y = 0
             self.shake_intensity = 0
 
+    # ---- Act / level progression helpers ----
+    def _get_act_info(self) -> dict:
+        """Return the ACTS dict for the current act."""
+        return ACTS.get(self.current_act, ACTS[1])
+
+    def _get_area_name(self) -> str:
+        """Return the D2R area name for the current act and level."""
+        areas = ACT_AREAS.get(self.current_act, ACT_AREAS[1])
+        idx = min(self.current_act_level - 1, len(areas) - 1)
+        return areas[idx]
+
+    def _get_tier_scale(self) -> dict:
+        """Get difficulty tier multipliers (Normal/Nightmare/Hell)."""
+        return DIFFICULTY_TIER_SCALE.get(self.difficulty_tier, DIFFICULTY_TIER_SCALE["Normal"])
+
+    def _gen_weapon(self, force_rarity: Optional[str] = None) -> Weapon:
+        """Generate a weapon scaled to current level and difficulty tier."""
+        return generate_weapon(self.current_level, force_rarity,
+                               tier_bonus=self._get_tier_scale()["drop_bonus"])
+
+    def _is_act_boss_level(self) -> bool:
+        """True if current level is the last in the act (boss level)."""
+        return self.current_act_level >= LEVELS_PER_ACT
+
     # ---- Level management ----
     def next_level(self, dest_biome: Optional[str] = None):
+        # Advance within act or to next act
+        if self.current_act_level < LEVELS_PER_ACT:
+            # Next level within same act
+            self.current_act_level += 1
+        else:
+            # Completed act - advance to next act
+            if self.current_act < 5:
+                self.current_act += 1
+            else:
+                # Completed all 5 acts - advance to next difficulty tier
+                tier_idx = DIFFICULTY_TIERS.index(self.difficulty_tier)
+                if tier_idx < len(DIFFICULTY_TIERS) - 1:
+                    self.difficulty_tier = DIFFICULTY_TIERS[tier_idx + 1]
+                # Loop back to Act 1
+                self.current_act = 1
+            self.current_act_level = 1
+        # Set biome from the act definition
+        act_info = self._get_act_info()
+        self.current_biome = act_info["biome"]
         self.current_level += 1
-        if dest_biome:
-            self.current_biome = dest_biome
         self.dungeon = Dungeon(level=self.current_level, biome=self.current_biome)
         rx, ry = self.dungeon.center(self.dungeon.rooms[0]) if self.dungeon.rooms else (MAP_W // 2, MAP_H // 2)
         self.player.pos = Vec(rx * TILE + TILE / 2, ry * TILE + TILE / 2)
@@ -2811,11 +2982,24 @@ class Game:
         self.boss_spawned = False
         self._spawn_vendor()
         self.play_sound("portal")
-        # Announce biome
-        biome_name = BIOME_NAMES.get(self.current_biome, self.current_biome)
-        self.add_floating_text(self.player.pos.x, self.player.pos.y - 40,
-                               f"Entering {biome_name} - Depth {self.current_level}",
-                               BIOME_PORTAL_COLORS.get(self.current_biome, C_GOLD), 1.5)
+        # D2R-style area announcement
+        area_name = self._get_area_name()
+        act_name = act_info["name"]
+        portal_col = BIOME_PORTAL_COLORS.get(self.current_biome, C_GOLD)
+        if self.current_act_level == 1:
+            # New act announcement (big)
+            self.add_floating_text(self.player.pos.x, self.player.pos.y - 60,
+                                   act_name, C_GOLD, 2.5)
+            self.add_floating_text(self.player.pos.x, self.player.pos.y - 30,
+                                   act_info["desc"], portal_col, 2.0)
+            if self.difficulty_tier != "Normal":
+                self.add_floating_text(self.player.pos.x, self.player.pos.y - 5,
+                                       f"[{self.difficulty_tier}]",
+                                       (255, 100, 100) if self.difficulty_tier == "Hell" else (255, 200, 80), 2.0)
+        else:
+            self.add_floating_text(self.player.pos.x, self.player.pos.y - 40,
+                                   f"{area_name}",
+                                   portal_col, 1.5)
 
     # ======================= RENDERING =======================
     def draw(self):
@@ -2912,7 +3096,13 @@ class Game:
                 continue
             px = ptx * TILE - self.cam_x + ox + TILE // 2
             py = pty * TILE - self.cam_y + oy + TILE // 2
-            pcol = BIOME_PORTAL_COLORS.get(dest_biome, (200, 200, 100))
+            # Determine portal color based on where it leads
+            if self._is_act_boss_level():
+                next_act = self.current_act + 1 if self.current_act < 5 else 1
+                next_biome = ACTS.get(next_act, ACTS[1])["biome"]
+            else:
+                next_biome = self.current_biome
+            pcol = BIOME_PORTAL_COLORS.get(next_biome, (200, 200, 100))
             # Swirling portal with biome color
             for i in range(8):
                 ang = self.portal_angle + i * (math.tau / 8)
@@ -2928,9 +3118,18 @@ class Game:
             pygame.draw.circle(s, center_col, (px, py), 11)
             bright = (min(255, int(pcol[0] * glow)), min(255, int(pcol[1] * glow)), min(255, int(pcol[2] * 0.6 * glow)))
             pygame.draw.circle(s, bright, (px, py), 6)
-            # Biome name label
-            name = BIOME_NAMES.get(dest_biome, dest_biome)
-            label = self.font.render(name, True, pcol)
+            # D2R-style portal label showing next area
+            if self._is_act_boss_level():
+                # Last level of act - portal leads to next act
+                next_act = self.current_act + 1 if self.current_act < 5 else 1
+                next_info = ACTS.get(next_act, ACTS[1])
+                label_text = next_info["name"]
+            else:
+                # Next area within same act
+                next_areas = ACT_AREAS.get(self.current_act, ACT_AREAS[1])
+                next_idx = min(self.current_act_level, len(next_areas) - 1)
+                label_text = next_areas[next_idx]
+            label = self.font.render(label_text, True, pcol)
             s.blit(label, (px - label.get_width() // 2, py - 30))
 
     def _draw_torches(self, s, ox, oy):
@@ -3769,11 +3968,11 @@ class Game:
             pygame.draw.circle(surf, col, (rpx, rpy), 2)
 
         # portals
-        for ptx, pty, dest in self.dungeon.portal_positions:
+        for ptx, pty, _dest in self.dungeon.portal_positions:
             ppx = int(ptx * sx)
             ppy = int(pty * sy)
             pulse = 0.5 + 0.5 * math.sin(self.game_time * 3)
-            pcol = BIOME_PORTAL_COLORS.get(dest, (200, 200, 100))
+            pcol = BIOME_PORTAL_COLORS.get(self.current_biome, (200, 200, 100))
             col = (int(pcol[0] * pulse), int(pcol[1] * pulse), int(pcol[2] * pulse), 255)
             pygame.draw.rect(surf, col, (ppx - 2, ppy - 2, 5, 5))
 
@@ -3907,12 +4106,16 @@ class Game:
             txt = self.font.render(f"{p.infusion_type.upper()} {p.infusion_timer:.1f}s", True, icol)
             s.blit(txt, (buff_x + 6, buff_y + 1))
 
-        # Top-left info
-        biome_name = BIOME_NAMES.get(self.current_biome, self.current_biome)
-        info = self.font.render(f"Depth {self.current_level}  {biome_name}  {self.difficulty_name}  Wave {self.wave}", True, (170, 165, 150))
-        s.blit(info, (16, 12))
-        wave_txt = self.font.render(f"Next wave: {self.spawn_timer:.1f}s", True, (140, 135, 120))
-        s.blit(wave_txt, (16, 32))
+        # Top-left info - D2R style act & area display
+        act_info = self._get_act_info()
+        area_name = self._get_area_name()
+        tier_label = f"  [{self.difficulty_tier}]" if self.difficulty_tier != "Normal" else ""
+        tier_col = (255, 100, 100) if self.difficulty_tier == "Hell" else (
+                   (255, 200, 80) if self.difficulty_tier == "Nightmare" else (170, 165, 150))
+        act_line = self.font.render(f"{act_info['name']}{tier_label}", True, tier_col)
+        s.blit(act_line, (16, 12))
+        area_line = self.font.render(f"{area_name}  -  {self.difficulty_name}  -  Wave {self.wave}", True, (140, 135, 120))
+        s.blit(area_line, (16, 32))
         # Lives display
         lives_col = (100, 200, 100) if p.lives > 1 else ((220, 180, 60) if p.lives == 1 else (200, 60, 60))
         lives_txt = self.font.render(f"Lives: {p.lives}/{p.max_lives}", True, lives_col)
@@ -3976,9 +4179,11 @@ class Game:
             txt = self.titlefont.render("PAUSED", True, C_GOLD)
             self.screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, HEIGHT // 2 - 120))
 
-            # Lives display
+            # Act/lives display
             p = self.player
-            lives_str = f"Lives: {p.lives}/{p.max_lives}   Depth: {self.current_level}   Level: {p.level}"
+            act_info = self._get_act_info()
+            tier_str = f"  [{self.difficulty_tier}]" if self.difficulty_tier != "Normal" else ""
+            lives_str = f"Lives: {p.lives}/{p.max_lives}   {act_info['name']}{tier_str}   Lv {p.level}"
             info = self.font.render(lives_str, True, (160, 150, 130))
             self.screen.blit(info, (WIDTH // 2 - info.get_width() // 2, HEIGHT // 2 - 55))
 
@@ -4050,7 +4255,8 @@ class Game:
             ("Infusions", "Pick up Fire/Ice/Lightning arrows for timed buffs"),
             ("V", "Trade with vendor NPC (when nearby)"),
             ("", ""),
-            ("Portals", "Step into colored portals to enter new biomes"),
+            ("Portals", "Step into portal to advance through Act areas (D2R-style progression)"),
+            ("Acts", "5 Acts from Crypt to Frozen Summit, then Nightmare and Hell difficulty"),
             ("Vendor NPC", "Buy/sell weapons in the starting room"),
             ("Creatures", "Skeletons, Demons, Spiders, Wraiths - each with unique sounds"),
             ("Treasure Goblin", "Chase it! Drops gold as it flees, jackpot on kill"),
@@ -4738,6 +4944,9 @@ class Game:
             "game": {
                 "current_level": self.current_level,
                 "current_biome": self.current_biome,
+                "current_act": self.current_act,
+                "current_act_level": self.current_act_level,
+                "difficulty_tier": self.difficulty_tier,
                 "wave": self.wave,
                 "kills": self.kills,
                 "difficulty": self.difficulty_name,
@@ -4786,6 +4995,9 @@ class Game:
             MAX_ACTIVE_ENEMIES = self.diff["max_enemies"]
             self.current_level = gd["current_level"]
             self.current_biome = gd["current_biome"]
+            self.current_act = gd.get("current_act", 1)
+            self.current_act_level = gd.get("current_act_level", 1)
+            self.difficulty_tier = gd.get("difficulty_tier", "Normal")
             self.wave = gd["wave"]
             self.kills = gd["kills"]
             # Rebuild dungeon for current level
@@ -4873,8 +5085,11 @@ class Game:
             self.screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, HEIGHT // 2 - 120))
 
             # Stats
+            act_info = self._get_act_info()
+            area_name = self._get_area_name()
+            tier_str = f" [{self.difficulty_tier}]" if self.difficulty_tier != "Normal" else ""
             stats = [
-                f"Level {p.level}  -  Depth {self.current_level} ({BIOME_NAMES.get(self.current_biome, '')})  -  Wave {self.wave}",
+                f"Level {p.level}  -  {act_info['name']}{tier_str}  -  {area_name}",
                 f"Gold: {p.gold}   Kills: {self.kills}   Difficulty: {self.difficulty_name}",
                 f"Weapon: {p.weapon.name} [{RARITY_NAMES[p.weapon.rarity]}]",
             ]
