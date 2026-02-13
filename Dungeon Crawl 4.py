@@ -574,6 +574,7 @@ class Player(Entity):
     iframes: float = 0.0
     walk_anim: float = 0.0
     levelup_flash: float = 0.0
+    hurt_flash: float = 0.0
     infusion_type: Optional[str] = None
     infusion_timer: float = 0.0
     # Character stats (D2 style)
@@ -812,14 +813,25 @@ class Dungeon:
             self.tiles[0][y] = WALL
             self.tiles[MAP_W - 1][y] = WALL
 
-        # Place portal to next area (linear progression like D2R)
+        # Place portal to next area - pick the room FARTHEST from start (like D2R flow)
         if len(self.rooms) >= 2:
-            # Portal goes in the LAST room (furthest from start)
-            portal_room = self.rooms[-1]
-            px, py = self.center(portal_room)
-            # dest_biome is set by the Game class based on act progression
+            start_cx, start_cy = self.center(self.rooms[0])
+            best_room = self.rooms[-1]
+            best_dist = 0
+            for room in self.rooms[1:]:
+                rcx, rcy = self.center(room)
+                dist = abs(rcx - start_cx) + abs(rcy - start_cy)
+                if dist > best_dist:
+                    best_dist = dist
+                    best_room = room
+            px, py = self.center(best_room)
             self.portal_positions.append((px, py, "next"))
             self.tiles[px][py] = FLOOR
+            # Ensure there's a carved path to the portal room
+            # (rooms are chain-connected but portal room may not be last in chain)
+            prev_cx, prev_cy = self.center(self.rooms[-1])
+            if best_room != self.rooms[-1]:
+                self.carve_tunnel(prev_cx, prev_cy, px, py)
 
     def _place_torches(self, room: pygame.Rect, rng):
         walls = []
@@ -2091,8 +2103,10 @@ class Game:
                     pdmg -= absorb
                 if pdmg > 0:
                     p.hp -= pdmg
+                    p.hurt_flash = 0.35
                     self.add_floating_text(p.pos.x, p.pos.y - 20, f"-{pdmg}", (255, 100, 40), 1.0)
                     p.iframes = max(p.iframes, 0.3)
+                    self.play_sound("hurt")
         else:
             # Normal break - wood splinters
             self.emit_particles(crate.pos.x, crate.pos.y, 8, (140, 100, 50),
@@ -2313,6 +2327,7 @@ class Game:
         p.dash_cd = max(0.0, p.dash_cd - dt)
         p.iframes = max(0.0, p.iframes - dt)
         p.levelup_flash = max(0.0, p.levelup_flash - dt)
+        p.hurt_flash = max(0.0, p.hurt_flash - dt)
         # Passive mana regeneration
         max_mana = p.max_mana()
         if p.mana < max_mana:
@@ -2373,6 +2388,9 @@ class Game:
                         hazard = BIOME_HAZARD.get(self.current_biome, "poison")
                         dmg_rate = 3 if hazard == "lava" else 2
                         p.hp -= max(1, int(dmg_rate * dt * 10))
+                        p.hurt_flash = 0.25
+                        if self.game_time % 0.5 < dt:
+                            self.play_sound("hurt")
                         if random.random() < 0.3:
                             hcol = C_LAVA if hazard == "lava" else C_ICE if hazard == "ice" else C_POISON
                             self.emit_particles(p.pos.x, p.pos.y, 2, hcol, speed=20, life=0.4, gravity=-40)
@@ -2548,6 +2566,7 @@ class Game:
                             dmg -= absorb
                         if dmg > 0:
                             p.hp -= dmg
+                            p.hurt_flash = 0.35
                             self.add_floating_text(p.pos.x, p.pos.y - 20, f"-{dmg}", (255, 60, 60), 1.2)
                             self.add_screen_shake(4)
                             self.emit_blood(p.pos.x, p.pos.y, 6)
@@ -2594,6 +2613,7 @@ class Game:
                         dmg -= absorb
                     if dmg > 0:
                         self.player.hp -= dmg
+                        self.player.hurt_flash = 0.35
                         self.player.iframes = max(self.player.iframes, 0.12)
                         self.add_floating_text(self.player.pos.x, self.player.pos.y - 20, f"-{dmg}", (255, 60, 60))
                         self.add_screen_shake(3)
@@ -3804,6 +3824,11 @@ class Game:
         if p.iframes > 0 and int(p.iframes * 20) % 2 == 0:
             return  # blink effect
 
+        # Red hurt flash overlay
+        hurt_alpha = 0
+        if p.hurt_flash > 0:
+            hurt_alpha = int(180 * (p.hurt_flash / 0.35))
+
         # Dash afterimage
         if p.dash_timer > 0:
             pygame.draw.circle(s, (40, 60, 100), (px, py), 22, 2)
@@ -3862,6 +3887,15 @@ class Game:
         if p.infusion_type:
             icol = INFUSION_COLORS[p.infusion_type]
             pygame.draw.circle(s, icol, (hand_x, hand_y), 8, 2)
+
+        # Red hurt flash overlay
+        if hurt_alpha > 0:
+            flash_surf = pygame.Surface((50, 50), pygame.SRCALPHA)
+            pulse = 0.7 + 0.3 * math.sin(self.game_time * 20)
+            a = int(hurt_alpha * pulse)
+            pygame.draw.circle(flash_surf, (255, 30, 20, a), (25, 25), 22)
+            pygame.draw.circle(flash_surf, (255, 80, 60, a // 2), (25, 25), 18)
+            s.blit(flash_surf, (px - 25, py - 25))
 
         # Shield visual
         if p.shield > 0:
@@ -4080,14 +4114,21 @@ class Game:
                 col = (40, 160, 30, 180)
             pygame.draw.circle(surf, col, (rpx, rpy), 2)
 
-        # portals
+        # portals - always visible as beacon (even through fog)
         for ptx, pty, _dest in self.dungeon.portal_positions:
             ppx = int(ptx * sx)
             ppy = int(pty * sy)
             pulse = 0.5 + 0.5 * math.sin(self.game_time * 3)
             pcol = BIOME_PORTAL_COLORS.get(self.current_biome, (200, 200, 100))
             col = (int(pcol[0] * pulse), int(pcol[1] * pulse), int(pcol[2] * pulse), 255)
+            # Pulsing glow ring beacon
+            ring_pulse = 0.3 + 0.7 * abs(math.sin(self.game_time * 2))
+            ring_r = int(6 + 3 * ring_pulse)
+            glow_col = (int(pcol[0] * 0.4 * ring_pulse), int(pcol[1] * 0.4 * ring_pulse),
+                        int(pcol[2] * 0.4 * ring_pulse), int(120 * ring_pulse))
+            pygame.draw.circle(surf, glow_col, (ppx, ppy), ring_r)
             pygame.draw.rect(surf, col, (ppx - 2, ppy - 2, 5, 5))
+            pygame.draw.circle(surf, col, (ppx, ppy), ring_r, 1)
 
         # treasure goblin
         if self.treasure_goblin and self.treasure_goblin.alive:
@@ -4233,6 +4274,35 @@ class Game:
         lives_col = (100, 200, 100) if p.lives > 1 else ((220, 180, 60) if p.lives == 1 else (200, 60, 60))
         lives_txt = self.font.render(f"Lives: {p.lives}/{p.max_lives}", True, lives_col)
         s.blit(lives_txt, (16, 52))
+
+        # Compass arrow pointing toward portal
+        if self.dungeon.portal_positions:
+            ptx, pty, _ = self.dungeon.portal_positions[0]
+            portal_world = Vec(ptx * TILE + TILE / 2, pty * TILE + TILE / 2)
+            dx = portal_world.x - p.pos.x
+            dy = portal_world.y - p.pos.y
+            dist = math.sqrt(dx * dx + dy * dy)
+            if dist > 80:
+                ang = math.atan2(dy, dx)
+                # Draw compass on screen
+                comp_cx = WIDTH // 2
+                comp_cy = 50
+                comp_r = 22
+                pulse = 0.6 + 0.4 * math.sin(self.game_time * 3)
+                pcol = BIOME_PORTAL_COLORS.get(self.current_biome, (200, 200, 100))
+                arrow_col = (int(pcol[0] * pulse), int(pcol[1] * pulse), int(pcol[2] * pulse))
+                # Arrow triangle pointing direction
+                tip_x = comp_cx + int(math.cos(ang) * (comp_r + 6))
+                tip_y = comp_cy + int(math.sin(ang) * (comp_r + 6))
+                left_x = comp_cx + int(math.cos(ang + 2.6) * comp_r)
+                left_y = comp_cy + int(math.sin(ang + 2.6) * comp_r)
+                right_x = comp_cx + int(math.cos(ang - 2.6) * comp_r)
+                right_y = comp_cy + int(math.sin(ang - 2.6) * comp_r)
+                pygame.draw.polygon(s, arrow_col, [(tip_x, tip_y), (left_x, left_y), (right_x, right_y)])
+                # Distance label
+                tile_dist = int(dist / TILE)
+                dist_txt = self.font.render(f"Portal: {tile_dist} tiles", True, arrow_col)
+                s.blit(dist_txt, (comp_cx - dist_txt.get_width() // 2, comp_cy + comp_r + 10))
         hint = self.font.render("C=Stats  I=Inventory  T=Skills  M=Waypoints  Esc=Menu  F1=Help", True, (90, 85, 75))
         s.blit(hint, (16, 72))
 
