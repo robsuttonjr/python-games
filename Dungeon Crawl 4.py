@@ -48,11 +48,11 @@ IFRAME_TIME = 0.25
 POTION_HEAL = 50
 POTION_MANA = 40
 
-ENEMY_BASE_HP = 40
-ENEMY_BASE_DMG = (4, 8)
-ENEMY_SPEED = 150
+ENEMY_BASE_HP = 12  # low base - scales up with level/act (D2R: Act 1 monsters die easily)
+ENEMY_BASE_DMG = (2, 4)  # low base damage - scales up progressively
+ENEMY_SPEED = 140
 SPAWN_INTERVAL = 6.0
-WAVE_SCALE = 1.10
+WAVE_SCALE = 1.08
 MAX_ACTIVE_ENEMIES = 7
 
 ELITE_PACK_CHANCE = 0.35
@@ -65,10 +65,17 @@ AURAS = {
     "guardian":  {"speed":1.00,"damage":1.00,"taken":0.66,"color":(120,255,160)},
 }
 
-BOSS_HP = 600
-BOSS_DMG = (8, 14)
+BOSS_HP = 350  # act boss base HP (scales heavily with act)
+BOSS_DMG = (6, 12)
 BOSS_SHOT_CD = (1.0, 1.6)
 BOSS_PROJ_SPEED = 480
+
+# Uber boss constants (rare super-bosses, much larger and tougher)
+UBER_BOSS_CHANCE = 0.18  # chance per wave to spawn uber on boss levels after boss is dead
+UBER_BOSS_HP_MULT = 4.0
+UBER_BOSS_DMG_MULT = 2.0
+UBER_BOSS_RADIUS = 44
+UBER_BOSS_UNIQUE_DROP = 0.65  # 65% chance to drop a unique
 
 DMG_BOOST_MULT = 1.6
 DMG_BOOST_TIME = 8.0
@@ -669,6 +676,7 @@ class Elite(Enemy):
 @dataclass
 class Boss(Enemy):
     shot_cd: float = 1.0
+    is_uber: bool = False
 
 @dataclass
 class TreasureGoblin(Enemy):
@@ -1059,6 +1067,9 @@ class Game:
         self.difficulty_name = "Normal"
         self.diff = DIFFICULTY["Normal"]
         self.goblin_cooldown = 0.0  # seconds until goblin can spawn again
+        # Waypoint system - tracks discovered areas for teleportation
+        # Format: set of (act, act_level) tuples
+        self.waypoints_discovered: set = {(1, 1)}  # start with Act 1 Level 1
         global MAX_ACTIVE_ENEMIES
         self.dungeon = Dungeon(level=1, biome="crypt")
         rx, ry = self.dungeon.center(self.dungeon.rooms[0]) if self.dungeon.rooms else (MAP_W // 2, MAP_H // 2)
@@ -1406,6 +1417,14 @@ class Game:
         boom += np.sin(2 * np.pi * 120 * t) * 0.2 * np.exp(-t * 15)
         boom += noise(0.2, 0.25) * np.exp(-t * 10)
         self.sounds["crate_explode"] = make_sound(boom)
+
+        # Uber boss roar - deep demonic rumble
+        t = np.linspace(0, 0.6, int(rate * 0.6), endpoint=False)
+        roar = np.sin(2 * np.pi * 45 * t) * 0.4 * np.exp(-t * 3)
+        roar += np.sin(2 * np.pi * 80 * t) * 0.25 * np.exp(-t * 4)
+        roar += np.sin(2 * np.pi * 120 * t * (1 + 0.3 * np.sin(t * 8))) * 0.15 * np.exp(-t * 5)
+        roar += noise(0.6, 0.2) * np.exp(-t * 3)
+        self.sounds["boss_roar"] = make_sound(roar)
 
         # Dash - quick whoosh
         t = np.linspace(0, 0.1, int(rate * 0.1), endpoint=False)
@@ -1789,15 +1808,22 @@ class Game:
             tries += 1
         return self.player.pos + Vec(random.randint(-240, 240), random.randint(-240, 240))
 
+    def _level_scale(self) -> float:
+        """Progressive scaling factor: grows slowly at start, steeper later (D2R feel)."""
+        lvl = self.current_level
+        # Level 1: 1.0, Level 5: ~2.0, Level 10: ~3.5, Level 15: ~5.5, Level 25: ~10
+        return 1.0 + (lvl - 1) * 0.25 + max(0, lvl - 10) * 0.15 + max(0, lvl - 20) * 0.1
+
     def spawn_enemy(self, near_player: bool = True, kind_override: Optional[int] = None):
         if len(self.enemies) >= MAX_ACTIVE_ENEMIES:
             return
         pos = self._random_floor_pos(near_player)
         tier = self._get_tier_scale()
-        scale = (WAVE_SCALE ** (self.wave - 1)) * (1.0 + 0.1 * (self.current_level - 1))
-        hp = int(ENEMY_BASE_HP * scale * self.diff["enemy_hp"] * tier["hp"])
-        dmg_min = int(ENEMY_BASE_DMG[0] * scale * self.diff["enemy_dmg"] * tier["dmg"])
-        dmg_max = int(ENEMY_BASE_DMG[1] * scale * self.diff["enemy_dmg"] * tier["dmg"])
+        wave_scale = WAVE_SCALE ** (self.wave - 1)
+        level_scale = self._level_scale()
+        hp = max(5, int(ENEMY_BASE_HP * level_scale * wave_scale * self.diff["enemy_hp"] * tier["hp"]))
+        dmg_min = max(1, int(ENEMY_BASE_DMG[0] * level_scale * wave_scale * self.diff["enemy_dmg"] * tier["dmg"]))
+        dmg_max = max(2, int(ENEMY_BASE_DMG[1] * level_scale * wave_scale * self.diff["enemy_dmg"] * tier["dmg"]))
         speed = ENEMY_SPEED * (0.95 + 0.1 * random.random()) * self.diff["enemy_speed"] * tier["speed"]
         kind = kind_override if kind_override is not None else random.choices([0, 1, 2, 3], [0.35, 0.25, 0.25, 0.15])[0]
         e = Enemy(pos=pos, vel=Vec(0, 0), radius=20, hp=hp, max_hp=hp,
@@ -1830,7 +1856,9 @@ class Game:
         if len(self.enemies) >= MAX_ACTIVE_ENEMIES:
             return
         pos = self._random_floor_pos(near_player=True)
-        scale = (WAVE_SCALE ** (self.wave - 1)) * (1.0 + 0.1 * (self.current_level - 1))
+        wave_scale = WAVE_SCALE ** (self.wave - 1)
+        level_scale = self._level_scale()
+        scale = wave_scale * level_scale
         tier = self._get_tier_scale()
         hp = int(ENEMY_BASE_HP * ELITE_MULT["hp"] * scale * self.diff["enemy_hp"] * tier["hp"])
         dmg_min = int(ENEMY_BASE_DMG[0] * ELITE_MULT["dmg"] * scale * self.diff["enemy_dmg"] * tier["dmg"])
@@ -1892,13 +1920,14 @@ class Game:
             return
         center_tx, center_ty = self.dungeon.center(self.dungeon.rooms[-1])
         pos = Vec(center_tx * TILE + TILE / 2, center_ty * TILE + TILE / 2)
-        # Boss scales with act number and difficulty tier
-        act_scale = 1.0 + (self.current_act - 1) * 0.4
+        # Boss scales with act number and difficulty tier (progressive)
+        act_scale = 1.0 + (self.current_act - 1) * 0.6
         tier_scale = self._get_tier_scale()
+        level_scale = self._level_scale()
         boss_scale = act_scale * tier_scale["hp"]
-        hp = int(BOSS_HP * self.diff["enemy_hp"] * boss_scale)
-        dmg_min = int(BOSS_DMG[0] * self.diff["enemy_dmg"] * act_scale * tier_scale["dmg"])
-        dmg_max = int(BOSS_DMG[1] * self.diff["enemy_dmg"] * act_scale * tier_scale["dmg"])
+        hp = max(80, int(BOSS_HP * level_scale * 0.5 * self.diff["enemy_hp"] * boss_scale))
+        dmg_min = max(3, int(BOSS_DMG[0] * level_scale * 0.4 * self.diff["enemy_dmg"] * act_scale * tier_scale["dmg"]))
+        dmg_max = max(6, int(BOSS_DMG[1] * level_scale * 0.4 * self.diff["enemy_dmg"] * act_scale * tier_scale["dmg"]))
         b = Boss(pos=pos, vel=Vec(0, 0), radius=34, hp=hp, max_hp=hp,
                  dmg_min=dmg_min, dmg_max=dmg_max,
                  speed=ENEMY_SPEED * 0.9 * self.diff["enemy_speed"] * tier_scale["speed"],
@@ -1914,6 +1943,39 @@ class Game:
         self.add_floating_text(pos.x, pos.y - 40, boss_name, (255, 80, 60), 2.5)
         if boss_title:
             self.add_floating_text(pos.x, pos.y - 15, boss_title, (200, 160, 80), 2.0)
+
+    def spawn_uber_boss(self):
+        """Spawn a rare uber boss - much larger, tougher, high unique drop chance."""
+        if len(self.enemies) >= MAX_ACTIVE_ENEMIES:
+            return
+        pos = self._random_floor_pos(near_player=False)
+        tier_scale = self._get_tier_scale()
+        level_scale = self._level_scale()
+        base_hp = int(BOSS_HP * UBER_BOSS_HP_MULT * level_scale * self.diff["enemy_hp"] * tier_scale["hp"])
+        base_dmg_min = int(BOSS_DMG[0] * UBER_BOSS_DMG_MULT * level_scale * 0.5 * self.diff["enemy_dmg"] * tier_scale["dmg"])
+        base_dmg_max = int(BOSS_DMG[1] * UBER_BOSS_DMG_MULT * level_scale * 0.5 * self.diff["enemy_dmg"] * tier_scale["dmg"])
+        # Pick a D2R-style uber name
+        uber_names = [
+            ("Uber Diablo", "The Prime Evil"),
+            ("Uber Mephisto", "Lord of Hatred Reborn"),
+            ("Uber Baal", "The Worldstone Keeper"),
+            ("Lilith", "Daughter of Hatred"),
+            ("Uber Duriel", "The Maggot King"),
+            ("Pandemonium Diablo", "Terror Incarnate"),
+        ]
+        name, title = random.choice(uber_names)
+        b = Boss(pos=pos, vel=Vec(0, 0), radius=UBER_BOSS_RADIUS, hp=base_hp, max_hp=base_hp,
+                 dmg_min=base_dmg_min, dmg_max=base_dmg_max,
+                 speed=ENEMY_SPEED * 0.75 * self.diff["enemy_speed"] * tier_scale["speed"],
+                 kind=1, shot_cd=random.uniform(0.8, 1.3))
+        b.is_uber = True  # tag for special drops
+        self.enemies.append(b)
+        self.add_screen_shake(18)
+        self.emit_death_burst(pos.x, pos.y, (200, 40, 200), 45)
+        self.emit_particles(pos.x, pos.y, 30, (255, 80, 255), speed=120, life=1.0, gravity=-20)
+        self.add_floating_text(pos.x, pos.y - 55, name, (255, 60, 255), 3.0)
+        self.add_floating_text(pos.x, pos.y - 25, title, (200, 140, 200), 2.5)
+        self.play_sound("boss_roar")
 
     def spawn_pickup_near_player(self):
         base_tx = int(self.player.pos.x // TILE)
@@ -2741,16 +2803,25 @@ class Game:
             self.emit_death_burst(e.pos.x, e.pos.y, death_color, 30)
             self.add_screen_shake(6)
         elif isinstance(e, Boss):
-            self.emit_death_burst(e.pos.x, e.pos.y, (255, 100, 40), 50)
-            self.add_screen_shake(15)
-            act_info = self._get_act_info()
-            boss_name = act_info.get("boss_name", "Boss")
-            self.add_floating_text(e.pos.x, e.pos.y - 50,
-                                   f"{boss_name} SLAIN!", (255, 200, 60), 2.5)
-            if self._is_act_boss_level():
-                self.add_floating_text(e.pos.x, e.pos.y - 20,
-                                       f"{act_info['name']} Complete!", C_GOLD, 3.0)
+            if getattr(e, 'is_uber', False):
+                # Uber boss death - massive explosion
+                self.emit_death_burst(e.pos.x, e.pos.y, (255, 80, 255), 80)
+                self.emit_particles(e.pos.x, e.pos.y, 60, (255, 200, 80), speed=150, life=1.2, gravity=-30)
+                self.add_screen_shake(25)
+                self.add_floating_text(e.pos.x, e.pos.y - 60, "UBER BOSS SLAIN!", (255, 80, 255), 3.5)
+                self.add_floating_text(e.pos.x, e.pos.y - 25, "LEGENDARY LOOT!", C_GOLD, 3.0)
                 self.play_sound("levelup")
+            else:
+                self.emit_death_burst(e.pos.x, e.pos.y, (255, 100, 40), 50)
+                self.add_screen_shake(15)
+                act_info = self._get_act_info()
+                boss_name = act_info.get("boss_name", "Boss")
+                self.add_floating_text(e.pos.x, e.pos.y - 50,
+                                       f"{boss_name} SLAIN!", (255, 200, 60), 2.5)
+                if self._is_act_boss_level():
+                    self.add_floating_text(e.pos.x, e.pos.y - 20,
+                                           f"{act_info['name']} Complete!", C_GOLD, 3.0)
+                    self.play_sound("levelup")
         else:
             self.emit_death_burst(e.pos.x, e.pos.y, death_color, 15)
         self.play_sound(f"death_{self._creature_sound_name(e)}")
@@ -2817,19 +2888,34 @@ class Game:
                 drops.append(Loot(pos=self._safe_loot_pos(e.pos, 15),
                                   weapon=self._gen_weapon(elite_rarity)))
         if isinstance(e, Boss):
-            # Act bosses drop better loot at higher acts
-            unique_chance = 0.15 + self.current_act * 0.06  # 21% to 45%
-            drops.append(Loot(pos=self._safe_loot_pos(e.pos, 30),
-                              weapon=self._gen_weapon(
-                                  RARITY_UNIQUE if random.random() < unique_chance else RARITY_RARE)))
-            drops.append(Loot(pos=self._safe_loot_pos(e.pos, 30),
-                              weapon=self._gen_weapon(
-                                  RARITY_RARE if random.random() < 0.5 else RARITY_MAGIC)))
-            drops.append(Loot(pos=sp(), gold=random.randint(40 + self.current_act * 15, 100 + self.current_act * 25)))
-            # Extra drops for later act bosses
-            if self.current_act >= 3:
+            if getattr(e, 'is_uber', False):
+                # UBER BOSS - massive loot explosion, very high unique chance
+                for _ in range(3):
+                    rarity = RARITY_UNIQUE if random.random() < UBER_BOSS_UNIQUE_DROP else RARITY_RARE
+                    drops.append(Loot(pos=self._safe_loot_pos(e.pos, 40),
+                                      weapon=self._gen_weapon(rarity)))
                 drops.append(Loot(pos=self._safe_loot_pos(e.pos, 35),
-                                  weapon=self._gen_weapon(RARITY_MAGIC)))
+                                  weapon=self._gen_weapon(RARITY_RARE)))
+                drops.append(Loot(pos=sp(), gold=random.randint(100 + self.current_level * 10,
+                                                                 250 + self.current_level * 20)))
+                for _ in range(2):
+                    pt = random.choice(["hp", "mana"])
+                    drops.append(Loot(pos=sp(), potion_hp=(pt == "hp"), potion_mana=(pt == "mana")))
+                drops.append(Loot(pos=sp(), infusion=random.choice(INFUSION_TYPES)))
+            else:
+                # Regular act bosses drop better loot at higher acts
+                unique_chance = 0.15 + self.current_act * 0.06  # 21% to 45%
+                drops.append(Loot(pos=self._safe_loot_pos(e.pos, 30),
+                                  weapon=self._gen_weapon(
+                                      RARITY_UNIQUE if random.random() < unique_chance else RARITY_RARE)))
+                drops.append(Loot(pos=self._safe_loot_pos(e.pos, 30),
+                                  weapon=self._gen_weapon(
+                                      RARITY_RARE if random.random() < 0.5 else RARITY_MAGIC)))
+                drops.append(Loot(pos=sp(), gold=random.randint(40 + self.current_act * 15, 100 + self.current_act * 25)))
+                # Extra drops for later act bosses
+                if self.current_act >= 3:
+                    drops.append(Loot(pos=self._safe_loot_pos(e.pos, 35),
+                                      weapon=self._gen_weapon(RARITY_MAGIC)))
         self.loots.extend(drops)
         # Unique drop announcement (D2R style)
         for d in drops:
@@ -2865,6 +2951,11 @@ class Game:
             self.wave += 1
             self.spawn_timer = SPAWN_INTERVAL
             self.spawn_boss()
+            # Uber boss chance (rare, only on later levels, after act boss is dead)
+            if (self.current_level >= 8 and self.boss_spawned
+                    and not any(isinstance(e, Boss) for e in self.enemies if e.alive)
+                    and random.random() < UBER_BOSS_CHANCE):
+                self.spawn_uber_boss()
 
     def update_particles(self, dt: float):
         alive = []
@@ -2982,6 +3073,8 @@ class Game:
         self.boss_spawned = False
         self._spawn_vendor()
         self.play_sound("portal")
+        # Mark waypoint as discovered
+        self.waypoints_discovered.add((self.current_act, self.current_act_level))
         # D2R-style area announcement
         area_name = self._get_area_name()
         act_name = act_info["name"]
@@ -3474,6 +3567,26 @@ class Game:
                    (ex + 1, ey - 22), (ex + 7, ey - 34), (ex + 14, ey - 22)]
             pygame.draw.polygon(s, crown_col, pts)
             pygame.draw.polygon(s, (200, 160, 60), pts, 1)
+
+        # Uber boss aura - massive pulsing purple/red aura with demonic glow
+        if isinstance(e, Boss) and getattr(e, 'is_uber', False):
+            uber_pulse = 0.5 + 0.5 * math.sin(self.game_time * 5)
+            # Outer dark aura ring
+            pygame.draw.circle(s, (int(120 * uber_pulse), 20, int(120 * uber_pulse)),
+                               (ex, ey), e.radius + 20, 5)
+            # Inner fire ring
+            pygame.draw.circle(s, (int(200 * uber_pulse), int(60 * uber_pulse), int(40 * uber_pulse)),
+                               (ex, ey), e.radius + 12, 3)
+            # Demonic horns
+            horn_col = (200, 60, 200)
+            pygame.draw.line(s, horn_col, (ex - 18, ey - e.radius - 5),
+                             (ex - 28, ey - e.radius - 30), 3)
+            pygame.draw.line(s, horn_col, (ex + 18, ey - e.radius - 5),
+                             (ex + 28, ey - e.radius - 30), 3)
+            # Skull emblem above
+            pygame.draw.circle(s, (255, 255, 255), (ex, ey - e.radius - 18), 7)
+            pygame.draw.circle(s, (40, 0, 40), (ex - 3, ey - e.radius - 20), 2)
+            pygame.draw.circle(s, (40, 0, 40), (ex + 3, ey - e.radius - 20), 2)
 
         # Body - demonic look based on kind
         if e.hit_flash > 0:
@@ -4120,7 +4233,7 @@ class Game:
         lives_col = (100, 200, 100) if p.lives > 1 else ((220, 180, 60) if p.lives == 1 else (200, 60, 60))
         lives_txt = self.font.render(f"Lives: {p.lives}/{p.max_lives}", True, lives_col)
         s.blit(lives_txt, (16, 52))
-        hint = self.font.render("C=Stats  I=Inventory  T=Skills  Esc=Menu  F1=Help", True, (90, 85, 75))
+        hint = self.font.render("C=Stats  I=Inventory  T=Skills  M=Waypoints  Esc=Menu  F1=Help", True, (90, 85, 75))
         s.blit(hint, (16, 72))
 
     def _draw_globe(self, s, cx, cy, r, frac, empty_color, fill_color, highlight_color, frame_color):
@@ -4162,10 +4275,192 @@ class Game:
         s.blit(lbl, (x + size // 2 - lbl.get_width() // 2, y + size + 2))
 
     # ---- Overlays ----
+    def _waypoint_menu(self):
+        """D2R-style waypoint menu: teleport to any discovered area."""
+        # Build list of discovered waypoints organized by act
+        wp_list = []  # (act, act_level, area_name, act_name, biome)
+        for act_num in range(1, 6):
+            act_info = ACTS[act_num]
+            areas = ACT_AREAS[act_num]
+            for al in range(1, LEVELS_PER_ACT + 1):
+                if (act_num, al) in self.waypoints_discovered:
+                    area_name = areas[min(al - 1, len(areas) - 1)]
+                    wp_list.append((act_num, al, area_name, act_info["name"], act_info["biome"]))
+        if not wp_list:
+            return  # nothing to show
+
+        idx = 0
+        # Find current location in list
+        for i, (a, al, _, _, _) in enumerate(wp_list):
+            if a == self.current_act and al == self.current_act_level:
+                idx = i
+                break
+
+        scroll_offset = 0
+        max_visible = 14  # max items visible at once
+
+        while True:
+            self.clock.tick(30)
+            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 210))
+            self.screen.blit(overlay, (0, 0))
+
+            # Title
+            title = self.titlefont.render("WAYPOINTS", True, C_GOLD)
+            self.screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 40))
+            tier_str = f"  [{self.difficulty_tier}]" if self.difficulty_tier != "Normal" else ""
+            sub = self.font.render(f"Select a destination{tier_str}", True, (140, 135, 120))
+            self.screen.blit(sub, (WIDTH // 2 - sub.get_width() // 2, 110))
+
+            # Decorative line
+            pygame.draw.line(self.screen, C_GOTHIC_FRAME,
+                             (WIDTH // 2 - 300, 140), (WIDTH // 2 + 300, 140), 2)
+
+            # Keep selection in view
+            if idx < scroll_offset:
+                scroll_offset = idx
+            elif idx >= scroll_offset + max_visible:
+                scroll_offset = idx - max_visible + 1
+
+            # Draw waypoints
+            y = 160
+            prev_act = -1
+            visible_idx = 0
+            for wi, (act_num, al, area_name, act_name, biome) in enumerate(wp_list):
+                if wi < scroll_offset:
+                    prev_act = act_num
+                    continue
+                if visible_idx >= max_visible:
+                    break
+
+                # Act header
+                if act_num != prev_act:
+                    act_col = BIOME_PORTAL_COLORS.get(biome, C_GOLD)
+                    act_header = self.font.render(act_name, True, act_col)
+                    self.screen.blit(act_header, (WIDTH // 2 - 280, y))
+                    y += 28
+                    visible_idx += 1
+                    if visible_idx >= max_visible:
+                        break
+                    prev_act = act_num
+
+                is_sel = (wi == idx)
+                is_current = (act_num == self.current_act and al == self.current_act_level)
+
+                # Selection highlight
+                if is_sel:
+                    pygame.draw.rect(self.screen, (40, 35, 25),
+                                     (WIDTH // 2 - 260, y - 2, 520, 30), border_radius=4)
+                    pygame.draw.rect(self.screen, C_GOLD_DARK,
+                                     (WIDTH // 2 - 260, y - 2, 520, 30), 1, border_radius=4)
+
+                # Area name
+                if is_current:
+                    col = (100, 255, 100) if is_sel else (80, 200, 80)
+                    marker = "> " if is_sel else "  "
+                    suffix = "  (Current)"
+                elif is_sel:
+                    col = C_GOLD
+                    marker = "> "
+                    suffix = ""
+                else:
+                    col = (160, 155, 140)
+                    marker = "  "
+                    suffix = ""
+
+                # Waypoint icon
+                icon_col = BIOME_PORTAL_COLORS.get(biome, (180, 160, 120))
+                pygame.draw.circle(self.screen, icon_col, (WIDTH // 2 - 240, y + 10), 5)
+                pygame.draw.circle(self.screen, (min(255, icon_col[0] + 60),
+                                                  min(255, icon_col[1] + 60),
+                                                  min(255, icon_col[2] + 60)),
+                                   (WIDTH // 2 - 240, y + 10), 3)
+
+                txt = self.font.render(f"{marker}{area_name}{suffix}", True, col)
+                self.screen.blit(txt, (WIDTH // 2 - 220, y))
+                y += 30
+                visible_idx += 1
+
+            # Scroll indicators
+            if scroll_offset > 0:
+                up_txt = self.font.render("^ More above ^", True, (120, 115, 100))
+                self.screen.blit(up_txt, (WIDTH // 2 - up_txt.get_width() // 2, 148))
+            if scroll_offset + max_visible < len(wp_list):
+                dn_txt = self.font.render("v More below v", True, (120, 115, 100))
+                self.screen.blit(dn_txt, (WIDTH // 2 - dn_txt.get_width() // 2, HEIGHT - 80))
+
+            # Controls hint
+            hint = self.font.render("[W/S] Navigate  -  [Enter] Teleport  -  [Esc] Cancel", True, (100, 95, 80))
+            self.screen.blit(hint, (WIDTH // 2 - hint.get_width() // 2, HEIGHT - 50))
+
+            pygame.display.flip()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                    return
+                if event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_UP, pygame.K_w):
+                        idx = (idx - 1) % len(wp_list)
+                    elif event.key in (pygame.K_DOWN, pygame.K_s):
+                        idx = (idx + 1) % len(wp_list)
+                    elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                        act_num, al, area_name, _, biome = wp_list[idx]
+                        if act_num == self.current_act and al == self.current_act_level:
+                            return  # already here
+                        # Teleport to the selected waypoint
+                        self._teleport_to_waypoint(act_num, al)
+                        return
+                    elif event.key in (pygame.K_ESCAPE, pygame.K_m):
+                        return
+
+    def _teleport_to_waypoint(self, dest_act: int, dest_act_level: int):
+        """Teleport player to a discovered waypoint area."""
+        act_info = ACTS.get(dest_act, ACTS[1])
+        # Calculate the absolute level for this act/level
+        abs_level = (dest_act - 1) * LEVELS_PER_ACT + dest_act_level
+        # Adjust for difficulty tier
+        tier_idx = DIFFICULTY_TIERS.index(self.difficulty_tier) if self.difficulty_tier in DIFFICULTY_TIERS else 0
+        abs_level += tier_idx * 25  # 25 levels per full cycle
+
+        self.current_act = dest_act
+        self.current_act_level = dest_act_level
+        self.current_biome = act_info["biome"]
+        self.current_level = abs_level
+
+        self.dungeon = Dungeon(level=self.current_level, biome=self.current_biome)
+        rx, ry = self.dungeon.center(self.dungeon.rooms[0]) if self.dungeon.rooms else (MAP_W // 2, MAP_H // 2)
+        self.player.pos = Vec(rx * TILE + TILE / 2, ry * TILE + TILE / 2)
+        self.enemies.clear()
+        self.projectiles.clear()
+        self.loots.clear()
+        self.particles.clear()
+        self.floating_texts.clear()
+        self.corpses.clear()
+        self.chests.clear()
+        self.crates.clear()
+        self.treasure_goblin = None
+        self.lightning_chains.clear()
+        self._build_texture_cache(self.current_biome)
+        self._spawn_chests()
+        self._spawn_crates()
+        self.wave = 1
+        self.spawn_timer = SPAWN_INTERVAL
+        self.dungeon.mark_seen_radius(self.player.pos)
+        self.boss_spawned = False
+        self._spawn_vendor()
+        self.play_sound("portal")
+        # Announce
+        area_name = self._get_area_name()
+        portal_col = BIOME_PORTAL_COLORS.get(self.current_biome, C_GOLD)
+        self.add_floating_text(self.player.pos.x, self.player.pos.y - 40,
+                               f"Teleported to {area_name}", portal_col, 1.5)
+
     def _pause_screen(self):
         idx = 0
         options = [
             ("Resume", "resume"),
+            ("Waypoint Map", "waypoint"),
             ("Save Game", "save"),
             ("Save & Quit", "save_quit"),
             ("Quit (no save)", "quit"),
@@ -4213,6 +4508,10 @@ class Game:
                         if action == "resume":
                             self.paused = False
                             return
+                        elif action == "waypoint":
+                            self._waypoint_menu()
+                            self.paused = False
+                            return
                         elif action == "save":
                             self._save_game()
                             self.paused = False
@@ -4254,9 +4553,12 @@ class Game:
             ("Shoot Chests", "Break open for gold, potions, weapons, boosts"),
             ("Infusions", "Pick up Fire/Ice/Lightning arrows for timed buffs"),
             ("V", "Trade with vendor NPC (when nearby)"),
+            ("M", "Open Waypoint Map - teleport to any discovered area"),
             ("", ""),
             ("Portals", "Step into portal to advance through Act areas (D2R-style progression)"),
             ("Acts", "5 Acts from Crypt to Frozen Summit, then Nightmare and Hell difficulty"),
+            ("Waypoints", "Areas are discovered as you progress; use M to teleport back"),
+            ("Uber Bosses", "Rare super-bosses appear after Act bosses; drop legendary loot"),
             ("Vendor NPC", "Buy/sell weapons in the starting room"),
             ("Creatures", "Skeletons, Demons, Spiders, Wraiths - each with unique sounds"),
             ("Treasure Goblin", "Chase it! Drops gold as it flees, jackpot on kill"),
@@ -4947,6 +5249,7 @@ class Game:
                 "current_act": self.current_act,
                 "current_act_level": self.current_act_level,
                 "difficulty_tier": self.difficulty_tier,
+                "waypoints": [[a, l] for a, l in sorted(self.waypoints_discovered)],
                 "wave": self.wave,
                 "kills": self.kills,
                 "difficulty": self.difficulty_name,
@@ -4998,6 +5301,10 @@ class Game:
             self.current_act = gd.get("current_act", 1)
             self.current_act_level = gd.get("current_act_level", 1)
             self.difficulty_tier = gd.get("difficulty_tier", "Normal")
+            # Restore waypoints
+            wp_list = gd.get("waypoints", [])
+            self.waypoints_discovered = {(a, l) for a, l in wp_list} if wp_list else {(1, 1)}
+            self.waypoints_discovered.add((self.current_act, self.current_act_level))
             self.wave = gd["wave"]
             self.kills = gd["kills"]
             # Rebuild dungeon for current level
@@ -5216,6 +5523,8 @@ class Game:
                         self._skill_tree_screen()
                     if event.key == pygame.K_v and self.show_vendor_hint:
                         self._vendor_screen()
+                    if event.key == pygame.K_m:
+                        self._waypoint_menu()
                     if event.key == pygame.K_F11:
                         self.fullscreen = not self.fullscreen
                         if self.fullscreen:
