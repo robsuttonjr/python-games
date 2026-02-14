@@ -84,7 +84,7 @@ PICKUP_SPAWN_CHANCE = 0.25
 
 GOLD_DROP = (3, 12)
 POTION_DROP_CHANCE = 0.10
-LOOT_DROP_CHANCE = 0.08
+LOOT_DROP_CHANCE = 0.12
 DMG_PICKUP_DROP_CHANCE = 0.06
 SHIELD_PICKUP_DROP_CHANCE = 0.06
 
@@ -2186,21 +2186,27 @@ class Game:
                 self.loots.append(Loot(pos=self._safe_loot_pos(chest.pos),
                                        gold=random.randint(5, 20) * gold_mult))
 
-        # Always drop a weapon — same rarity chances as a normal monster
+        # Always drop a weapon — gold chests have better odds
         roll = random.random()
         depth = self.current_level
         if chest.kind == "gold":
-            # Gold chests slightly better
-            if roll < 0.05 + depth * 0.005:
+            # Gold chests: decent unique chance, especially at depth
+            unique_ch = 0.04 + depth * 0.006  # ~4% at depth 1, ~19% at depth 25
+            if roll < unique_ch:
+                w_rarity = RARITY_UNIQUE
+            elif roll < unique_ch + 0.12 + depth * 0.005:
                 w_rarity = RARITY_RARE
-            elif roll < 0.45:
+            elif roll < 0.55:
                 w_rarity = RARITY_MAGIC
             else:
                 w_rarity = RARITY_NORMAL
         else:
-            if roll < 0.03 + depth * 0.005:
+            unique_ch = 0.02 + depth * 0.004  # ~2% at depth 1, ~12% at depth 25
+            if roll < unique_ch:
+                w_rarity = RARITY_UNIQUE
+            elif roll < unique_ch + 0.06 + depth * 0.005:
                 w_rarity = RARITY_RARE
-            elif roll < 0.35:
+            elif roll < 0.40:
                 w_rarity = RARITY_MAGIC
             else:
                 w_rarity = RARITY_NORMAL
@@ -2473,7 +2479,12 @@ class Game:
                 if e.loot_drop_timer <= 0:
                     e.loot_drop_timer = GOBLIN_LOOT_INTERVAL
                     drop_pos = self._safe_loot_pos(e.pos)
-                    self.loots.append(Loot(pos=drop_pos, gold=random.randint(3, 10)))
+                    if random.random() < 0.12:
+                        # Occasional weapon drops while fleeing
+                        trail_rarity = RARITY_RARE if random.random() < 0.3 else RARITY_MAGIC
+                        self.loots.append(Loot(pos=drop_pos, weapon=self._gen_weapon(trail_rarity)))
+                    else:
+                        self.loots.append(Loot(pos=drop_pos, gold=random.randint(3, 10)))
                     self.emit_particles(e.pos.x, e.pos.y, 3, C_GOLD, speed=30, life=0.3, gravity=-20)
                 # Wall collision with sliding
                 new_epos = e.pos + e.vel * dt
@@ -2807,9 +2818,15 @@ class Game:
             self.loots.append(Loot(pos=self._safe_loot_pos(e.pos), infusion=inf))
             if random.random() < 0.5:
                 self.loots.append(Loot(pos=self._safe_loot_pos(e.pos), potion_hp=True))
-            # Goblin weapon drops: 2-3 weapons, magic to rare range
-            for gi in range(random.randint(2, 3)):
-                gob_rarity = random.choice([RARITY_MAGIC, RARITY_MAGIC, RARITY_RARE])
+            # Goblin weapon drops: 3-4 weapons with guaranteed unique chance
+            for gi in range(random.randint(3, 4)):
+                gob_roll = random.random()
+                if gob_roll < 0.25:
+                    gob_rarity = RARITY_UNIQUE  # 25% unique per drop!
+                elif gob_roll < 0.55:
+                    gob_rarity = RARITY_RARE
+                else:
+                    gob_rarity = RARITY_MAGIC
                 self.loots.append(Loot(pos=self._safe_loot_pos(e.pos, 35),
                                        weapon=self._gen_weapon(gob_rarity)))
             self.corpses.append(Corpse(x=e.pos.x, y=e.pos.y, radius=e.radius, kind=e.kind,
@@ -2874,18 +2891,21 @@ class Game:
                     force = RARITY_RARE
             elif isinstance(e, Elite):
                 roll = random.random()
-                if roll < 0.05:
+                if roll < 0.12:
                     force = RARITY_UNIQUE
-                elif roll < 0.40:
+                elif roll < 0.45:
                     force = RARITY_RARE
                 else:
                     force = RARITY_MAGIC
             else:
-                # Regular monsters: mostly normal/magic
+                # Regular monsters: mostly normal/magic, small unique chance at higher depths
                 roll = random.random()
-                if roll < 0.03 + self.current_level * 0.005:
+                unique_thresh = 0.005 + self.current_level * 0.003  # ~0.8% at depth 1, ~8% at depth 25
+                if roll < unique_thresh:
+                    force = RARITY_UNIQUE
+                elif roll < unique_thresh + 0.05 + self.current_level * 0.006:
                     force = RARITY_RARE
-                elif roll < 0.35:
+                elif roll < 0.40:
                     force = RARITY_MAGIC
                 else:
                     force = RARITY_NORMAL
@@ -2904,7 +2924,13 @@ class Game:
                 drops.append(Loot(pos=sp(), shield_boost=True))
             # Elites always drop at least magic gear
             if not any(d.weapon for d in drops):
-                elite_rarity = RARITY_MAGIC if random.random() < 0.6 else RARITY_RARE
+                eroll = random.random()
+                if eroll < 0.08:
+                    elite_rarity = RARITY_UNIQUE
+                elif eroll < 0.35:
+                    elite_rarity = RARITY_RARE
+                else:
+                    elite_rarity = RARITY_MAGIC
                 drops.append(Loot(pos=self._safe_loot_pos(e.pos, 15),
                                   weapon=self._gen_weapon(elite_rarity)))
         if isinstance(e, Boss):
