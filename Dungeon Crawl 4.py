@@ -17,9 +17,9 @@ FPS = 60
 FONT_NAME = "consolas"
 
 DIFFICULTY = {
-    "Easy":   {"enemy_hp":0.9,"enemy_dmg":0.8,"enemy_speed":0.95,"max_enemies":6},
-    "Normal": {"enemy_hp":1.0,"enemy_dmg":1.0,"enemy_speed":1.0, "max_enemies":7},
-    "Hard":   {"enemy_hp":1.2,"enemy_dmg":1.25,"enemy_speed":1.05,"max_enemies":9},
+    "Easy":   {"enemy_hp":0.9,"enemy_dmg":0.8,"enemy_speed":0.95,"max_enemies":20},
+    "Normal": {"enemy_hp":1.0,"enemy_dmg":1.0,"enemy_speed":1.0, "max_enemies":25},
+    "Hard":   {"enemy_hp":1.2,"enemy_dmg":1.25,"enemy_speed":1.05,"max_enemies":30},
 }
 
 PLAYER_SPEED = 340
@@ -53,10 +53,10 @@ ENEMY_BASE_DMG = (2, 4)  # low base damage - scales up progressively
 ENEMY_SPEED = 140
 SPAWN_INTERVAL = 6.0
 WAVE_SCALE = 1.08
-MAX_ACTIVE_ENEMIES = 7
+MAX_ACTIVE_ENEMIES = 25
 
-ELITE_PACK_CHANCE = 0.35
-PACK_SIZE_RANGE = (3, 6)
+ELITE_PACK_CHANCE = 0.50
+PACK_SIZE_RANGE = (4, 8)
 ELITE_MULT = {"hp": 2.6, "dmg": 1.8, "spd": 1.08, "radius": 26}
 AURA_RADIUS = 300
 AURAS = {
@@ -114,7 +114,7 @@ GOBLIN_LOOT_INTERVAL = 0.6
 GOBLIN_MIN_INTERVAL = 660.0  # minimum 11 minutes between goblin spawns
 
 TILE = 48
-MAP_W, MAP_H = 180, 140
+MAP_W, MAP_H = 560, 440
 WALL = 1
 FLOOR = 0
 
@@ -157,11 +157,11 @@ BIOME_COLORS = {
                    "tree_trunk": (35, 32, 20), "tree_top": (20, 45, 18), "outdoor": True},
 }
 BIOME_AMBIENT = {
-    "crypt":     (30, 32, 28),
-    "cave":      (32, 28, 22),
-    "firepit":   (40, 18, 12),
-    "icecavern": (22, 28, 38),
-    "swamp":     (22, 30, 18),
+    "crypt":     (220, 225, 210),
+    "cave":      (215, 210, 195),
+    "firepit":   (225, 195, 185),
+    "icecavern": (200, 215, 230),
+    "swamp":     (200, 215, 195),
 }
 BIOME_NAMES = {
     "crypt": "Rogue Encampment", "cave": "Lut Gholein", "firepit": "Burning Hells",
@@ -209,7 +209,7 @@ ACT_AREAS = {
 }
 
 # ============ VISUAL CONFIG ============
-AMBIENT_LIGHT = (20, 17, 25)
+AMBIENT_LIGHT = (210, 210, 200)
 PLAYER_LIGHT_RADIUS = 400
 PLAYER_LIGHT_COLOR = (255, 230, 190)
 TORCH_LIGHT_RADIUS = 270
@@ -296,12 +296,91 @@ BOW_BASES = [
     ("Demon Xbow",     32, 60,  3.0, "crossbow", 26),
 ]
 
+# ============ ARMOR BASES ============
+ARMOR_BASES = [
+    # (name, defense, str_req, ilvl)
+    ("Quilted Armor",     3,  0,  1),
+    ("Leather Armor",     6,  0,  3),
+    ("Hard Leather",     10,  0,  5),
+    ("Studded Leather",  16,  0,  8),
+    ("Ring Mail",        22, 10, 10),
+    ("Scale Mail",       30, 12, 13),
+    ("Chain Mail",       38, 16, 16),
+    ("Breast Plate",     50, 20, 19),
+    ("Plate Mail",       62, 24, 22),
+    ("Gothic Plate",     75, 30, 25),
+    ("Full Plate Mail",  90, 36, 28),
+    ("Ancient Armor",   108, 42, 32),
+]
+
+# ============ RING BASES ============
+RING_BASES = [
+    # (name, ilvl)
+    ("Bone Ring",        1),
+    ("Coral Ring",       4),
+    ("Iron Ring",        7),
+    ("Gold Ring",       10),
+    ("Jade Ring",       14),
+    ("Cobalt Ring",     18),
+    ("Garnet Ring",     22),
+    ("Ruby Ring",       26),
+]
+
+RING_PREFIXES = [
+    ("Fortified",  {"bonus_hp": (8, 30)}),
+    ("Arcane",     {"bonus_mana": (8, 25)}),
+    ("Cruel",      {"dmg_min": (1, 4), "dmg_max": (2, 6)}),
+    ("Vampiric",   {"life_steal": (1, 5)}),
+    ("Burning",    {"fire_dmg": (2, 8)}),
+    ("Freezing",   {"ice_dmg": (2, 8)}),
+    ("Sparking",   {"lightning_dmg": (2, 10)}),
+]
+RING_SUFFIXES = [
+    ("of Strength",    {"strength": (1, 5)}),
+    ("of Dexterity",   {"dexterity": (1, 5)}),
+    ("of Vitality",    {"vitality": (1, 5)}),
+    ("of Energy",      {"energy": (1, 5)}),
+    ("of Life",        {"bonus_hp": (10, 35)}),
+    ("of the Zodiac",  {"bonus_hp": (5, 15), "bonus_mana": (5, 15)}),
+    ("of Precision",   {"crit_chance": (2, 6)}),
+]
+
+ARMOR_PREFIXES = [
+    ("Sturdy",     {"defense": (3, 10)}),
+    ("Fortified",  {"defense": (5, 18), "bonus_hp": (5, 15)}),
+    ("Blessed",    {"defense": (8, 25)}),
+    ("Godly",      {"defense": (15, 40)}),
+    ("Serpent's",  {"bonus_mana": (10, 30)}),
+    ("Coral",      {"bonus_hp": (15, 40)}),
+    ("Prismatic",  {"fire_resist": (5, 15), "ice_resist": (5, 15), "lightning_resist": (5, 15)}),
+]
+ARMOR_SUFFIXES = [
+    ("of the Whale",   {"bonus_hp": (20, 60)}),
+    ("of Deflection",  {"defense": (5, 20)}),
+    ("of the Mammoth", {"strength": (2, 6)}),
+    ("of the Fox",     {"vitality": (2, 6)}),
+    ("of the Squid",   {"bonus_mana": (15, 40)}),
+    ("of Thorns",      {"thorn_dmg": (3, 12)}),
+    ("of Regeneration",{"hp_regen": (1, 4)}),
+]
+
+# ============ JEWEL SYSTEM (for socketing) ============
+JEWEL_TYPES = [
+    ("Ruby",      {"fire_dmg": (3, 10), "bonus_hp": (8, 20)}, (200, 40, 40)),
+    ("Sapphire",  {"ice_dmg": (3, 10), "bonus_mana": (8, 20)}, (40, 60, 200)),
+    ("Topaz",     {"lightning_dmg": (3, 12), "crit_chance": (1, 4)}, (200, 180, 40)),
+    ("Emerald",   {"dexterity": (2, 6), "life_steal": (1, 4)}, (30, 180, 50)),
+    ("Diamond",   {"defense": (5, 20), "fire_resist": (5, 10)}, (200, 200, 220)),
+    ("Amethyst",  {"strength": (2, 6), "vitality": (1, 4)}, (150, 60, 200)),
+    ("Skull",     {"life_steal": (2, 6), "bonus_mana": (5, 15)}, (180, 180, 170)),
+]
+
 # Affixes for magic/rare items
 PREFIXES = [
     ("Fine",      {"dmg_min": (1, 3), "dmg_max": (2, 5)}),
     ("Sharp",     {"dmg_max": (3, 8)}),
     ("Deadly",    {"crit_chance": (3, 8)}),
-    ("Swift",     {"attack_speed": (-0.2, -0.4)}),  # negative = faster
+    ("Swift",     {"attack_speed": (-0.2, -0.4)}),
     ("Sturdy",    {"bonus_hp": (10, 30)}),
     ("Arcane",    {"bonus_mana": (8, 20)}),
     ("Vampiric",  {"life_steal": (2, 6)}),
@@ -310,6 +389,10 @@ PREFIXES = [
     ("Shocking",  {"lightning_dmg": (3, 14)}),
     ("Cruel",     {"dmg_min": (3, 6), "dmg_max": (5, 12)}),
     ("Massive",   {"knockback": (20, 50)}),
+    ("Ruthless",  {"dmg_min": (4, 8), "dmg_max": (6, 14), "crit_chance": (2, 5)}),
+    ("Berserker", {"dmg_max": (5, 15), "strength": (1, 3)}),
+    ("Ethereal",  {"dmg_min": (2, 5), "bonus_mana": (5, 15)}),
+    ("Savage",    {"dmg_min": (3, 7), "dmg_max": (4, 10), "life_steal": (1, 3)}),
 ]
 SUFFIXES = [
     ("of Precision",  {"dexterity": (1, 4)}),
@@ -324,6 +407,10 @@ SUFFIXES = [
     ("of Frost",      {"ice_dmg": (2, 8)}),
     ("of Thunder",    {"lightning_dmg": (2, 10)}),
     ("of the Fox",    {"vitality": (1, 3)}),
+    ("of Swiftness",  {"attack_speed": (-0.15, -0.35), "dexterity": (1, 2)}),
+    ("of Slaughter",  {"dmg_min": (2, 5), "dmg_max": (3, 8)}),
+    ("of the Colossus", {"strength": (2, 6), "bonus_hp": (10, 25)}),
+    ("of the Vampire", {"life_steal": (3, 8)}),
 ]
 
 # Unique weapons (hand-crafted D2R-accurate legendary items)
@@ -524,6 +611,8 @@ class Weapon:
     suffix: str = ""
     set_name: str = ""
     ilvl: int = 1  # item level
+    sockets: int = 0
+    jewels: list = field(default_factory=list)  # socketed Jewel items
     def roll_damage(self) -> int:
         base = random.randint(self.dmg_min, self.dmg_max)
         base += self.mods.get("fire_dmg", 0) + self.mods.get("ice_dmg", 0) + self.mods.get("lightning_dmg", 0)
@@ -545,12 +634,84 @@ class Weapon:
         return lines
 
 @dataclass
+class Armor:
+    name: str
+    defense: int
+    rarity: str = RARITY_NORMAL
+    mods: dict = field(default_factory=dict)
+    base_name: str = ""
+    prefix: str = ""
+    suffix: str = ""
+    ilvl: int = 1
+    sockets: int = 0
+    jewels: list = field(default_factory=list)  # list of Jewel
+    def get_color(self) -> Tuple[int, int, int]:
+        return RARITY_COLORS.get(self.rarity, (180, 180, 180))
+    def total_defense(self) -> int:
+        d = self.defense + self.mods.get("defense", 0)
+        for j in self.jewels:
+            d += j.mods.get("defense", 0)
+        return d
+    def get_tooltip_lines(self) -> List[str]:
+        lines = [self.name]
+        lines.append(f"{self.base_name or self.name}")
+        lines.append(f"Defense: {self.total_defense()}")
+        if self.sockets > 0:
+            filled = len(self.jewels)
+            lines.append(f"Sockets: {filled}/{self.sockets}")
+        for k, v in self.mods.items():
+            if v and k != "defense":
+                label = k.replace("_", " ").title()
+                lines.append(f"  +{v} {label}" if isinstance(v, int) else f"  +{v:.1f} {label}")
+        for j in self.jewels:
+            lines.append(f"  [{j.name}]")
+        return lines
+
+@dataclass
+class Ring:
+    name: str
+    rarity: str = RARITY_NORMAL
+    mods: dict = field(default_factory=dict)
+    base_name: str = ""
+    prefix: str = ""
+    suffix: str = ""
+    ilvl: int = 1
+    def get_color(self) -> Tuple[int, int, int]:
+        return RARITY_COLORS.get(self.rarity, (180, 180, 180))
+    def get_tooltip_lines(self) -> List[str]:
+        lines = [self.name]
+        lines.append(f"{self.base_name or self.name}")
+        for k, v in self.mods.items():
+            if v:
+                label = k.replace("_", " ").title()
+                lines.append(f"  +{v} {label}" if isinstance(v, int) else f"  +{v:.1f} {label}")
+        return lines
+
+@dataclass
+class Jewel:
+    name: str
+    mods: dict = field(default_factory=dict)
+    color: Tuple[int, int, int] = (200, 200, 200)
+    def get_color(self) -> Tuple[int, int, int]:
+        return self.color
+    def get_tooltip_lines(self) -> List[str]:
+        lines = [self.name]
+        for k, v in self.mods.items():
+            if v:
+                label = k.replace("_", " ").title()
+                lines.append(f"  +{v} {label}" if isinstance(v, int) else f"  +{v:.1f} {label}")
+        return lines
+
+@dataclass
 class Loot:
     pos: Vec
     gold: int = 0
     potion_hp: bool = False
     potion_mana: bool = False
     weapon: Optional[Weapon] = None
+    armor: Optional[Armor] = None
+    ring: Optional[Ring] = None
+    jewel: Optional[Jewel] = None
     dmg_boost: bool = False
     shield_boost: bool = False
     infusion: Optional[str] = None  # "fire", "ice", "lightning"
@@ -611,8 +772,12 @@ class Player(Entity):
     skill_points: int = 0  # unspent skill points
     skills: dict = field(default_factory=dict)  # skill_id -> level
     crit_chance: float = 5.0  # base 5% crit
-    # Inventory: list of Weapon items
-    inventory: list = field(default_factory=list)  # List[Weapon], max INV_COLS*INV_ROWS
+    # Equipment slots
+    equipped_armor: Optional[Armor] = None
+    equipped_ring1: Optional[Ring] = None
+    equipped_ring2: Optional[Ring] = None
+    # Inventory: list of items (Weapon, Armor, Ring, Jewel)
+    inventory: list = field(default_factory=list)  # max INV_COLS*INV_ROWS
     # Lives / respawn
     lives: int = 3
     max_lives: int = 3
@@ -620,12 +785,33 @@ class Player(Entity):
     def max_hp(self) -> int:
         base = PLAYER_HP + 10 * self.level + self.vitality * 3
         base += self.weapon.mods.get("bonus_hp", 0)
+        if self.equipped_armor:
+            base += self.equipped_armor.mods.get("bonus_hp", 0)
+        for ring in (self.equipped_ring1, self.equipped_ring2):
+            if ring:
+                base += ring.mods.get("bonus_hp", 0)
         return base
 
     def max_mana(self) -> int:
         base = PLAYER_MANA + 8 * self.level + self.energy * 4
         base += self.weapon.mods.get("bonus_mana", 0)
+        if self.equipped_armor:
+            base += self.equipped_armor.mods.get("bonus_mana", 0)
+        for ring in (self.equipped_ring1, self.equipped_ring2):
+            if ring:
+                base += ring.mods.get("bonus_mana", 0)
         return base
+
+    def total_defense(self) -> int:
+        d = 0
+        if self.equipped_armor:
+            d += self.equipped_armor.total_defense()
+        return d
+
+    def damage_reduction(self) -> float:
+        """Damage reduction from defense (D2R formula: def / (def + 200))."""
+        d = self.total_defense()
+        return d / (d + 200.0) if d > 0 else 0.0
 
     def mana_regen(self) -> float:
         base = MANA_REGEN_RATE + self.energy * 0.3
@@ -740,7 +926,7 @@ class Dungeon:
         self.tiles = [[WALL for _ in range(MAP_H)] for _ in range(MAP_W)]
         self.terrain = [[TERRAIN_GRASS for _ in range(MAP_H)] for _ in range(MAP_W)]
         self.wall_type = [[WALL_DEFAULT for _ in range(MAP_H)] for _ in range(MAP_W)]
-        self.seen = [[False for _ in range(MAP_H)] for _ in range(MAP_W)]
+        self.seen = [[True for _ in range(MAP_H)] for _ in range(MAP_W)]
         self.rooms: List[pygame.Rect] = []
         self.scenery: List[Tuple[int, int, str]] = []
         self.torches: List[Tuple[int, int]] = []
@@ -856,23 +1042,24 @@ class Dungeon:
                     continue
 
         # ---- Step 4: Carve a main winding road from start to end ----
-        start_x, start_y = 15, MAP_H // 2
-        end_x, end_y = MAP_W - 15, MAP_H // 2 + rng.randint(-20, 20)
+        start_x, start_y = 30, MAP_H // 2
+        end_x, end_y = MAP_W - 30, MAP_H // 2 + rng.randint(-60, 60)
 
-        # Generate a winding path using waypoints
-        num_waypoints = 5 + self.level // 3
+        # Generate a winding path using waypoints (more for bigger maps)
+        num_waypoints = 10 + self.level // 2
         waypoints = [(start_x, start_y)]
         for i in range(1, num_waypoints):
             frac = i / num_waypoints
-            wx = int(start_x + (end_x - start_x) * frac + rng.randint(-15, 15))
-            wy = int(start_y + (end_y - start_y) * frac + rng.randint(-25, 25))
-            wx = max(10, min(MAP_W - 10, wx))
-            wy = max(10, min(MAP_H - 10, wy))
+            wx = int(start_x + (end_x - start_x) * frac + rng.randint(-50, 50))
+            wy = int(start_y + (end_y - start_y) * frac + rng.randint(-80, 80))
+            wx = max(20, min(MAP_W - 20, wx))
+            wy = max(20, min(MAP_H - 20, wy))
             waypoints.append((wx, wy))
+
         waypoints.append((end_x, end_y))
 
         # Carve wide road along waypoints
-        road_width = 4
+        road_width = 5
         for i in range(len(waypoints) - 1):
             x1, y1 = waypoints[i]
             x2, y2 = waypoints[i + 1]
@@ -897,7 +1084,7 @@ class Dungeon:
 
         # ---- Step 5: Create clearings at waypoints (act as "rooms") ----
         for i, (wx, wy) in enumerate(waypoints):
-            clearing_r = rng.randint(8, 14)
+            clearing_r = rng.randint(12, 22)
             rect = pygame.Rect(wx - clearing_r, wy - clearing_r,
                                clearing_r * 2, clearing_r * 2)
             rect.clamp_ip(pygame.Rect(2, 2, MAP_W - 4, MAP_H - 4))
@@ -909,40 +1096,42 @@ class Dungeon:
                         if dx * dx + dy * dy <= clearing_r * clearing_r:
                             self.tiles[nx][ny] = FLOOR
                             self.wall_type[nx][ny] = WALL_DEFAULT
-                            # Center is grass, edges are dirt
-                            if dx * dx + dy * dy <= (clearing_r - 3) ** 2:
+                            if dx * dx + dy * dy <= (clearing_r - 4) ** 2:
                                 self.terrain[nx][ny] = base_terrain
                             else:
                                 self.terrain[nx][ny] = TERRAIN_DIRT
 
         # ---- Step 6: Add side paths branching off the main road ----
         for i in range(len(waypoints) - 1):
-            if rng.random() < 0.6:
-                mx = (waypoints[i][0] + waypoints[i + 1][0]) // 2
-                my = (waypoints[i][1] + waypoints[i + 1][1]) // 2
-                bx = mx + rng.randint(-20, 20)
-                by = my + rng.randint(-25, 25)
-                bx = max(10, min(MAP_W - 10, bx))
-                by = max(10, min(MAP_H - 10, by))
-                # Carve branch path
-                steps = max(abs(bx - mx), abs(by - my)) + 1
-                bw = 2
-                for s in range(steps):
-                    t = s / max(1, steps - 1)
-                    cx = int(mx + (bx - mx) * t)
-                    cy = int(my + (by - my) * t)
-                    for ddx in range(-bw, bw + 1):
-                        for ddy in range(-bw, bw + 1):
-                            nx, ny = cx + ddx, cy + ddy
-                            if 1 <= nx < MAP_W - 1 and 1 <= ny < MAP_H - 1:
-                                if ddx * ddx + ddy * ddy <= bw * bw:
-                                    self.tiles[nx][ny] = FLOOR
-                                    self.wall_type[nx][ny] = WALL_DEFAULT
-                                    self.terrain[nx][ny] = TERRAIN_DIRT
-                # Small clearing at end of branch
-                br = rng.randint(5, 8)
-                branch_rect = pygame.Rect(bx - br, by - br, br * 2, br * 2)
-                branch_rect.clamp_ip(pygame.Rect(2, 2, MAP_W - 4, MAP_H - 4))
+            # Multiple branches per segment for exploration
+            num_branches = rng.randint(1, 3)
+            for _ in range(num_branches):
+                if rng.random() < 0.7:
+                    mx = (waypoints[i][0] + waypoints[i + 1][0]) // 2 + rng.randint(-30, 30)
+                    my = (waypoints[i][1] + waypoints[i + 1][1]) // 2 + rng.randint(-30, 30)
+                    bx = mx + rng.randint(-60, 60)
+                    by = my + rng.randint(-70, 70)
+                    bx = max(20, min(MAP_W - 20, bx))
+                    by = max(20, min(MAP_H - 20, by))
+                    # Carve branch path
+                    steps = max(abs(bx - mx), abs(by - my)) + 1
+                    bw = 3
+                    for s in range(steps):
+                        t = s / max(1, steps - 1)
+                        cx = int(mx + (bx - mx) * t)
+                        cy = int(my + (by - my) * t)
+                        for ddx in range(-bw, bw + 1):
+                            for ddy in range(-bw, bw + 1):
+                                nx, ny = cx + ddx, cy + ddy
+                                if 1 <= nx < MAP_W - 1 and 1 <= ny < MAP_H - 1:
+                                    if ddx * ddx + ddy * ddy <= bw * bw:
+                                        self.tiles[nx][ny] = FLOOR
+                                        self.wall_type[nx][ny] = WALL_DEFAULT
+                                        self.terrain[nx][ny] = TERRAIN_DIRT
+                    # Clearing at end of branch
+                    br = rng.randint(7, 13)
+                    branch_rect = pygame.Rect(bx - br, by - br, br * 2, br * 2)
+                    branch_rect.clamp_ip(pygame.Rect(2, 2, MAP_W - 4, MAP_H - 4))
                 self.rooms.append(branch_rect)
                 for ddx in range(-br, br + 1):
                     for ddy in range(-br, br + 1):
@@ -952,7 +1141,64 @@ class Dungeon:
                                 self.tiles[nx][ny] = FLOOR
                                 self.wall_type[nx][ny] = WALL_DEFAULT
 
-        # ---- Step 7: Place scenery objects in clearings ----
+        # ---- Step 7: Generate mini dungeons (cave/ruin clusters) ----
+        self.mini_dungeons: List[pygame.Rect] = []
+        num_mini = rng.randint(3, 6)
+        for _ in range(num_mini):
+            # Pick a random location away from the main road
+            mdx = rng.randint(40, MAP_W - 40)
+            mdy = rng.randint(40, MAP_H - 40)
+            # Check it's not too close to existing clearings
+            too_close = any(abs(mdx - r.centerx) + abs(mdy - r.centery) < 30 for r in self.rooms)
+            if too_close:
+                continue
+            # Create a cluster of connected rooms (traditional dungeon style)
+            dungeon_rooms = []
+            for ri in range(rng.randint(4, 8)):
+                rw = rng.randint(5, 10)
+                rh = rng.randint(5, 10)
+                rx = mdx + rng.randint(-25, 25)
+                ry = mdy + rng.randint(-25, 25)
+                rx = max(3, min(MAP_W - rw - 3, rx))
+                ry = max(3, min(MAP_H - rh - 3, ry))
+                room_rect = pygame.Rect(rx, ry, rw, rh)
+                # Carve the room with stone floor
+                for x in range(room_rect.left, room_rect.right):
+                    for y in range(room_rect.top, room_rect.bottom):
+                        if 1 <= x < MAP_W - 1 and 1 <= y < MAP_H - 1:
+                            self.tiles[x][y] = FLOOR
+                            self.terrain[x][y] = TERRAIN_STONE
+                            self.wall_type[x][y] = WALL_DEFAULT
+                # Connect to previous room in cluster
+                if dungeon_rooms:
+                    pcx = dungeon_rooms[-1].centerx
+                    pcy = dungeon_rooms[-1].centery
+                    self.carve_tunnel(pcx, pcy, room_rect.centerx, room_rect.centery)
+                    # Set tunnel terrain to stone
+                    for tx in range(min(pcx, room_rect.centerx) - 1, max(pcx, room_rect.centerx) + 2):
+                        for ty in range(min(pcy, room_rect.centery) - 1, max(pcy, room_rect.centery) + 2):
+                            if 0 <= tx < MAP_W and 0 <= ty < MAP_H and self.tiles[tx][ty] == FLOOR:
+                                self.terrain[tx][ty] = TERRAIN_STONE
+                dungeon_rooms.append(room_rect)
+                self.rooms.append(room_rect)
+            # Connect mini dungeon to nearest main path clearing
+            if dungeon_rooms:
+                entrance = dungeon_rooms[0]
+                nearest = min(self.rooms[:len(waypoints)],
+                              key=lambda r: abs(r.centerx - entrance.centerx) + abs(r.centery - entrance.centery))
+                self.carve_tunnel(nearest.centerx, nearest.centery,
+                                  entrance.centerx, entrance.centery)
+                md_rect = pygame.Rect(mdx - 15, mdy - 15, 30, 30)
+                self.mini_dungeons.append(md_rect)
+                # Place extra chests in mini dungeons
+                for dr in dungeon_rooms:
+                    if rng.random() < 0.5:
+                        cx = rng.randint(dr.left + 1, max(dr.left + 1, dr.right - 2))
+                        cy = rng.randint(dr.top + 1, max(dr.top + 1, dr.bottom - 2))
+                        if 0 <= cx < MAP_W and 0 <= cy < MAP_H and self.tiles[cx][cy] == FLOOR:
+                            self.chest_positions.append((cx, cy))
+
+        # ---- Step 8: Place scenery objects in clearings ----
         for room in self.rooms[1:]:
             for _ in range(rng.randint(0, 3)):
                 tx = rng.randint(room.left + 1, max(room.left + 1, room.right - 2))
@@ -2229,28 +2475,16 @@ class Game:
                       dmg_min=dmg_min, dmg_max=dmg_max, speed=spd, kind=1, aura=aura_name)
         self.enemies.append(elite)
         self.emit_particles(pos.x, pos.y, 15, AURAS[aura_name]["color"], speed=80, life=0.8, gravity=-20)
-        # Scatter minions across random floor positions in nearby rooms
+        # Spawn minions clustered around the elite (pack stays together)
         count = random.randint(*PACK_SIZE_RANGE)
-        # find elite's room or use random rooms
-        elite_room = self._find_room_at(pos)
-        # build candidate rooms: elite's room + adjacent rooms
-        candidate_rooms = []
-        if elite_room:
-            candidate_rooms.append(elite_room)
-        # add a few other random rooms for variety
-        other_rooms = [r for r in self.dungeon.rooms if r != elite_room]
-        random.shuffle(other_rooms)
-        candidate_rooms.extend(other_rooms[:3])
-        if not candidate_rooms:
-            candidate_rooms = self.dungeon.rooms[:5]
         for i in range(count):
             if len(self.enemies) >= MAX_ACTIVE_ENEMIES:
                 break
             kind = random.choices([0, 1, 2, 3], [0.4, 0.25, 0.2, 0.15])[0]
-            # pick a random room from candidates
-            room = random.choice(candidate_rooms)
-            mpos = self._random_floor_in_room(room)
-            if mpos is None:
+            # Cluster minions near the elite
+            offset = Vec(random.uniform(-80, 80), random.uniform(-80, 80))
+            mpos = Vec(pos.x + offset.x, pos.y + offset.y)
+            if self._circle_collides(mpos, 20):
                 mpos = self._random_floor_pos(near_player=False)
             self.spawn_enemy(near_player=False, kind_override=kind)
             self.enemies[-1].pos = mpos
@@ -2911,6 +3145,8 @@ class Game:
                         self.add_floating_text(p.pos.x, p.pos.y - 20, "DODGE!", (140, 255, 140), 0.8)
                     else:
                         dmg = e.roll_damage()
+                        # Apply armor damage reduction
+                        dmg = max(1, int(dmg * (1.0 - p.damage_reduction())))
                         if p.shield > 0:
                             absorb = min(p.shield, dmg)
                             p.shield -= absorb
@@ -2957,7 +3193,7 @@ class Game:
                         self.add_floating_text(self.player.pos.x, self.player.pos.y - 20, "DODGE!", (140, 255, 140), 0.8)
                         pr.ttl = 0
                         continue
-                    dmg = pr.dmg
+                    dmg = max(1, int(pr.dmg * (1.0 - self.player.damage_reduction())))
                     if self.player.shield > 0:
                         absorb = min(self.player.shield, dmg)
                         self.player.shield -= absorb
@@ -3100,6 +3336,39 @@ class Game:
                             self.add_floating_text(l.pos.x, l.pos.y - 10, f"[Inv] {l.weapon.name}", wc, 1.2)
                         else:
                             self.add_floating_text(l.pos.x, l.pos.y - 10, "Inventory Full!", (200, 60, 60), 1.0)
+                    self.play_sound("pickup")
+                if l.armor:
+                    ac = l.armor.get_color()
+                    # Auto-equip if better or no armor
+                    if not self.player.equipped_armor or l.armor.total_defense() > self.player.equipped_armor.total_defense():
+                        if self.player.equipped_armor and len(self.player.inventory) < INV_COLS * INV_ROWS:
+                            self.player.inventory.append(self.player.equipped_armor)
+                        self.player.equipped_armor = l.armor
+                        self.add_floating_text(l.pos.x, l.pos.y - 10, l.armor.name, ac, 1.5)
+                    else:
+                        if len(self.player.inventory) < INV_COLS * INV_ROWS:
+                            self.player.inventory.append(l.armor)
+                            self.add_floating_text(l.pos.x, l.pos.y - 10, f"[Inv] {l.armor.name}", ac, 1.2)
+                    self.play_sound("pickup")
+                if l.ring:
+                    rc = l.ring.get_color()
+                    # Auto-equip to first empty ring slot
+                    if not self.player.equipped_ring1:
+                        self.player.equipped_ring1 = l.ring
+                        self.add_floating_text(l.pos.x, l.pos.y - 10, l.ring.name, rc, 1.5)
+                    elif not self.player.equipped_ring2:
+                        self.player.equipped_ring2 = l.ring
+                        self.add_floating_text(l.pos.x, l.pos.y - 10, l.ring.name, rc, 1.5)
+                    else:
+                        if len(self.player.inventory) < INV_COLS * INV_ROWS:
+                            self.player.inventory.append(l.ring)
+                            self.add_floating_text(l.pos.x, l.pos.y - 10, f"[Inv] {l.ring.name}", rc, 1.2)
+                    self.play_sound("pickup")
+                if l.jewel:
+                    jc = l.jewel.get_color()
+                    if len(self.player.inventory) < INV_COLS * INV_ROWS:
+                        self.player.inventory.append(l.jewel)
+                        self.add_floating_text(l.pos.x, l.pos.y - 10, l.jewel.name, jc, 1.2)
                     self.play_sound("pickup")
                 if l.dmg_boost:
                     self.player.dmg_mult = DMG_BOOST_MULT
@@ -3253,6 +3522,13 @@ class Game:
             drops.append(Loot(pos=sp(), shield_boost=True))
         if random.random() < INFUSION_DROP_CHANCE:
             drops.append(Loot(pos=sp(), infusion=random.choice(INFUSION_TYPES)))
+        # Armor/ring/jewel drops
+        if random.random() < 0.06:
+            drops.append(Loot(pos=sp(), armor=self._gen_armor()))
+        if random.random() < 0.04:
+            drops.append(Loot(pos=sp(), ring=self._gen_ring()))
+        if random.random() < 0.03:
+            drops.append(Loot(pos=sp(), jewel=self._gen_jewel()))
         if isinstance(e, Elite):
             drops.append(Loot(pos=sp(), gold=random.randint(15, 35)))
             if random.random() < 0.5:
@@ -3309,12 +3585,24 @@ class Game:
             if random.random() < ELITE_PACK_CHANCE and len(self.enemies) < MAX_ACTIVE_ENEMIES:
                 self.spawn_elite_pack()
                 did_pack = True
-            to_spawn = min(2, MAX_ACTIVE_ENEMIES - len(self.enemies))
-            if not did_pack:
-                for _ in range(max(0, to_spawn)):
-                    self.spawn_enemy(near_player=True)
-            else:
-                if random.random() < 0.5 and len(self.enemies) < MAX_ACTIVE_ENEMIES:
+            # Spawn a group of regular enemies (pack-style, 3-5 at once)
+            group_size = min(random.randint(3, 5), MAX_ACTIVE_ENEMIES - len(self.enemies))
+            if not did_pack and group_size > 0:
+                # Pick a single position and spawn group near it
+                base_pos = self._random_floor_pos(near_player=True)
+                kind = random.choices([0, 1, 2, 3], [0.35, 0.25, 0.25, 0.15])[0]
+                for _ in range(group_size):
+                    self.spawn_enemy(near_player=True, kind_override=kind)
+                    # Nudge to cluster near base
+                    if self.enemies:
+                        offset = Vec(random.uniform(-60, 60), random.uniform(-60, 60))
+                        new_pos = Vec(base_pos.x + offset.x, base_pos.y + offset.y)
+                        if not self._circle_collides(new_pos, 20):
+                            self.enemies[-1].pos = new_pos
+            elif did_pack:
+                # Also spawn a small supporting group
+                extra = min(2, MAX_ACTIVE_ENEMIES - len(self.enemies))
+                for _ in range(extra):
                     self.spawn_enemy(near_player=True)
             if random.random() < PICKUP_SPAWN_CHANCE:
                 self.spawn_pickup_near_player()
@@ -3399,8 +3687,97 @@ class Game:
 
     def _gen_weapon(self, force_rarity: Optional[str] = None) -> Weapon:
         """Generate a weapon scaled to current level and difficulty tier."""
-        return generate_weapon(self.current_level, force_rarity,
-                               tier_bonus=self._get_tier_scale()["drop_bonus"])
+        w = generate_weapon(self.current_level, force_rarity,
+                            tier_bonus=self._get_tier_scale()["drop_bonus"])
+        # Rare+ weapons can have sockets
+        if w.rarity in (RARITY_RARE, RARITY_UNIQUE, RARITY_SET):
+            w.sockets = random.randint(0, min(2, 1 + self.current_level // 10))
+        return w
+
+    def _gen_armor(self, force_rarity: Optional[str] = None) -> Armor:
+        """Generate armor scaled to current level."""
+        depth = self.current_level
+        rarity = force_rarity or _pick_rarity(depth, self._get_tier_scale()["drop_bonus"])
+        eligible = [a for a in ARMOR_BASES if a[3] <= depth + 3]
+        if not eligible:
+            eligible = ARMOR_BASES[:2]
+        # Weight toward higher-tier bases
+        weights = [1.0 + max(0, depth - a[3]) * 0.2 for a in eligible]
+        base = random.choices(eligible, weights=weights, k=1)[0]
+        name, defense, str_req, ilvl = base
+        mods = {}
+        display_name = name
+        prefix_name = ""
+        suffix_name = ""
+        sockets = 0
+        # Scale defense with depth
+        defense = int(defense * (1.0 + depth * 0.08))
+        if rarity in (RARITY_MAGIC, RARITY_RARE, RARITY_UNIQUE, RARITY_SET):
+            # Add prefix
+            pn, pm = random.choice(ARMOR_PREFIXES)
+            prefix_name = pn
+            for k, (lo, hi) in pm.items():
+                mods[k] = mods.get(k, 0) + random.randint(int(lo), int(hi))
+            display_name = f"{pn} {name}"
+        if rarity in (RARITY_RARE, RARITY_UNIQUE, RARITY_SET):
+            # Add suffix
+            sn, sm = random.choice(ARMOR_SUFFIXES)
+            suffix_name = sn
+            for k, (lo, hi) in sm.items():
+                mods[k] = mods.get(k, 0) + random.randint(int(lo), int(hi))
+            display_name = f"{display_name} {sn}"
+            sockets = random.randint(0, min(3, 1 + depth // 8))
+        return Armor(name=display_name, defense=defense, rarity=rarity, mods=mods,
+                     base_name=name, prefix=prefix_name, suffix=suffix_name,
+                     ilvl=ilvl, sockets=sockets)
+
+    def _gen_ring(self, force_rarity: Optional[str] = None) -> Ring:
+        """Generate a ring scaled to current level."""
+        depth = self.current_level
+        rarity = force_rarity or _pick_rarity(depth, self._get_tier_scale()["drop_bonus"])
+        eligible = [r for r in RING_BASES if r[1] <= depth + 3]
+        if not eligible:
+            eligible = RING_BASES[:2]
+        base = random.choice(eligible)
+        name, ilvl = base
+        mods = {}
+        display_name = name
+        prefix_name = ""
+        suffix_name = ""
+        if rarity in (RARITY_MAGIC, RARITY_RARE, RARITY_UNIQUE, RARITY_SET):
+            pn, pm = random.choice(RING_PREFIXES)
+            prefix_name = pn
+            for k, (lo, hi) in pm.items():
+                mods[k] = mods.get(k, 0) + random.randint(int(lo), int(hi))
+            display_name = f"{pn} {name}"
+        if rarity in (RARITY_RARE, RARITY_UNIQUE, RARITY_SET):
+            sn, sm = random.choice(RING_SUFFIXES)
+            suffix_name = sn
+            for k, (lo, hi) in sm.items():
+                mods[k] = mods.get(k, 0) + random.randint(int(lo), int(hi))
+            display_name = f"{display_name} {sn}"
+        return Ring(name=display_name, rarity=rarity, mods=mods,
+                    base_name=name, prefix=prefix_name, suffix=suffix_name, ilvl=ilvl)
+
+    def _gen_jewel(self) -> Jewel:
+        """Generate a random jewel for socketing."""
+        jtype = random.choice(JEWEL_TYPES)
+        jname, jmod_ranges, jcolor = jtype
+        mods = {}
+        for k, (lo, hi) in jmod_ranges.items():
+            mods[k] = random.randint(int(lo), int(hi))
+        quality = random.choice(["Chipped", "Flawed", "", "Flawless", "Perfect"])
+        full_name = f"{quality} {jname}".strip()
+        # Scale stats with quality
+        if quality == "Perfect":
+            mods = {k: int(v * 1.5) for k, v in mods.items()}
+        elif quality == "Flawless":
+            mods = {k: int(v * 1.25) for k, v in mods.items()}
+        elif quality == "Chipped":
+            mods = {k: max(1, int(v * 0.5)) for k, v in mods.items()}
+        elif quality == "Flawed":
+            mods = {k: max(1, int(v * 0.75)) for k, v in mods.items()}
+        return Jewel(name=full_name, mods=mods, color=jcolor)
 
     def _is_act_boss_level(self) -> bool:
         """True if current level is the last in the act (boss level)."""
@@ -3844,6 +4221,34 @@ class Game:
                 # Pulsing ring
                 ring_pulse = int(3 + 2 * math.sin(self.game_time * 4))
                 pygame.draw.circle(s, icol, (vx, vy), 11 + ring_pulse, 2)
+            elif l.armor:
+                ac = l.armor.get_color()
+                pygame.draw.circle(s, (ac[0]//3, ac[1]//3, ac[2]//3), (vx, vy), 16)
+                pygame.draw.rect(s, ac, (vx - 9, vy - 10, 18, 20), border_radius=4)
+                pygame.draw.rect(s, (min(255, ac[0]+40), min(255, ac[1]+40), min(255, ac[2]+40)),
+                                 (vx - 9, vy - 10, 18, 20), 1, border_radius=4)
+                # Armor symbol (chestplate)
+                pygame.draw.line(s, (min(255, ac[0]+60), min(255, ac[1]+60), min(255, ac[2]+60)),
+                                (vx - 4, vy - 5), (vx + 4, vy - 5), 2)
+                alabel = self.font.render(l.armor.name, True, ac)
+                s.blit(alabel, (vx - alabel.get_width() // 2, vy - 24))
+            elif l.ring:
+                rc = l.ring.get_color()
+                pygame.draw.circle(s, (rc[0]//3, rc[1]//3, rc[2]//3), (vx, vy), 13)
+                pygame.draw.circle(s, rc, (vx, vy), 8, 2)
+                pygame.draw.circle(s, (min(255, rc[0]+60), min(255, rc[1]+60), min(255, rc[2]+60)),
+                                   (vx, vy - 3), 3)
+                rlabel = self.font.render(l.ring.name, True, rc)
+                s.blit(rlabel, (vx - rlabel.get_width() // 2, vy - 22))
+            elif l.jewel:
+                jc = l.jewel.get_color()
+                pygame.draw.circle(s, (jc[0]//3, jc[1]//3, jc[2]//3), (vx, vy), 13)
+                # Diamond shape
+                pts = [(vx, vy - 8), (vx + 6, vy), (vx, vy + 8), (vx - 6, vy)]
+                pygame.draw.polygon(s, jc, pts)
+                pygame.draw.polygon(s, (min(255, jc[0]+50), min(255, jc[1]+50), min(255, jc[2]+50)), pts, 1)
+                jlabel = self.font.render(l.jewel.name, True, jc)
+                s.blit(jlabel, (vx - jlabel.get_width() // 2, vy - 22))
             elif l.gold:
                 pygame.draw.circle(s, (glow_alpha + 10, glow_alpha + 5, 0), (vx, vy), 11)
                 pygame.draw.circle(s, (255, 215, 0), (vx, vy), 7)
@@ -4624,6 +5029,13 @@ class Game:
                 notify_parts.append(f"[T] {p.skill_points} skill pts")
             notify_txt = self.font.render("  ".join(notify_parts), True, C_GOLD)
             s.blit(notify_txt, (WIDTH // 2 - notify_txt.get_width() // 2, HEIGHT - panel_h - 42))
+
+        # Defense display
+        def_val = p.total_defense()
+        if def_val > 0:
+            red_pct = int(p.damage_reduction() * 100)
+            def_txt = self.font.render(f"Def: {def_val} (-{red_pct}%)", True, (160, 160, 180))
+            s.blit(def_txt, (WIDTH - 220, HEIGHT - panel_h - 22))
 
         # Active buffs
         buff_x = 140
