@@ -75,7 +75,7 @@ UBER_BOSS_CHANCE = 0.18  # chance per wave to spawn uber on boss levels after bo
 UBER_BOSS_HP_MULT = 4.0
 UBER_BOSS_DMG_MULT = 2.0
 UBER_BOSS_RADIUS = 44
-UBER_BOSS_UNIQUE_DROP = 0.65  # 65% chance to drop a unique
+UBER_BOSS_UNIQUE_DROP = 0.06  # 6% chance to drop a unique
 
 DMG_BOOST_MULT = 1.6
 DMG_BOOST_TIME = 8.0
@@ -84,7 +84,7 @@ PICKUP_SPAWN_CHANCE = 0.25
 
 GOLD_DROP = (3, 12)
 POTION_DROP_CHANCE = 0.10
-LOOT_DROP_CHANCE = 0.12
+LOOT_DROP_CHANCE = 0.08
 DMG_PICKUP_DROP_CHANCE = 0.06
 SHIELD_PICKUP_DROP_CHANCE = 0.06
 
@@ -119,28 +119,53 @@ WALL = 1
 FLOOR = 0
 
 BIOMES = ["crypt", "cave", "firepit", "icecavern", "swamp"]
+# Terrain types for outdoor landscapes (visual only, collision still uses WALL/FLOOR)
+TERRAIN_GRASS = "grass"
+TERRAIN_DIRT = "dirt"
+TERRAIN_ROAD = "road"
+TERRAIN_SAND = "sand"
+TERRAIN_SNOW = "snow"
+TERRAIN_LAVA_ROCK = "lava_rock"
+TERRAIN_MUD = "mud"
+TERRAIN_STONE = "stone"
+# Wall sub-types for visual rendering
+WALL_TREE = "tree"
+WALL_ROCK = "rock"
+WALL_WATER = "water"
+WALL_CLIFF = "cliff"
+WALL_DEFAULT = "wall"
 BIOME_COLORS = {
-    "crypt":      {"wall_base": 38, "floor_r": 22, "floor_g": 20, "floor_b": 24,
-                   "wall_tint": (0, -2, 8), "floor_tint": (0, -2, 4)},
-    "cave":       {"wall_base": 48, "floor_r": 35, "floor_g": 30, "floor_b": 22,
-                   "wall_tint": (6, 2, -4), "floor_tint": (4, 2, -2)},
-    "firepit":    {"wall_base": 42, "floor_r": 30, "floor_g": 16, "floor_b": 12,
-                   "wall_tint": (12, -4, -8), "floor_tint": (8, -2, -4)},
-    "icecavern":  {"wall_base": 36, "floor_r": 20, "floor_g": 28, "floor_b": 38,
-                   "wall_tint": (-4, 2, 12), "floor_tint": (-2, 4, 8)},
-    "swamp":      {"wall_base": 34, "floor_r": 18, "floor_g": 28, "floor_b": 16,
-                   "wall_tint": (-4, 8, -6), "floor_tint": (-2, 6, -4)},
+    "crypt":      {"wall_base": 38, "floor_r": 34, "floor_g": 52, "floor_b": 28,
+                   "wall_tint": (0, 6, -4), "floor_tint": (0, 4, -2),
+                   "grass": (34, 55, 28), "dirt": (50, 40, 28), "road": (55, 48, 35),
+                   "tree_trunk": (55, 40, 25), "tree_top": (25, 55, 20), "outdoor": True},
+    "cave":       {"wall_base": 48, "floor_r": 55, "floor_g": 48, "floor_b": 32,
+                   "wall_tint": (6, 2, -4), "floor_tint": (4, 2, -2),
+                   "grass": (50, 45, 28), "dirt": (60, 50, 30), "road": (65, 55, 38),
+                   "tree_trunk": (60, 45, 30), "tree_top": (40, 50, 25), "outdoor": True},
+    "firepit":    {"wall_base": 42, "floor_r": 40, "floor_g": 22, "floor_b": 16,
+                   "wall_tint": (12, -4, -8), "floor_tint": (8, -2, -4),
+                   "grass": (35, 25, 15), "dirt": (45, 28, 18), "road": (50, 32, 22),
+                   "tree_trunk": (40, 25, 15), "tree_top": (30, 20, 12), "outdoor": True},
+    "icecavern":  {"wall_base": 36, "floor_r": 50, "floor_g": 58, "floor_b": 68,
+                   "wall_tint": (-4, 2, 12), "floor_tint": (-2, 4, 8),
+                   "grass": (55, 62, 70), "dirt": (48, 52, 60), "road": (52, 56, 64),
+                   "tree_trunk": (50, 48, 55), "tree_top": (40, 60, 70), "outdoor": True},
+    "swamp":      {"wall_base": 34, "floor_r": 28, "floor_g": 42, "floor_b": 22,
+                   "wall_tint": (-4, 8, -6), "floor_tint": (-2, 6, -4),
+                   "grass": (25, 40, 18), "dirt": (35, 38, 22), "road": (40, 42, 28),
+                   "tree_trunk": (35, 32, 20), "tree_top": (20, 45, 18), "outdoor": True},
 }
 BIOME_AMBIENT = {
-    "crypt":     (20, 17, 25),
-    "cave":      (25, 20, 15),
-    "firepit":   (35, 14, 10),
-    "icecavern": (14, 20, 30),
-    "swamp":     (16, 24, 14),
+    "crypt":     (30, 32, 28),
+    "cave":      (32, 28, 22),
+    "firepit":   (40, 18, 12),
+    "icecavern": (22, 28, 38),
+    "swamp":     (22, 30, 18),
 }
 BIOME_NAMES = {
-    "crypt": "Ancient Crypt", "cave": "Dark Caverns", "firepit": "Infernal Pits",
-    "icecavern": "Frozen Depths", "swamp": "Poison Swamp",
+    "crypt": "Rogue Encampment", "cave": "Lut Gholein", "firepit": "Burning Hells",
+    "icecavern": "Harrogath", "swamp": "Kurast Docks",
 }
 BIOME_HAZARD = {
     "crypt": "poison", "cave": None, "firepit": "lava", "icecavern": "ice", "swamp": "poison",
@@ -713,6 +738,8 @@ class Dungeon:
         self.level = level
         self.biome = biome
         self.tiles = [[WALL for _ in range(MAP_H)] for _ in range(MAP_W)]
+        self.terrain = [[TERRAIN_GRASS for _ in range(MAP_H)] for _ in range(MAP_W)]
+        self.wall_type = [[WALL_DEFAULT for _ in range(MAP_H)] for _ in range(MAP_W)]
         self.seen = [[False for _ in range(MAP_H)] for _ in range(MAP_W)]
         self.rooms: List[pygame.Rect] = []
         self.scenery: List[Tuple[int, int, str]] = []
@@ -725,95 +752,288 @@ class Dungeon:
         self.tile_variants = [[random.randint(0, 7) for _ in range(MAP_H)] for _ in range(MAP_W)]
         self.generate()
 
+    def _noise2d(self, x, y, seed=0):
+        """Simple value noise for terrain generation."""
+        n = x * 374761393 + y * 668265263 + seed * 1274126177
+        n = (n ^ (n >> 13)) * 1274126177
+        n = n ^ (n >> 16)
+        return (n & 0x7fffffff) / 0x7fffffff
+
+    def _smooth_noise(self, x, y, scale=20.0, seed=0):
+        """Smoothed noise by interpolating nearby samples."""
+        sx = x / scale
+        sy = y / scale
+        ix, iy = int(sx), int(sy)
+        fx, fy = sx - ix, sy - iy
+        v00 = self._noise2d(ix, iy, seed)
+        v10 = self._noise2d(ix + 1, iy, seed)
+        v01 = self._noise2d(ix, iy + 1, seed)
+        v11 = self._noise2d(ix + 1, iy + 1, seed)
+        top = v00 + (v10 - v00) * fx
+        bot = v01 + (v11 - v01) * fx
+        return top + (bot - top) * fy
+
     def generate(self):
         rng = random.Random()
-        max_rooms = 50 + self.level * 10
-        min_size, max_size = 6, 15
-        for _ in range(max_rooms):
-            w = rng.randint(min_size, max_size)
-            h = rng.randint(min_size, max_size)
-            x = rng.randint(2, MAP_W - w - 3)
-            y = rng.randint(2, MAP_H - h - 3)
-            new = pygame.Rect(x, y, w, h)
-            if any(new.colliderect(r.inflate(2, 2)) for r in self.rooms):
-                continue
-            self.carve_room(new)
-            if self.rooms:
-                px, py = self.center(self.rooms[-1])
-                nx, ny = self.center(new)
-                self.carve_tunnel(px, py, nx, ny)
-            self.rooms.append(new)
-            for _ in range(rng.randint(0, 2)):
-                tx = rng.randint(new.left + 1, new.right - 2)
-                ty = rng.randint(new.top + 1, new.bottom - 2)
-                self.tiles[tx][ty] = WALL
-                if self.biome == "cave":
-                    stype = 'stalagmite' if rng.random() < 0.7 else 'rock'
-                elif self.biome == "icecavern":
-                    stype = 'ice_crystal' if rng.random() < 0.6 else 'pillar'
+        seed = rng.randint(0, 999999)
+
+        # ---- Step 1: Fill map with open ground ----
+        for x in range(MAP_W):
+            for y in range(MAP_H):
+                self.tiles[x][y] = FLOOR
+                self.terrain[x][y] = TERRAIN_GRASS
+                self.wall_type[x][y] = WALL_DEFAULT
+
+        # Assign terrain base by biome
+        if self.biome == "cave":
+            base_terrain = TERRAIN_SAND
+        elif self.biome == "firepit":
+            base_terrain = TERRAIN_LAVA_ROCK
+        elif self.biome == "icecavern":
+            base_terrain = TERRAIN_SNOW
+        elif self.biome == "swamp":
+            base_terrain = TERRAIN_MUD
+        else:
+            base_terrain = TERRAIN_GRASS
+
+        for x in range(MAP_W):
+            for y in range(MAP_H):
+                self.terrain[x][y] = base_terrain
+
+        # ---- Step 2: Generate terrain variation with noise ----
+        for x in range(MAP_W):
+            for y in range(MAP_H):
+                n = self._smooth_noise(x, y, 25.0, seed)
+                if n > 0.6:
+                    self.terrain[x][y] = TERRAIN_DIRT
+                elif n < 0.25:
+                    self.terrain[x][y] = TERRAIN_STONE
+
+        # ---- Step 3: Place natural obstacles (trees, rocks, water) ----
+        tree_noise_seed = seed + 42
+        rock_noise_seed = seed + 99
+        water_noise_seed = seed + 177
+
+        for x in range(3, MAP_W - 3):
+            for y in range(3, MAP_H - 3):
+                tn = self._smooth_noise(x, y, 12.0, tree_noise_seed)
+                tn2 = self._smooth_noise(x, y, 6.0, tree_noise_seed + 50)
+                # Tree clusters where noise is high
+                tree_thresh = 0.62
+                if self.biome == "firepit":
+                    tree_thresh = 0.82  # very few trees in hell
                 elif self.biome == "swamp":
-                    stype = 'mushroom' if rng.random() < 0.5 else 'crate'
+                    tree_thresh = 0.55  # dense jungle
+                elif self.biome == "icecavern":
+                    tree_thresh = 0.68  # sparse pine
+                if tn > tree_thresh and tn2 > 0.35:
+                    self.tiles[x][y] = WALL
+                    self.wall_type[x][y] = WALL_TREE
+                    continue
+
+                # Rock outcroppings
+                rn = self._smooth_noise(x, y, 15.0, rock_noise_seed)
+                rock_thresh = 0.78
+                if self.biome == "cave":
+                    rock_thresh = 0.68  # rocky desert
                 elif self.biome == "firepit":
-                    stype = 'pillar' if rng.random() < 0.7 else 'crate'
-                else:
-                    stype = 'pillar' if rng.random() < 0.6 else 'crate'
-                self.scenery.append((tx, ty, stype))
-                if stype == 'crate':
-                    self.crate_positions.append((tx, ty))
-            self._place_torches(new, rng)
-        # Place treasure chests in rooms
-        for room in self.rooms[1:]:  # skip first room (player spawn)
+                    rock_thresh = 0.65  # lots of scorched rock
+                if rn > rock_thresh:
+                    self.tiles[x][y] = WALL
+                    self.wall_type[x][y] = WALL_ROCK
+                    continue
+
+                # Water features (rivers, ponds)
+                wn = self._smooth_noise(x, y, 18.0, water_noise_seed)
+                water_thresh = 0.82
+                if self.biome == "swamp":
+                    water_thresh = 0.72  # lots of swamp water
+                elif self.biome == "firepit":
+                    water_thresh = 0.92  # almost no water in hell
+                if wn > water_thresh:
+                    self.tiles[x][y] = WALL
+                    self.wall_type[x][y] = WALL_WATER
+                    continue
+
+        # ---- Step 4: Carve a main winding road from start to end ----
+        start_x, start_y = 15, MAP_H // 2
+        end_x, end_y = MAP_W - 15, MAP_H // 2 + rng.randint(-20, 20)
+
+        # Generate a winding path using waypoints
+        num_waypoints = 5 + self.level // 3
+        waypoints = [(start_x, start_y)]
+        for i in range(1, num_waypoints):
+            frac = i / num_waypoints
+            wx = int(start_x + (end_x - start_x) * frac + rng.randint(-15, 15))
+            wy = int(start_y + (end_y - start_y) * frac + rng.randint(-25, 25))
+            wx = max(10, min(MAP_W - 10, wx))
+            wy = max(10, min(MAP_H - 10, wy))
+            waypoints.append((wx, wy))
+        waypoints.append((end_x, end_y))
+
+        # Carve wide road along waypoints
+        road_width = 4
+        for i in range(len(waypoints) - 1):
+            x1, y1 = waypoints[i]
+            x2, y2 = waypoints[i + 1]
+            # Bresenham-like line with width
+            steps = max(abs(x2 - x1), abs(y2 - y1)) + 1
+            for s in range(steps):
+                t = s / max(1, steps - 1)
+                cx = int(x1 + (x2 - x1) * t)
+                cy = int(y1 + (y2 - y1) * t)
+                for dx in range(-road_width, road_width + 1):
+                    for dy in range(-road_width, road_width + 1):
+                        nx, ny = cx + dx, cy + dy
+                        if 1 <= nx < MAP_W - 1 and 1 <= ny < MAP_H - 1:
+                            if dx * dx + dy * dy <= road_width * road_width:
+                                self.tiles[nx][ny] = FLOOR
+                                self.wall_type[nx][ny] = WALL_DEFAULT
+                                # Road center is paved, edges are dirt
+                                if dx * dx + dy * dy <= (road_width - 2) ** 2:
+                                    self.terrain[nx][ny] = TERRAIN_ROAD
+                                else:
+                                    self.terrain[nx][ny] = TERRAIN_DIRT
+
+        # ---- Step 5: Create clearings at waypoints (act as "rooms") ----
+        for i, (wx, wy) in enumerate(waypoints):
+            clearing_r = rng.randint(8, 14)
+            rect = pygame.Rect(wx - clearing_r, wy - clearing_r,
+                               clearing_r * 2, clearing_r * 2)
+            rect.clamp_ip(pygame.Rect(2, 2, MAP_W - 4, MAP_H - 4))
+            self.rooms.append(rect)
+            for dx in range(-clearing_r, clearing_r + 1):
+                for dy in range(-clearing_r, clearing_r + 1):
+                    nx, ny = wx + dx, wy + dy
+                    if 1 <= nx < MAP_W - 1 and 1 <= ny < MAP_H - 1:
+                        if dx * dx + dy * dy <= clearing_r * clearing_r:
+                            self.tiles[nx][ny] = FLOOR
+                            self.wall_type[nx][ny] = WALL_DEFAULT
+                            # Center is grass, edges are dirt
+                            if dx * dx + dy * dy <= (clearing_r - 3) ** 2:
+                                self.terrain[nx][ny] = base_terrain
+                            else:
+                                self.terrain[nx][ny] = TERRAIN_DIRT
+
+        # ---- Step 6: Add side paths branching off the main road ----
+        for i in range(len(waypoints) - 1):
+            if rng.random() < 0.6:
+                mx = (waypoints[i][0] + waypoints[i + 1][0]) // 2
+                my = (waypoints[i][1] + waypoints[i + 1][1]) // 2
+                bx = mx + rng.randint(-20, 20)
+                by = my + rng.randint(-25, 25)
+                bx = max(10, min(MAP_W - 10, bx))
+                by = max(10, min(MAP_H - 10, by))
+                # Carve branch path
+                steps = max(abs(bx - mx), abs(by - my)) + 1
+                bw = 2
+                for s in range(steps):
+                    t = s / max(1, steps - 1)
+                    cx = int(mx + (bx - mx) * t)
+                    cy = int(my + (by - my) * t)
+                    for ddx in range(-bw, bw + 1):
+                        for ddy in range(-bw, bw + 1):
+                            nx, ny = cx + ddx, cy + ddy
+                            if 1 <= nx < MAP_W - 1 and 1 <= ny < MAP_H - 1:
+                                if ddx * ddx + ddy * ddy <= bw * bw:
+                                    self.tiles[nx][ny] = FLOOR
+                                    self.wall_type[nx][ny] = WALL_DEFAULT
+                                    self.terrain[nx][ny] = TERRAIN_DIRT
+                # Small clearing at end of branch
+                br = rng.randint(5, 8)
+                branch_rect = pygame.Rect(bx - br, by - br, br * 2, br * 2)
+                branch_rect.clamp_ip(pygame.Rect(2, 2, MAP_W - 4, MAP_H - 4))
+                self.rooms.append(branch_rect)
+                for ddx in range(-br, br + 1):
+                    for ddy in range(-br, br + 1):
+                        nx, ny = bx + ddx, by + ddy
+                        if 1 <= nx < MAP_W - 1 and 1 <= ny < MAP_H - 1:
+                            if ddx * ddx + ddy * ddy <= br * br:
+                                self.tiles[nx][ny] = FLOOR
+                                self.wall_type[nx][ny] = WALL_DEFAULT
+
+        # ---- Step 7: Place scenery objects in clearings ----
+        for room in self.rooms[1:]:
+            for _ in range(rng.randint(0, 3)):
+                tx = rng.randint(room.left + 1, max(room.left + 1, room.right - 2))
+                ty = rng.randint(room.top + 1, max(room.top + 1, room.bottom - 2))
+                if 1 <= tx < MAP_W - 1 and 1 <= ty < MAP_H - 1 and self.tiles[tx][ty] == FLOOR:
+                    self.tiles[tx][ty] = WALL
+                    if self.biome == "cave":
+                        stype = 'rock' if rng.random() < 0.6 else 'crate'
+                    elif self.biome == "icecavern":
+                        stype = 'ice_crystal' if rng.random() < 0.5 else 'rock'
+                    elif self.biome == "swamp":
+                        stype = 'mushroom' if rng.random() < 0.5 else 'crate'
+                    elif self.biome == "firepit":
+                        stype = 'rock' if rng.random() < 0.6 else 'crate'
+                    else:
+                        stype = 'rock' if rng.random() < 0.5 else 'crate'
+                    self.scenery.append((tx, ty, stype))
+                    if stype == 'crate':
+                        self.crate_positions.append((tx, ty))
+
+        # Place torches / campfires at clearings
+        for room in self.rooms:
+            self._place_torches(room, rng)
+
+        # Place treasure chests in clearings
+        for room in self.rooms[1:]:
             if rng.random() < CHEST_SPAWN_PER_ROOM:
                 for _ in range(20):
-                    tx = rng.randint(room.left + 1, room.right - 2)
-                    ty = rng.randint(room.top + 1, room.bottom - 2)
-                    if self.tiles[tx][ty] == FLOOR:
+                    tx = rng.randint(room.left + 1, max(room.left + 1, room.right - 2))
+                    ty = rng.randint(room.top + 1, max(room.top + 1, room.bottom - 2))
+                    if 0 <= tx < MAP_W and 0 <= ty < MAP_H and self.tiles[tx][ty] == FLOOR:
                         too_close = any(abs(cx - tx) + abs(cy - ty) < 3 for cx, cy in self.chest_positions)
                         if not too_close:
-                            chest_kind = "gold" if rng.random() < 0.15 else "wood"
                             self.chest_positions.append((tx, ty))
                             break
-            # Rare: extra gold chest in large rooms
-            if room.w >= 10 and room.h >= 10 and rng.random() < 0.25:
+            if room.w >= 12 and room.h >= 12 and rng.random() < 0.25:
                 for _ in range(20):
-                    tx = rng.randint(room.left + 2, room.right - 3)
-                    ty = rng.randint(room.top + 2, room.bottom - 3)
-                    if self.tiles[tx][ty] == FLOOR:
+                    tx = rng.randint(room.left + 2, max(room.left + 2, room.right - 3))
+                    ty = rng.randint(room.top + 2, max(room.top + 2, room.bottom - 3))
+                    if 0 <= tx < MAP_W and 0 <= ty < MAP_H and self.tiles[tx][ty] == FLOOR:
                         too_close = any(abs(cx - tx) + abs(cy - ty) < 3 for cx, cy in self.chest_positions)
                         if not too_close:
                             self.chest_positions.append((tx, ty))
                             break
-        # Place additional breakable crates in rooms (on floor, not walls)
+
+        # Place breakable crates
         for room in self.rooms[1:]:
             num_crates = rng.randint(0, 3)
             for _ in range(num_crates):
                 for _ in range(15):
-                    tx = rng.randint(room.left + 1, room.right - 2)
-                    ty = rng.randint(room.top + 1, room.bottom - 2)
-                    if self.tiles[tx][ty] == FLOOR:
+                    tx = rng.randint(room.left + 1, max(room.left + 1, room.right - 2))
+                    ty = rng.randint(room.top + 1, max(room.top + 1, room.bottom - 2))
+                    if 0 <= tx < MAP_W and 0 <= ty < MAP_H and self.tiles[tx][ty] == FLOOR:
                         too_close = (any(abs(cx - tx) + abs(cy - ty) < 2 for cx, cy in self.crate_positions)
                                      or any(abs(cx - tx) + abs(cy - ty) < 2 for cx, cy in self.chest_positions))
                         if not too_close:
                             self.crate_positions.append((tx, ty))
                             break
 
-        # Place hazard pools based on biome
+        # Place hazard pools
         hazard_chance = 0.20 if self.biome in ("swamp", "firepit") else 0.12
         for room in self.rooms[2:]:
             if rng.random() < hazard_chance:
                 cx = rng.randint(room.left + 2, max(room.left + 2, room.right - 3))
                 cy = rng.randint(room.top + 2, max(room.top + 2, room.bottom - 3))
-                if self.tiles[cx][cy] == FLOOR:
+                if 0 <= cx < MAP_W and 0 <= cy < MAP_H and self.tiles[cx][cy] == FLOOR:
                     self.hazard_pools.append((cx, cy))
 
+        # Map border walls
         for x in range(MAP_W):
             self.tiles[x][0] = WALL
             self.tiles[x][MAP_H - 1] = WALL
+            self.wall_type[x][0] = WALL_CLIFF
+            self.wall_type[x][MAP_H - 1] = WALL_CLIFF
         for y in range(MAP_H):
             self.tiles[0][y] = WALL
             self.tiles[MAP_W - 1][y] = WALL
+            self.wall_type[0][y] = WALL_CLIFF
+            self.wall_type[MAP_W - 1][y] = WALL_CLIFF
 
-        # Place portal to next area - pick the room FARTHEST from start (like D2R flow)
+        # Place portal in farthest clearing from start
         if len(self.rooms) >= 2:
             start_cx, start_cy = self.center(self.rooms[0])
             best_room = self.rooms[-1]
@@ -827,8 +1047,7 @@ class Dungeon:
             px, py = self.center(best_room)
             self.portal_positions.append((px, py, "next"))
             self.tiles[px][py] = FLOOR
-            # Ensure there's a carved path to the portal room
-            # (rooms are chain-connected but portal room may not be last in chain)
+            # Ensure path to portal
             prev_cx, prev_cy = self.center(self.rooms[-1])
             if best_room != self.rooms[-1]:
                 self.carve_tunnel(prev_cx, prev_cy, px, py)
@@ -875,12 +1094,16 @@ class Dungeon:
             for dy in (-1, 0, 1):
                 if 0 <= y + dy < MAP_H:
                     self.tiles[x][y + dy] = FLOOR
+                    self.wall_type[x][y + dy] = WALL_DEFAULT
+                    self.terrain[x][y + dy] = TERRAIN_DIRT
 
     def carve_v_tunnel(self, y1, y2, x):
         for y in range(min(y1, y2), max(y1, y2) + 1):
             for dx in (-1, 0, 1):
                 if 0 <= x + dx < MAP_W:
                     self.tiles[x + dx][y] = FLOOR
+                    self.wall_type[x + dx][y] = WALL_DEFAULT
+                    self.terrain[x + dx][y] = TERRAIN_DIRT
 
     def center(self, rect: pygame.Rect):
         return rect.left + rect.w // 2, rect.top + rect.h // 2
@@ -1145,7 +1368,93 @@ class Game:
         wt = bc["wall_tint"]
         ft = bc["floor_tint"]
         wb = bc["wall_base"]
+        grass_c = bc.get("grass", (34, 55, 28))
+        dirt_c = bc.get("dirt", (50, 40, 28))
+        road_c = bc.get("road", (55, 48, 35))
+        trunk_c = bc.get("tree_trunk", (55, 40, 25))
+        canopy_c = bc.get("tree_top", (25, 55, 20))
 
+        # ---- Tree wall tiles (8 variants) ----
+        self.tree_tiles = []
+        for i in range(8):
+            surf = pygame.Surface((TILE, TILE))
+            # Ground underneath
+            gr = grass_c[0] + (i * 3) % 8
+            gg = grass_c[1] + (i * 2) % 6
+            gb = grass_c[2] + (i * 2) % 6
+            surf.fill((gr, gg, gb))
+            # Tree trunk
+            tw = 6 + (i % 3)
+            tx_off = TILE // 2 - tw // 2 + (i % 3) - 1
+            tr = trunk_c[0] + (i * 4) % 12
+            tg = trunk_c[1] + (i * 3) % 8
+            tb = trunk_c[2] + (i * 2) % 6
+            pygame.draw.rect(surf, (tr, tg, tb), (tx_off, TILE // 3, tw, TILE * 2 // 3))
+            # Canopy (circle)
+            cr = TILE // 2 - 2 + (i % 3)
+            canopy_r = canopy_c[0] + (i * 5) % 15
+            canopy_g = canopy_c[1] + (i * 4) % 12
+            canopy_b = canopy_c[2] + (i * 3) % 8
+            pygame.draw.circle(surf, (canopy_r, canopy_g, canopy_b), (TILE // 2, TILE // 3), cr)
+            # Canopy highlight
+            pygame.draw.circle(surf, (min(255, canopy_r + 15), min(255, canopy_g + 20),
+                                       min(255, canopy_b + 10)),
+                               (TILE // 2 - 3, TILE // 3 - 4), cr // 2)
+            # Noise for texture
+            for _ in range(8):
+                nx, ny = random.randint(0, TILE - 1), random.randint(0, TILE - 1)
+                v = random.randint(-6, 6)
+                oc = surf.get_at((nx, ny))
+                surf.set_at((nx, ny), (max(0, min(255, oc[0] + v)),
+                                        max(0, min(255, oc[1] + v)),
+                                        max(0, min(255, oc[2] + v))))
+            self.tree_tiles.append(surf)
+
+        # ---- Rock wall tiles (8 variants) ----
+        self.rock_tiles = []
+        for i in range(8):
+            surf = pygame.Surface((TILE, TILE))
+            gr = grass_c[0] + (i * 2) % 6
+            gg = grass_c[1] + (i * 3) % 6
+            gb = grass_c[2] + (i * 2) % 6
+            surf.fill((gr, gg, gb))
+            # Rock shape (irregular ellipse)
+            rx = TILE // 2 + (i % 3) - 1
+            ry = TILE // 2 + (i % 2)
+            rw = TILE // 2 + (i % 4)
+            rh = TILE // 2 - 2 + (i % 3)
+            rock_base = wb + (i * 4) % 16
+            rc = (max(0, rock_base + 10), max(0, rock_base + 5), max(0, rock_base - 2))
+            pygame.draw.ellipse(surf, rc, (rx - rw // 2, ry - rh // 2, rw, rh))
+            # Highlight
+            pygame.draw.ellipse(surf, (min(255, rc[0] + 20), min(255, rc[1] + 15), min(255, rc[2] + 10)),
+                               (rx - rw // 2 + 2, ry - rh // 2 + 1, rw // 2, rh // 2))
+            # Outline
+            pygame.draw.ellipse(surf, (max(0, rc[0] - 15), max(0, rc[1] - 15), max(0, rc[2] - 12)),
+                               (rx - rw // 2, ry - rh // 2, rw, rh), 2)
+            self.rock_tiles.append(surf)
+
+        # ---- Water wall tiles (8 variants) ----
+        self.water_tiles = []
+        for i in range(8):
+            surf = pygame.Surface((TILE, TILE))
+            if biome == "firepit":
+                wr, wg, wb2 = 140 + (i * 8) % 30, 40 + (i * 5) % 20, 10
+            elif biome == "icecavern":
+                wr, wg, wb2 = 50 + (i * 4) % 15, 80 + (i * 5) % 20, 130 + (i * 6) % 25
+            elif biome == "swamp":
+                wr, wg, wb2 = 30 + (i * 3) % 10, 55 + (i * 4) % 15, 25 + (i * 3) % 10
+            else:
+                wr, wg, wb2 = 25 + (i * 4) % 12, 50 + (i * 5) % 18, 100 + (i * 6) % 25
+            surf.fill((wr, wg, wb2))
+            # Ripple lines
+            for rl in range(3):
+                ry = 8 + rl * (TILE // 3) + (i * 5) % 6
+                pygame.draw.line(surf, (min(255, wr + 20), min(255, wg + 25), min(255, wb2 + 30)),
+                                (0, ry), (TILE, ry + (i % 3) - 1))
+            self.water_tiles.append(surf)
+
+        # ---- Cliff/border wall tiles (default wall style) ----
         self.wall_tiles = []
         for i in range(8):
             surf = pygame.Surface((TILE, TILE))
@@ -1171,29 +1480,68 @@ class Game:
                                         max(0, min(255, c + 4 + wt[2]))))
             self.wall_tiles.append(surf)
 
-        self.floor_tiles = []
-        for i in range(8):
-            surf = pygame.Surface((TILE, TILE))
-            br = bc["floor_r"] + (i * 2) % 10
-            bg = bc["floor_g"] + (i * 3) % 8
-            bb = bc["floor_b"] + (i * 2) % 12
-            surf.fill((br, bg, bb))
-            jc = (max(0, br - 6), max(0, bg - 6), max(0, bb - 4))
-            if i % 3 == 0:
-                pygame.draw.line(surf, jc, (0, TILE // 2), (TILE, TILE // 2))
-            if i % 3 == 1:
-                pygame.draw.line(surf, jc, (TILE // 2, 0), (TILE // 2, TILE))
-            if i % 4 == 0:
-                cx = random.randint(4, TILE - 4)
-                cy = random.randint(4, TILE - 4)
-                pygame.draw.line(surf, (br - 10, bg - 10, bb - 8),
-                                 (cx, cy), (cx + random.randint(-8, 8), cy + random.randint(-8, 8)))
-            # noise
-            for _ in range(4):
-                nx, ny = random.randint(0, TILE - 1), random.randint(0, TILE - 1)
-                v = random.randint(-4, 4)
-                surf.set_at((nx, ny), (max(0, br + v), max(0, bg + v), max(0, bb + v)))
-            self.floor_tiles.append(surf)
+        # ---- Terrain floor tiles: grass, dirt, road, etc. ----
+        self._terrain_tiles = {}
+        terrain_colors = {
+            TERRAIN_GRASS: grass_c,
+            TERRAIN_DIRT: dirt_c,
+            TERRAIN_ROAD: road_c,
+            TERRAIN_SAND: bc.get("dirt", (60, 52, 35)),
+            TERRAIN_SNOW: (grass_c[0] + 30, grass_c[1] + 30, grass_c[2] + 35),
+            TERRAIN_LAVA_ROCK: (max(0, grass_c[0] - 5), max(0, grass_c[1] - 10), max(0, grass_c[2] - 10)),
+            TERRAIN_MUD: (max(0, grass_c[0] - 3), grass_c[1], max(0, grass_c[2] - 5)),
+            TERRAIN_STONE: (wb + 8, wb + 4, wb + 2),
+        }
+        for ttype, tcol in terrain_colors.items():
+            tiles = []
+            for i in range(8):
+                surf = pygame.Surface((TILE, TILE))
+                br = max(0, min(255, tcol[0] + (i * 3) % 10 - 4))
+                bg = max(0, min(255, tcol[1] + (i * 2) % 8 - 3))
+                bb = max(0, min(255, tcol[2] + (i * 3) % 8 - 3))
+                surf.fill((br, bg, bb))
+                if ttype in (TERRAIN_GRASS, TERRAIN_MUD):
+                    # Grass blades
+                    for _ in range(6):
+                        gx = random.randint(2, TILE - 2)
+                        gy = random.randint(2, TILE - 2)
+                        glen = random.randint(3, 7)
+                        gc = (max(0, min(255, br + random.randint(-8, 12))),
+                              max(0, min(255, bg + random.randint(-5, 18))),
+                              max(0, min(255, bb + random.randint(-6, 6))))
+                        pygame.draw.line(surf, gc, (gx, gy), (gx + random.randint(-2, 2), gy - glen))
+                elif ttype == TERRAIN_ROAD:
+                    # Cobblestone-like pattern
+                    for _ in range(3):
+                        sx = random.randint(0, TILE - 1)
+                        sy = random.randint(0, TILE - 1)
+                        sc = (max(0, br - 6), max(0, bg - 6), max(0, bb - 4))
+                        pygame.draw.circle(surf, sc, (sx, sy), random.randint(2, 5), 1)
+                elif ttype == TERRAIN_SNOW:
+                    # Sparkle dots
+                    for _ in range(3):
+                        sx = random.randint(0, TILE - 1)
+                        sy = random.randint(0, TILE - 1)
+                        surf.set_at((sx, sy), (min(255, br + 30), min(255, bg + 30), min(255, bb + 35)))
+                elif ttype == TERRAIN_SAND:
+                    # Sand grain texture
+                    for _ in range(5):
+                        sx = random.randint(0, TILE - 1)
+                        sy = random.randint(0, TILE - 1)
+                        v = random.randint(-5, 5)
+                        surf.set_at((sx, sy), (max(0, br + v), max(0, bg + v), max(0, bb + v - 2)))
+                # General noise
+                for _ in range(4):
+                    nx, ny = random.randint(0, TILE - 1), random.randint(0, TILE - 1)
+                    v = random.randint(-4, 4)
+                    surf.set_at((nx, ny), (max(0, min(255, br + v)),
+                                            max(0, min(255, bg + v)),
+                                            max(0, min(255, bb + v))))
+                tiles.append(surf)
+            self._terrain_tiles[ttype] = tiles
+
+        # Default floor tiles (fallback, uses grass)
+        self.floor_tiles = self._terrain_tiles.get(TERRAIN_GRASS, self._terrain_tiles[TERRAIN_DIRT])
 
         self.unseen_wall = pygame.Surface((TILE, TILE))
         self.unseen_wall.fill((14, 12, 18))
@@ -2186,27 +2534,24 @@ class Game:
                 self.loots.append(Loot(pos=self._safe_loot_pos(chest.pos),
                                        gold=random.randint(5, 20) * gold_mult))
 
-        # Always drop a weapon — gold chests have better odds
+        # Always drop a weapon — gold chests slightly better odds
         roll = random.random()
         depth = self.current_level
         if chest.kind == "gold":
-            # Gold chests: decent unique chance, especially at depth
-            unique_ch = 0.04 + depth * 0.006  # ~4% at depth 1, ~19% at depth 25
-            if roll < unique_ch:
+            # Gold chests: very rare unique chance (0.5%)
+            if roll < 0.005:
                 w_rarity = RARITY_UNIQUE
-            elif roll < unique_ch + 0.12 + depth * 0.005:
+            elif roll < 0.08 + depth * 0.005:
                 w_rarity = RARITY_RARE
-            elif roll < 0.55:
+            elif roll < 0.45:
                 w_rarity = RARITY_MAGIC
             else:
                 w_rarity = RARITY_NORMAL
         else:
-            unique_ch = 0.02 + depth * 0.004  # ~2% at depth 1, ~12% at depth 25
-            if roll < unique_ch:
-                w_rarity = RARITY_UNIQUE
-            elif roll < unique_ch + 0.06 + depth * 0.005:
+            # Regular chests: no uniques
+            if roll < 0.04 + depth * 0.005:
                 w_rarity = RARITY_RARE
-            elif roll < 0.40:
+            elif roll < 0.35:
                 w_rarity = RARITY_MAGIC
             else:
                 w_rarity = RARITY_NORMAL
@@ -2479,12 +2824,7 @@ class Game:
                 if e.loot_drop_timer <= 0:
                     e.loot_drop_timer = GOBLIN_LOOT_INTERVAL
                     drop_pos = self._safe_loot_pos(e.pos)
-                    if random.random() < 0.12:
-                        # Occasional weapon drops while fleeing
-                        trail_rarity = RARITY_RARE if random.random() < 0.3 else RARITY_MAGIC
-                        self.loots.append(Loot(pos=drop_pos, weapon=self._gen_weapon(trail_rarity)))
-                    else:
-                        self.loots.append(Loot(pos=drop_pos, gold=random.randint(3, 10)))
+                    self.loots.append(Loot(pos=drop_pos, gold=random.randint(3, 10)))
                     self.emit_particles(e.pos.x, e.pos.y, 3, C_GOLD, speed=30, life=0.3, gravity=-20)
                 # Wall collision with sliding
                 new_epos = e.pos + e.vel * dt
@@ -2818,12 +3158,12 @@ class Game:
             self.loots.append(Loot(pos=self._safe_loot_pos(e.pos), infusion=inf))
             if random.random() < 0.5:
                 self.loots.append(Loot(pos=self._safe_loot_pos(e.pos), potion_hp=True))
-            # Goblin weapon drops: 3-4 weapons with guaranteed unique chance
-            for gi in range(random.randint(3, 4)):
+            # Goblin weapon drops: 2-3 weapons, rare odds with slim unique chance
+            for gi in range(random.randint(2, 3)):
                 gob_roll = random.random()
-                if gob_roll < 0.25:
-                    gob_rarity = RARITY_UNIQUE  # 25% unique per drop!
-                elif gob_roll < 0.55:
+                if gob_roll < 0.01:
+                    gob_rarity = RARITY_UNIQUE  # 1% unique
+                elif gob_roll < 0.35:
                     gob_rarity = RARITY_RARE
                 else:
                     gob_rarity = RARITY_MAGIC
@@ -2883,29 +3223,26 @@ class Game:
             force = None
             if isinstance(e, Boss):
                 roll = random.random()
-                if roll < 0.10:
+                if roll < 0.05:
                     force = RARITY_SET
-                elif roll < 0.35:
+                elif roll < 0.10:
                     force = RARITY_UNIQUE
                 else:
                     force = RARITY_RARE
             elif isinstance(e, Elite):
                 roll = random.random()
-                if roll < 0.12:
+                if roll < 0.03:
                     force = RARITY_UNIQUE
-                elif roll < 0.45:
+                elif roll < 0.35:
                     force = RARITY_RARE
                 else:
                     force = RARITY_MAGIC
             else:
-                # Regular monsters: mostly normal/magic, small unique chance at higher depths
+                # Regular monsters: normal/magic, occasional rare - no uniques
                 roll = random.random()
-                unique_thresh = 0.005 + self.current_level * 0.003  # ~0.8% at depth 1, ~8% at depth 25
-                if roll < unique_thresh:
-                    force = RARITY_UNIQUE
-                elif roll < unique_thresh + 0.05 + self.current_level * 0.006:
+                if roll < 0.03 + self.current_level * 0.005:
                     force = RARITY_RARE
-                elif roll < 0.40:
+                elif roll < 0.35:
                     force = RARITY_MAGIC
                 else:
                     force = RARITY_NORMAL
@@ -2924,13 +3261,7 @@ class Game:
                 drops.append(Loot(pos=sp(), shield_boost=True))
             # Elites always drop at least magic gear
             if not any(d.weapon for d in drops):
-                eroll = random.random()
-                if eroll < 0.08:
-                    elite_rarity = RARITY_UNIQUE
-                elif eroll < 0.35:
-                    elite_rarity = RARITY_RARE
-                else:
-                    elite_rarity = RARITY_MAGIC
+                elite_rarity = RARITY_MAGIC if random.random() < 0.6 else RARITY_RARE
                 drops.append(Loot(pos=self._safe_loot_pos(e.pos, 15),
                                   weapon=self._gen_weapon(elite_rarity)))
         if isinstance(e, Boss):
@@ -2950,7 +3281,7 @@ class Game:
                 drops.append(Loot(pos=sp(), infusion=random.choice(INFUSION_TYPES)))
             else:
                 # Regular act bosses drop better loot at higher acts
-                unique_chance = 0.15 + self.current_act * 0.06  # 21% to 45%
+                unique_chance = 0.03 + self.current_act * 0.01  # 4% to 8%
                 drops.append(Loot(pos=self._safe_loot_pos(e.pos, 30),
                                   weapon=self._gen_weapon(
                                       RARITY_UNIQUE if random.random() < unique_chance else RARITY_RARE)))
@@ -3186,12 +3517,22 @@ class Game:
                 variant = self.dungeon.tile_variants[tx][ty]
                 if self.dungeon.tiles[tx][ty] == WALL:
                     if seen:
-                        s.blit(self.wall_tiles[variant], (px, py))
+                        wtype = self.dungeon.wall_type[tx][ty]
+                        if wtype == WALL_TREE and hasattr(self, 'tree_tiles'):
+                            s.blit(self.tree_tiles[variant], (px, py))
+                        elif wtype == WALL_ROCK and hasattr(self, 'rock_tiles'):
+                            s.blit(self.rock_tiles[variant], (px, py))
+                        elif wtype == WALL_WATER and hasattr(self, 'water_tiles'):
+                            s.blit(self.water_tiles[variant], (px, py))
+                        else:
+                            s.blit(self.wall_tiles[variant], (px, py))
                     else:
                         s.blit(self.unseen_wall, (px, py))
                 else:
                     if seen:
-                        s.blit(self.floor_tiles[variant], (px, py))
+                        terrain = self.dungeon.terrain[tx][ty]
+                        ttiles = self._terrain_tiles.get(terrain, self.floor_tiles)
+                        s.blit(ttiles[variant], (px, py))
                     else:
                         s.blit(self.unseen_floor, (px, py))
 
@@ -4087,14 +4428,31 @@ class Game:
 
         sx = mm_w / MAP_W
         sy = mm_h / MAP_H
+        bc = BIOME_COLORS.get(self.current_biome, BIOME_COLORS["crypt"])
+        mm_grass = bc.get("grass", (34, 55, 28))
+        mm_dirt = bc.get("dirt", (50, 40, 28))
         for tx in range(0, MAP_W, 2):
             for ty in range(0, MAP_H, 2):
                 if not self.dungeon.seen[tx][ty]:
                     continue
                 if self.dungeon.tiles[tx][ty] == WALL:
-                    col = (60, 55, 65, 200)
+                    wt = self.dungeon.wall_type[tx][ty]
+                    if wt == WALL_TREE:
+                        col = (mm_grass[0] - 5, mm_grass[1] + 10, mm_grass[2] - 5, 200)
+                    elif wt == WALL_WATER:
+                        col = (30, 50, 110, 200)
+                    elif wt == WALL_ROCK:
+                        col = (55, 50, 45, 200)
+                    else:
+                        col = (60, 55, 65, 200)
                 else:
-                    col = (100, 95, 110, 180)
+                    ter = self.dungeon.terrain[tx][ty]
+                    if ter == TERRAIN_ROAD:
+                        col = (mm_dirt[0] + 10, mm_dirt[1] + 8, mm_dirt[2] + 5, 200)
+                    elif ter == TERRAIN_DIRT:
+                        col = (mm_dirt[0], mm_dirt[1], mm_dirt[2], 180)
+                    else:
+                        col = (mm_grass[0] + 15, mm_grass[1] + 20, mm_grass[2] + 10, 180)
                 pygame.draw.rect(surf, col, (tx * sx, ty * sy, sx * 2, sy * 2))
 
         # player dot
