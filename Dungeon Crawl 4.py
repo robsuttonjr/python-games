@@ -17,9 +17,9 @@ FPS = 60
 FONT_NAME = "consolas"
 
 DIFFICULTY = {
-    "Easy":   {"enemy_hp":0.9,"enemy_dmg":0.8,"enemy_speed":0.95,"max_enemies":20},
-    "Normal": {"enemy_hp":1.0,"enemy_dmg":1.0,"enemy_speed":1.0, "max_enemies":25},
-    "Hard":   {"enemy_hp":1.2,"enemy_dmg":1.25,"enemy_speed":1.05,"max_enemies":30},
+    "Easy":   {"enemy_hp":0.9,"enemy_dmg":0.8,"enemy_speed":0.95,"max_enemies":14},
+    "Normal": {"enemy_hp":1.0,"enemy_dmg":1.0,"enemy_speed":1.0, "max_enemies":18},
+    "Hard":   {"enemy_hp":1.2,"enemy_dmg":1.25,"enemy_speed":1.05,"max_enemies":22},
 }
 
 PLAYER_SPEED = 340
@@ -51,11 +51,11 @@ POTION_MANA = 40
 ENEMY_BASE_HP = 12  # low base - scales up with level/act (D2R: Act 1 monsters die easily)
 ENEMY_BASE_DMG = (2, 4)  # low base damage - scales up progressively
 ENEMY_SPEED = 140
-SPAWN_INTERVAL = 6.0
+SPAWN_INTERVAL = 12.0
 WAVE_SCALE = 1.08
-MAX_ACTIVE_ENEMIES = 25
+MAX_ACTIVE_ENEMIES = 18
 
-ELITE_PACK_CHANCE = 0.50
+ELITE_PACK_CHANCE = 0.35
 PACK_SIZE_RANGE = (4, 8)
 ELITE_MULT = {"hp": 2.6, "dmg": 1.8, "spd": 1.08, "radius": 26}
 AURA_RADIUS = 300
@@ -2767,16 +2767,26 @@ class Game:
                                         tier_bonus=self._get_tier_scale()["drop_bonus"]))
         return stock
 
-    def _get_vendor_buy_price(self, w: Weapon) -> int:
+    def _get_vendor_buy_price(self, item) -> int:
         """Price to buy from vendor."""
-        base = (w.dmg_min + w.dmg_max) * 2 + w.ilvl * 3
+        if isinstance(item, Weapon):
+            base = (item.dmg_min + item.dmg_max) * 2 + item.ilvl * 3
+        elif isinstance(item, Armor):
+            base = item.defense * 2 + item.ilvl * 3
+        elif isinstance(item, Ring):
+            base = item.ilvl * 5 + sum(v for v in item.mods.values() if isinstance(v, (int, float))) * 2
+        elif isinstance(item, Jewel):
+            base = sum(v for v in item.mods.values() if isinstance(v, (int, float))) * 3
+        else:
+            base = 5
         rarity_mult = {RARITY_NORMAL: 1, RARITY_MAGIC: 3, RARITY_RARE: 8,
                        RARITY_UNIQUE: 15, RARITY_SET: 12}
-        return max(5, int(base * rarity_mult.get(w.rarity, 1)))
+        rarity = getattr(item, 'rarity', RARITY_NORMAL)
+        return max(5, int(base * rarity_mult.get(rarity, 1)))
 
-    def _get_vendor_sell_price(self, w: Weapon) -> int:
+    def _get_vendor_sell_price(self, item) -> int:
         """Price vendor pays for player's item (less than buy price)."""
-        return max(1, self._get_vendor_buy_price(w) // 3)
+        return max(1, self._get_vendor_buy_price(item) // 3)
 
     # ---- Chest system ----
     def _spawn_chests(self):
@@ -3754,8 +3764,8 @@ class Game:
             if random.random() < ELITE_PACK_CHANCE and len(self.enemies) < MAX_ACTIVE_ENEMIES:
                 self.spawn_elite_pack()
                 did_pack = True
-            # Spawn a group of regular enemies (pack-style, 3-5 at once)
-            group_size = min(random.randint(3, 5), MAX_ACTIVE_ENEMIES - len(self.enemies))
+            # Spawn a group of regular enemies (pack-style, 2-4 at once)
+            group_size = min(random.randint(2, 4), MAX_ACTIVE_ENEMIES - len(self.enemies))
             if not did_pack and group_size > 0:
                 # Pick a single position and spawn group near it
                 base_pos = self._random_floor_pos(near_player=True)
@@ -4688,23 +4698,22 @@ class Game:
             pygame.draw.circle(s, (40, 0, 40), (ex - 3, ey - e.radius - 20), 2)
             pygame.draw.circle(s, (40, 0, 40), (ex + 3, ey - e.radius - 20), 2)
 
-        # Body - demonic look based on kind
-        if e.hit_flash > 0:
-            body_col = (255, 255, 255)
-        elif ratio > 0.66:
-            body_col = (70, 160, 70)
-        elif ratio > 0.33:
-            body_col = (200, 170, 60)
-        else:
-            body_col = (190, 50, 50)
+        # Body - D2R creature sprites (natural colors, HP bar shows health)
+        flash = e.hit_flash > 0
 
         if isinstance(e, Boss):
-            # Boss: larger, more imposing
-            pygame.draw.circle(s, (40, 15, 15), (ex, ey), e.radius + 3)
-            pygame.draw.circle(s, body_col, (ex, ey), e.radius)
-            pygame.draw.circle(s, (max(0, body_col[0] - 30), max(0, body_col[1] - 30), max(0, body_col[2] - 20)),
-                               (ex, ey), e.radius - 6)
-            # Demonic eyes
+            # Boss: massive armored demon lord
+            bc = (160, 30, 25) if not flash else (255, 255, 255)
+            bd = (100, 15, 10) if not flash else (240, 240, 240)
+            pygame.draw.circle(s, bd, (ex, ey), e.radius + 3)
+            pygame.draw.circle(s, bc, (ex, ey), e.radius)
+            pygame.draw.circle(s, (min(255, bc[0] + 25), bc[1], bc[2]), (ex - 4, ey - 4), e.radius - 6)
+            # Shoulder armor plates
+            pygame.draw.ellipse(s, (80, 70, 60), (ex - e.radius - 8, ey - 10, 18, 24))
+            pygame.draw.ellipse(s, (80, 70, 60), (ex + e.radius - 8, ey - 10, 18, 24))
+            pygame.draw.ellipse(s, (100, 90, 75), (ex - e.radius - 6, ey - 8, 14, 20), 1)
+            pygame.draw.ellipse(s, (100, 90, 75), (ex + e.radius - 6, ey - 8, 14, 20), 1)
+            # Glowing demonic eyes
             pygame.draw.circle(s, (255, 60, 20), (ex - 12, ey - 8), 6)
             pygame.draw.circle(s, (255, 60, 20), (ex + 12, ey - 8), 6)
             pygame.draw.circle(s, (255, 220, 60), (ex - 12, ey - 8), 3)
@@ -4714,22 +4723,33 @@ class Game:
                    (ex + 10, ey - 42), (ex + 20, ey - 26)]
             pygame.draw.polygon(s, (240, 180, 60), pts)
             pygame.draw.polygon(s, (180, 130, 30), pts, 2)
-            # Mouth
-            pygame.draw.arc(s, (0, 0, 0), (ex - 12, ey + 4, 24, 14), 3.14, 6.28, 2)
+            # Fanged mouth
+            pygame.draw.arc(s, (30, 5, 5), (ex - 12, ey + 4, 24, 14), 3.14, 6.28, 2)
+            for tx in [-8, -4, 0, 4, 8]:
+                pygame.draw.line(s, (255, 240, 200), (ex + tx, ey + 6), (ex + tx, ey + 11), 1)
         elif e.kind == 4:  # Treasure Goblin
             shimmer = 0.7 + 0.3 * math.sin(self.game_time * 8)
             gcol = (int(255 * shimmer), int(215 * shimmer), int(40 * shimmer))
-            pygame.draw.circle(s, gcol, (ex, ey), e.radius)
-            pygame.draw.circle(s, (200, 170, 30), (ex, ey), e.radius, 2)
-            # Loot bag on back
-            pygame.draw.circle(s, (180, 150, 50), (ex - 5, ey - 8), 8)
-            pygame.draw.circle(s, (160, 130, 40), (ex - 5, ey - 8), 8, 1)
-            pygame.draw.line(s, (140, 110, 40), (ex - 5, ey - 16), (ex - 5, ey - 10), 2)
-            # Eyes (excited)
-            pygame.draw.circle(s, (255, 255, 200), (ex - 3, ey - 2), 3)
-            pygame.draw.circle(s, (255, 255, 200), (ex + 5, ey - 2), 3)
-            pygame.draw.circle(s, (40, 20, 10), (ex - 3, ey - 2), 1)
-            pygame.draw.circle(s, (40, 20, 10), (ex + 5, ey - 2), 1)
+            # Hunched body
+            pygame.draw.ellipse(s, (120, 100, 40), (ex - e.radius, ey - 2, e.radius * 2, e.radius + 4))
+            pygame.draw.circle(s, gcol, (ex, ey - 4), e.radius - 2)
+            pygame.draw.circle(s, (200, 170, 30), (ex, ey - 4), e.radius - 2, 2)
+            # Big pointy ears
+            pygame.draw.polygon(s, (160, 130, 50), [
+                (ex - e.radius + 2, ey - 6), (ex - e.radius - 8, ey - 18), (ex - e.radius + 6, ey - 2)])
+            pygame.draw.polygon(s, (160, 130, 50), [
+                (ex + e.radius - 2, ey - 6), (ex + e.radius + 8, ey - 18), (ex + e.radius - 6, ey - 2)])
+            # Loot sack on back
+            pygame.draw.circle(s, (140, 110, 40), (ex, ey - e.radius + 2), 9)
+            pygame.draw.circle(s, (110, 85, 30), (ex, ey - e.radius + 2), 9, 1)
+            pygame.draw.line(s, (100, 80, 30), (ex - 4, ey - e.radius - 5), (ex + 4, ey - e.radius - 5), 2)
+            # Beady eyes
+            pygame.draw.circle(s, (255, 255, 200), (ex - 4, ey - 5), 3)
+            pygame.draw.circle(s, (255, 255, 200), (ex + 4, ey - 5), 3)
+            pygame.draw.circle(s, (40, 20, 10), (ex - 4, ey - 5), 1)
+            pygame.draw.circle(s, (40, 20, 10), (ex + 4, ey - 5), 1)
+            # Grinning mouth
+            pygame.draw.arc(s, (80, 40, 20), (ex - 5, ey - 1, 10, 6), 3.14, 6.28, 1)
             # Timer arc
             if isinstance(e, TreasureGoblin):
                 timer_frac = max(0, e.portal_timer / GOBLIN_DESPAWN_TIME)
@@ -4738,137 +4758,183 @@ class Game:
                                     (e.radius + 4) * 2, (e.radius + 4) * 2),
                                     0, math.tau * timer_frac, 2)
         else:
-            # --- Kind 0: SKELETON - bony, pale, skull-shaped ---
+            # --- Kind 0: SKELETON WARRIOR - D2R bony undead with weapon ---
             if e.kind == 0:
-                bone_col = (220, 210, 180) if e.hit_flash <= 0 else (255, 255, 255)
-                bone_dark = (180, 165, 130) if e.hit_flash <= 0 else (240, 240, 240)
-                # Skull body (slightly oval)
-                pygame.draw.ellipse(s, bone_dark, (ex - e.radius, ey - e.radius + 2,
-                                    e.radius * 2, int(e.radius * 1.8)))
-                pygame.draw.ellipse(s, bone_col, (ex - e.radius + 2, ey - e.radius + 3,
-                                    e.radius * 2 - 4, int(e.radius * 1.8) - 4))
-                # Eye sockets (dark holes)
-                pygame.draw.circle(s, (15, 10, 10), (ex - 6, ey - 3), 5)
-                pygame.draw.circle(s, (15, 10, 10), (ex + 6, ey - 3), 5)
+                bone = (220, 210, 180) if not flash else (255, 255, 255)
+                bone_dk = (170, 155, 120) if not flash else (240, 240, 240)
+                # Ribcage body
+                pygame.draw.ellipse(s, bone_dk, (ex - e.radius + 1, ey - 2,
+                                    e.radius * 2 - 2, e.radius + 8))
+                for ry in range(0, e.radius + 4, 3):
+                    rw = max(2, e.radius - abs(ry - e.radius // 2))
+                    pygame.draw.line(s, bone, (ex - rw, ey + ry), (ex + rw, ey + ry), 1)
+                # Skull (on top)
+                pygame.draw.circle(s, bone, (ex, ey - 6), e.radius - 3)
+                pygame.draw.circle(s, bone_dk, (ex, ey - 6), e.radius - 5)
+                pygame.draw.circle(s, bone, (ex, ey - 6), e.radius - 6)
+                # Eye sockets (dark pits)
+                pygame.draw.circle(s, (10, 5, 5), (ex - 5, ey - 7), 4)
+                pygame.draw.circle(s, (10, 5, 5), (ex + 5, ey - 7), 4)
                 # Glowing red pupils
-                glow = 0.7 + 0.3 * math.sin(self.game_time * 5)
+                glow = 0.7 + 0.3 * math.sin(self.game_time * 5 + e.pos.x * 0.1)
                 eye_r = int(200 * glow)
-                pygame.draw.circle(s, (eye_r, 30, 20), (ex - 6, ey - 3), 2)
-                pygame.draw.circle(s, (eye_r, 30, 20), (ex + 6, ey - 3), 2)
-                # Nose hole
-                pygame.draw.polygon(s, (15, 10, 10), [(ex, ey + 2), (ex - 2, ey + 5), (ex + 2, ey + 5)])
-                # Jaw / teeth
-                for tx in range(-7, 8, 3):
-                    pygame.draw.rect(s, bone_col, (ex + tx, ey + 7, 2, 4))
-                pygame.draw.line(s, bone_dark, (ex - 8, ey + 7), (ex + 8, ey + 7), 1)
-                # Rib lines below
-                for ry in range(12, 18, 3):
-                    pygame.draw.line(s, bone_dark, (ex - 8, ey + ry), (ex + 8, ey + ry), 1)
+                pygame.draw.circle(s, (eye_r, 20, 10), (ex - 5, ey - 7), 2)
+                pygame.draw.circle(s, (eye_r, 20, 10), (ex + 5, ey - 7), 2)
+                # Nose cavity
+                pygame.draw.polygon(s, (10, 5, 5), [(ex, ey - 2), (ex - 2, ey + 1), (ex + 2, ey + 1)])
+                # Teeth
+                for tx in range(-6, 7, 2):
+                    pygame.draw.rect(s, bone, (ex + tx, ey + 2, 2, 3))
+                # Arm bones holding sword
+                pygame.draw.line(s, bone_dk, (ex + e.radius - 2, ey), (ex + e.radius + 8, ey + 12), 2)
+                pygame.draw.line(s, (140, 140, 160), (ex + e.radius + 6, ey + 4), (ex + e.radius + 6, ey + 18), 2)
+                # Shield on other arm
+                pygame.draw.rect(s, (80, 70, 50), (ex - e.radius - 6, ey - 4, 8, 12), border_radius=2)
+                pygame.draw.rect(s, (120, 100, 60), (ex - e.radius - 6, ey - 4, 8, 12), 1, border_radius=2)
 
-            # --- Kind 1: DEMON - red/dark, horns, muscular ---
+            # --- Kind 1: FALLEN DEMON - D2R red horned creature ---
             elif e.kind == 1:
-                dcol = (180, 40, 30) if e.hit_flash <= 0 else (255, 255, 255)
-                dcol_dark = (120, 20, 15) if e.hit_flash <= 0 else (240, 240, 240)
-                # Muscular body
-                pygame.draw.circle(s, dcol_dark, (ex, ey), e.radius + 2)
-                pygame.draw.circle(s, dcol, (ex, ey), e.radius)
-                # Inner body shading
-                pygame.draw.circle(s, (min(255, dcol[0] + 30), dcol[1], dcol[2]),
-                                   (ex - 3, ey - 3), e.radius - 5)
-                # Horns (curved)
-                horn_col = (100, 80, 50)
-                pygame.draw.polygon(s, horn_col, [
-                    (ex - 10, ey - 12), (ex - 18, ey - 28), (ex - 14, ey - 26), (ex - 6, ey - 10)])
-                pygame.draw.polygon(s, horn_col, [
-                    (ex + 10, ey - 12), (ex + 18, ey - 28), (ex + 14, ey - 26), (ex + 6, ey - 10)])
-                # Angry eyes
-                pygame.draw.line(s, (255, 200, 40), (ex - 9, ey - 6), (ex - 3, ey - 4), 3)
-                pygame.draw.line(s, (255, 200, 40), (ex + 3, ey - 4), (ex + 9, ey - 6), 3)
-                pygame.draw.circle(s, (255, 255, 100), (ex - 6, ey - 4), 2)
-                pygame.draw.circle(s, (255, 255, 100), (ex + 6, ey - 4), 2)
-                # Fanged mouth
+                dc = (180, 40, 30) if not flash else (255, 255, 255)
+                dd = (120, 20, 15) if not flash else (240, 240, 240)
+                # Bulky muscular body
+                pygame.draw.circle(s, dd, (ex, ey + 2), e.radius + 2)
+                pygame.draw.circle(s, dc, (ex, ey + 2), e.radius)
+                # Lighter belly
+                pygame.draw.ellipse(s, (min(255, dc[0] + 40), min(255, dc[1] + 15), dc[2]),
+                                   (ex - e.radius + 5, ey, e.radius * 2 - 10, e.radius))
+                # Curved horns
+                horn = (90, 75, 45)
+                pygame.draw.polygon(s, horn, [
+                    (ex - 9, ey - 10), (ex - 20, ey - 28), (ex - 15, ey - 25), (ex - 5, ey - 8)])
+                pygame.draw.polygon(s, horn, [
+                    (ex + 9, ey - 10), (ex + 20, ey - 28), (ex + 15, ey - 25), (ex + 5, ey - 8)])
+                # Slanted angry eyes
+                pygame.draw.line(s, (255, 200, 40), (ex - 9, ey - 6), (ex - 3, ey - 3), 3)
+                pygame.draw.line(s, (255, 200, 40), (ex + 3, ey - 3), (ex + 9, ey - 6), 3)
+                pygame.draw.circle(s, (255, 255, 80), (ex - 6, ey - 4), 2)
+                pygame.draw.circle(s, (255, 255, 80), (ex + 6, ey - 4), 2)
+                # Fanged snarling mouth
                 pygame.draw.arc(s, (50, 10, 10), (ex - 7, ey + 2, 14, 10), 3.14, 6.28, 2)
-                pygame.draw.polygon(s, (255, 240, 200), [(ex - 5, ey + 5), (ex - 4, ey + 9), (ex - 3, ey + 5)])
-                pygame.draw.polygon(s, (255, 240, 200), [(ex + 3, ey + 5), (ex + 4, ey + 9), (ex + 5, ey + 5)])
+                pygame.draw.polygon(s, (255, 240, 200), [(ex - 5, ey + 5), (ex - 4, ey + 10), (ex - 3, ey + 5)])
+                pygame.draw.polygon(s, (255, 240, 200), [(ex + 3, ey + 5), (ex + 4, ey + 10), (ex + 5, ey + 5)])
+                # Spiky tail
+                pygame.draw.line(s, dd, (ex, ey + e.radius), (ex - 12, ey + e.radius + 8), 2)
+                pygame.draw.circle(s, dc, (ex - 14, ey + e.radius + 8), 3)
 
-            # --- Kind 2: SPIDER - dark, multiple legs, mandibles ---
+            # --- Kind 2: SPIDER DEMON - D2R multi-legged horror ---
             elif e.kind == 2:
-                sp_col = (50, 40, 60) if e.hit_flash <= 0 else (255, 255, 255)
-                sp_light = (70, 55, 80) if e.hit_flash <= 0 else (240, 240, 240)
-                # Body (two segments: abdomen + head)
-                pygame.draw.ellipse(s, sp_col, (ex - e.radius + 2, ey - 4,
-                                    e.radius * 2 - 4, e.radius + 6))  # abdomen
-                pygame.draw.circle(s, sp_light, (ex, ey - 6), e.radius - 6)  # head
-                # Hourglass marking on abdomen
+                sp = (50, 40, 60) if not flash else (255, 255, 255)
+                sp_lt = (70, 55, 80) if not flash else (240, 240, 240)
+                # Segmented body (abdomen + cephalothorax)
+                pygame.draw.ellipse(s, sp, (ex - e.radius + 2, ey - 2,
+                                    e.radius * 2 - 4, e.radius + 8))
+                pygame.draw.circle(s, sp_lt, (ex, ey - 5), e.radius - 5)
+                # Hourglass marking
                 pygame.draw.polygon(s, (200, 30, 30), [
-                    (ex, ey + 2), (ex - 3, ey + 6), (ex, ey + 10), (ex + 3, ey + 6)])
-                # 8 legs (4 per side, animated)
-                walk = math.sin(self.game_time * 8) * 3
-                leg_col = sp_col
+                    (ex, ey + 1), (ex - 3, ey + 5), (ex, ey + 9), (ex + 3, ey + 5)])
+                # Pattern on abdomen
+                pygame.draw.line(s, (80, 65, 100), (ex - 4, ey + 4), (ex + 4, ey + 4), 1)
+                pygame.draw.line(s, (80, 65, 100), (ex - 3, ey + 7), (ex + 3, ey + 7), 1)
+                # 8 legs (animated walking)
+                walk = math.sin(self.game_time * 8 + e.pos.x * 0.05) * 3
                 for i, ang in enumerate([-0.8, -0.4, 0.1, 0.5]):
                     ofs = walk if i % 2 == 0 else -walk
-                    # Left legs
                     lx1 = ex - e.radius + 2
                     ly1 = ey + int(ang * 12) + int(ofs)
                     lx2 = lx1 - 14
-                    ly2 = ly1 + 8
-                    pygame.draw.line(s, leg_col, (lx1, ly1), (lx2, ly2), 2)
-                    pygame.draw.line(s, leg_col, (lx2, ly2), (lx2 - 4, ly2 + 6), 2)
-                    # Right legs
+                    ly2 = ly1 + 7
+                    pygame.draw.line(s, sp, (lx1, ly1), (lx2, ly2), 2)
+                    pygame.draw.line(s, sp, (lx2, ly2), (lx2 - 5, ly2 + 6), 2)
                     rx1 = ex + e.radius - 2
                     ry1 = ey + int(ang * 12) + int(ofs)
                     rx2 = rx1 + 14
-                    ry2 = ry1 + 8
-                    pygame.draw.line(s, leg_col, (rx1, ry1), (rx2, ry2), 2)
-                    pygame.draw.line(s, leg_col, (rx2, ry2), (rx2 + 4, ry2 + 6), 2)
-                # Multiple eyes (cluster)
+                    ry2 = ry1 + 7
+                    pygame.draw.line(s, sp, (rx1, ry1), (rx2, ry2), 2)
+                    pygame.draw.line(s, sp, (rx2, ry2), (rx2 + 5, ry2 + 6), 2)
+                # Cluster of red eyes
                 for dx, dy in [(-5, -8), (-2, -10), (2, -10), (5, -8), (-3, -6), (3, -6)]:
                     pygame.draw.circle(s, (180, 0, 0), (ex + dx, ey + dy), 2)
                     pygame.draw.circle(s, (255, 100, 100), (ex + dx, ey + dy), 1)
-                # Mandibles / fangs
-                pygame.draw.line(s, (160, 140, 100), (ex - 4, ey - 2), (ex - 8, ey + 6), 2)
-                pygame.draw.line(s, (160, 140, 100), (ex + 4, ey - 2), (ex + 8, ey + 6), 2)
+                # Venomous chelicerae
+                pygame.draw.line(s, (140, 200, 80), (ex - 4, ey - 2), (ex - 7, ey + 7), 2)
+                pygame.draw.line(s, (140, 200, 80), (ex + 4, ey - 2), (ex + 7, ey + 7), 2)
+                # Venom drip
+                if random.random() < 0.3:
+                    pygame.draw.circle(s, (100, 200, 60), (ex + random.choice([-7, 7]), ey + 9), 1)
 
-            # --- Kind 3: WRAITH - translucent, floating, purple wispy ---
+            # --- Kind 3: WRAITH - hooded spectral reaper with soul wisps ---
             elif e.kind == 3:
                 float_ofs = math.sin(self.game_time * 3) * 4
                 wy = ey + int(float_ofs)
-                # Wispy trailing tail
-                for i in range(5):
-                    t_alpha = 0.3 - i * 0.05
-                    t_col = (int(100 * t_alpha), int(50 * t_alpha), int(160 * t_alpha))
-                    trail_y = wy + 8 + i * 5
+                # Tattered robe bottom (ragged edges)
+                pulse = 0.6 + 0.4 * math.sin(self.game_time * 4)
+                robe_col = (int(60 * pulse), int(30 * pulse), int(120 * pulse))
+                if flash:
+                    robe_col = (255, 255, 255)
+                for i in range(6):
+                    rag_x = ex - 10 + i * 4
+                    rag_len = 8 + int(math.sin(self.game_time * 2 + i) * 3)
+                    pygame.draw.line(s, robe_col, (rag_x, wy + 6), (rag_x, wy + 6 + rag_len), 2)
+                # Spectral body - layered translucent robes
+                body_col_w = (int(70 * pulse), int(35 * pulse), int(130 * pulse))
+                if flash:
+                    body_col_w = (255, 255, 255)
+                pygame.draw.ellipse(s, body_col_w, (ex - e.radius, wy - 4, e.radius * 2, e.radius + 10))
+                inner_col = (int(90 * pulse), int(50 * pulse), int(160 * pulse))
+                if flash:
+                    inner_col = (255, 255, 255)
+                pygame.draw.ellipse(s, inner_col, (ex - e.radius + 3, wy - 2, e.radius * 2 - 6, e.radius + 4))
+                # Hooded cowl
+                hood_col = (int(50 * pulse), int(25 * pulse), int(100 * pulse))
+                if flash:
+                    hood_col = (255, 255, 255)
+                pygame.draw.arc(s, hood_col, (ex - 10, wy - 16, 20, 18), 0, math.pi, 4)
+                pygame.draw.ellipse(s, hood_col, (ex - 10, wy - 18, 20, 14))
+                # Glowing eyes deep in hood
+                pygame.draw.circle(s, (180, 160, 255), (ex - 5, wy - 10), 3)
+                pygame.draw.circle(s, (180, 160, 255), (ex + 5, wy - 10), 3)
+                pygame.draw.circle(s, (255, 240, 255), (ex - 5, wy - 10), 1)
+                pygame.draw.circle(s, (255, 240, 255), (ex + 5, wy - 10), 1)
+                # Orbiting soul wisps
+                for i in range(4):
+                    ang = self.game_time * 2.5 + i * math.tau / 4
+                    dist = e.radius + 8 + math.sin(self.game_time * 3 + i) * 3
+                    sx = ex + int(math.cos(ang) * dist)
+                    sy = wy + int(math.sin(ang) * (dist * 0.6))
+                    wisp_pulse = 0.5 + 0.5 * math.sin(self.game_time * 5 + i * 2)
+                    wisp_col = (int(120 * wisp_pulse), int(180 * wisp_pulse), int(255 * wisp_pulse))
+                    pygame.draw.circle(s, wisp_col, (sx, sy), 3)
+                    pygame.draw.circle(s, (200, 220, 255), (sx, sy), 1)
+                # Spectral trail behind
+                for i in range(4):
+                    t_alpha = 0.25 - i * 0.05
+                    t_col = (int(80 * t_alpha), int(40 * t_alpha), int(140 * t_alpha))
+                    trail_y = wy + 10 + i * 5
                     trail_w = e.radius - i * 2
                     if trail_w > 0:
-                        pygame.draw.ellipse(s, t_col, (ex - trail_w, trail_y, trail_w * 2, 6))
-                # Ghostly body (translucent-look with layered circles)
-                if e.hit_flash > 0:
-                    wr_col = (255, 255, 255)
-                else:
-                    pulse = 0.6 + 0.4 * math.sin(self.game_time * 4)
-                    wr_col = (int(80 * pulse), int(40 * pulse), int(150 * pulse))
-                pygame.draw.circle(s, wr_col, (ex, wy), e.radius)
-                # Inner glow
-                glow_col = (int(min(255, wr_col[0] + 60)), int(min(255, wr_col[1] + 40)),
-                            int(min(255, wr_col[2] + 50)))
-                pygame.draw.circle(s, glow_col, (ex, wy), e.radius - 5)
-                # Hollow eyes (bright glowing)
-                pygame.draw.circle(s, (200, 180, 255), (ex - 6, wy - 3), 4)
-                pygame.draw.circle(s, (200, 180, 255), (ex + 6, wy - 3), 4)
-                pygame.draw.circle(s, (255, 255, 255), (ex - 6, wy - 3), 2)
-                pygame.draw.circle(s, (255, 255, 255), (ex + 6, wy - 3), 2)
-                # Ghostly mouth (open wail)
-                pygame.draw.ellipse(s, (40, 20, 60), (ex - 4, wy + 4, 8, 6))
-                # Wispy particles around
-                for i in range(3):
-                    ang = self.game_time * 2 + i * math.tau / 3
-                    wx = ex + int(math.cos(ang) * (e.radius + 6))
-                    wwy = wy + int(math.sin(ang) * (e.radius + 4))
-                    pygame.draw.circle(s, (100, 70, 180), (wx, wwy), 2)
+                        pygame.draw.ellipse(s, t_col, (ex - trail_w, trail_y, trail_w * 2, 4))
 
             else:
-                # Fallback generic body
-                pygame.draw.circle(s, body_col, (ex, ey), e.radius)
+                # Fallback: ZOMBIE / UNDEAD - shambling corpse
+                zc = (90, 120, 75) if not flash else (255, 255, 255)
+                # Shambling body
+                pygame.draw.ellipse(s, zc, (ex - e.radius + 2, ey - 2, e.radius * 2 - 4, e.radius + 8))
+                # Torn flesh patches
+                pygame.draw.circle(s, (70, 95, 60) if not flash else (255, 255, 255), (ex - 4, ey + 2), 4)
+                pygame.draw.circle(s, (110, 80, 80) if not flash else (255, 255, 255), (ex + 5, ey - 1), 3)
+                # Head
+                pygame.draw.circle(s, zc, (ex, ey - e.radius + 2), 8)
+                # Sunken eyes
+                pygame.draw.circle(s, (40, 50, 35), (ex - 4, ey - e.radius + 1), 3)
+                pygame.draw.circle(s, (40, 50, 35), (ex + 4, ey - e.radius + 1), 3)
+                pygame.draw.circle(s, (180, 50, 50), (ex - 4, ey - e.radius + 1), 1)
+                pygame.draw.circle(s, (180, 50, 50), (ex + 4, ey - e.radius + 1), 1)
+                # Gaping mouth
+                pygame.draw.ellipse(s, (50, 30, 30), (ex - 3, ey - e.radius + 6, 6, 4))
+                # Dangling arms
+                arm_sway = math.sin(self.game_time * 2) * 3
+                pygame.draw.line(s, zc, (ex - e.radius + 2, ey - 2), (ex - e.radius - 3, ey + 10 + int(arm_sway)), 3)
+                pygame.draw.line(s, zc, (ex + e.radius - 2, ey - 2), (ex + e.radius + 3, ey + 10 - int(arm_sway)), 3)
 
         # HP bar above enemy
         if ratio < 1.0:
@@ -6530,18 +6596,30 @@ class Game:
                                      (200, iy, WIDTH - 400, 64), 1, border_radius=5)
                     # Item icon
                     pygame.draw.rect(self.screen, wc, (215, iy + 10, 44, 44), border_radius=5)
-                    icon_char = "B" if w.weapon_class == "bow" else "X"
+                    icon_char = self._get_item_icon(w)
                     it = self.font.render(icon_char, True, (20, 15, 10))
                     self.screen.blit(it, (237 - it.get_width() // 2, iy + 22))
-                    # Weapon info
+                    # Item info (type-aware)
                     nt = self.bigfont.render(w.name, True, wc)
                     self.screen.blit(nt, (275, iy + 5))
-                    rarity_label = f"[{RARITY_NAMES[w.rarity]}] {w.weapon_class.title()}  Dmg: {w.dmg_min}-{w.dmg_max}  Spd: {w.attack_speed:.1f}"
+                    rarity = getattr(w, 'rarity', RARITY_NORMAL)
+                    rarity_label = f"[{RARITY_NAMES.get(rarity, 'Normal')}]"
+                    if isinstance(w, Weapon):
+                        rarity_label += f" {w.weapon_class.title()}  Dmg: {w.dmg_min}-{w.dmg_max}  Spd: {w.attack_speed:.1f}"
+                    elif isinstance(w, Armor):
+                        slot_name = {"body": "Armor", "helm": "Helm", "gloves": "Gloves", "boots": "Boots"}.get(w.slot, "Armor")
+                        rarity_label += f" {slot_name}  Def: {w.total_defense()}"
+                    elif isinstance(w, Ring):
+                        slot_name = "Amulet" if w.slot == "amulet" else "Ring"
+                        rarity_label += f" {slot_name}"
+                    elif isinstance(w, Jewel):
+                        rarity_label = f"[Jewel]"
                     rt = self.font.render(rarity_label, True, (160, 155, 140))
                     self.screen.blit(rt, (275, iy + 36))
                     # Mods summary (compact)
                     mod_x = WIDTH - 550
-                    for mk, mv in w.mods.items():
+                    mods_dict = getattr(w, 'mods', {})
+                    for mk, mv in mods_dict.items():
                         if mv:
                             label = mk.replace("_", " ").title()
                             mt = self.font.render(f"+{mv} {label}", True, (100, 200, 255))
@@ -6575,13 +6653,24 @@ class Game:
                                      (200, iy, WIDTH - 400, 64), 1, border_radius=5)
                     # Item icon
                     pygame.draw.rect(self.screen, wc, (215, iy + 10, 44, 44), border_radius=5)
-                    icon_char = "B" if w.weapon_class == "bow" else "X"
+                    icon_char = self._get_item_icon(w)
                     it = self.font.render(icon_char, True, (20, 15, 10))
                     self.screen.blit(it, (237 - it.get_width() // 2, iy + 22))
-                    # Weapon info
+                    # Item info (type-aware)
                     nt = self.bigfont.render(w.name, True, wc)
                     self.screen.blit(nt, (275, iy + 5))
-                    rarity_label = f"[{RARITY_NAMES[w.rarity]}] {w.weapon_class.title()}  Dmg: {w.dmg_min}-{w.dmg_max}  Spd: {w.attack_speed:.1f}"
+                    rarity = getattr(w, 'rarity', RARITY_NORMAL)
+                    rarity_label = f"[{RARITY_NAMES.get(rarity, 'Normal')}]"
+                    if isinstance(w, Weapon):
+                        rarity_label += f" {w.weapon_class.title()}  Dmg: {w.dmg_min}-{w.dmg_max}  Spd: {w.attack_speed:.1f}"
+                    elif isinstance(w, Armor):
+                        slot_name = {"body": "Armor", "helm": "Helm", "gloves": "Gloves", "boots": "Boots"}.get(w.slot, "Armor")
+                        rarity_label += f" {slot_name}  Def: {w.total_defense()}"
+                    elif isinstance(w, Ring):
+                        slot_name = "Amulet" if w.slot == "amulet" else "Ring"
+                        rarity_label += f" {slot_name}"
+                    elif isinstance(w, Jewel):
+                        rarity_label = f"[Jewel]"
                     rt = self.font.render(rarity_label, True, (160, 155, 140))
                     self.screen.blit(rt, (275, iy + 36))
                     # Sell price
