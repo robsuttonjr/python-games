@@ -1280,14 +1280,14 @@ class Dungeon:
                     br = rng.randint(7, 13)
                     branch_rect = pygame.Rect(bx - br, by - br, br * 2, br * 2)
                     branch_rect.clamp_ip(pygame.Rect(2, 2, MAP_W - 4, MAP_H - 4))
-                self.rooms.append(branch_rect)
-                for ddx in range(-br, br + 1):
-                    for ddy in range(-br, br + 1):
-                        nx, ny = bx + ddx, by + ddy
-                        if 1 <= nx < MAP_W - 1 and 1 <= ny < MAP_H - 1:
-                            if ddx * ddx + ddy * ddy <= br * br:
-                                self.tiles[nx][ny] = FLOOR
-                                self.wall_type[nx][ny] = WALL_DEFAULT
+                    self.rooms.append(branch_rect)
+                    for ddx in range(-br, br + 1):
+                        for ddy in range(-br, br + 1):
+                            nx, ny = bx + ddx, by + ddy
+                            if 1 <= nx < MAP_W - 1 and 1 <= ny < MAP_H - 1:
+                                if ddx * ddx + ddy * ddy <= br * br:
+                                    self.tiles[nx][ny] = FLOOR
+                                    self.wall_type[nx][ny] = WALL_DEFAULT
 
         # ---- Step 7: Generate mini dungeons (cave/ruin clusters) ----
         self.mini_dungeons: List[pygame.Rect] = []
