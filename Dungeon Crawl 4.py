@@ -375,6 +375,133 @@ JEWEL_TYPES = [
     ("Skull",     {"life_steal": (2, 6), "bonus_mana": (5, 15)}, (180, 180, 170)),
 ]
 
+# ============ HELM BASES ============
+HELM_BASES = [
+    # (name, defense, str_req, ilvl)
+    ("Cap",              2,  0,  1),
+    ("Skull Cap",        5,  0,  3),
+    ("Helm",             9,  0,  5),
+    ("Full Helm",       14,  0,  8),
+    ("Great Helm",      20, 10, 12),
+    ("Mask",            26, 12, 15),
+    ("Crown",           34, 16, 18),
+    ("Bone Visage",     44, 20, 22),
+    ("Demonhead",       55, 26, 26),
+    ("Corona",          68, 32, 30),
+]
+
+HELM_PREFIXES = [
+    ("Sturdy",     {"defense": (2, 8)}),
+    ("Blessed",    {"defense": (5, 15)}),
+    ("Hawk's",     {"dexterity": (1, 4)}),
+    ("Prismatic",  {"fire_resist": (5, 12), "ice_resist": (5, 12)}),
+    ("Arcane",     {"bonus_mana": (8, 25)}),
+    ("Stalwart",   {"bonus_hp": (10, 30)}),
+]
+HELM_SUFFIXES = [
+    ("of Light",       {"bonus_hp": (10, 30), "bonus_mana": (5, 15)}),
+    ("of the Mind",    {"energy": (2, 5)}),
+    ("of the Bear",    {"strength": (2, 5)}),
+    ("of Warding",     {"defense": (5, 15)}),
+    ("of Insight",     {"crit_chance": (1, 4)}),
+    ("of the Sage",    {"bonus_mana": (15, 40)}),
+]
+
+# ============ GLOVES BASES ============
+GLOVES_BASES = [
+    # (name, defense, str_req, ilvl)
+    ("Leather Gloves",    2,  0,  1),
+    ("Heavy Gloves",      5,  0,  3),
+    ("Chain Gloves",      9,  0,  6),
+    ("Light Gauntlets",  14,  0,  9),
+    ("Gauntlets",        20, 10, 12),
+    ("War Gauntlets",    28, 14, 16),
+    ("Crusader Gauntlets",36, 20, 21),
+    ("Ogre Gauntlets",   46, 26, 26),
+    ("Vambraces",        58, 32, 30),
+]
+
+GLOVES_PREFIXES = [
+    ("Deft",       {"dexterity": (1, 4), "crit_chance": (1, 3)}),
+    ("Brutal",     {"dmg_min": (1, 3), "dmg_max": (2, 5)}),
+    ("Quick",      {"attack_speed": (-0.05, -0.15)}),
+    ("Fortified",  {"defense": (3, 12)}),
+    ("Vampiric",   {"life_steal": (1, 4)}),
+    ("Charged",    {"lightning_dmg": (2, 8)}),
+]
+GLOVES_SUFFIXES = [
+    ("of Haste",       {"attack_speed": (-0.05, -0.15)}),
+    ("of Striking",    {"crit_chance": (2, 6)}),
+    ("of the Leech",   {"life_steal": (1, 5)}),
+    ("of Might",       {"strength": (2, 5)}),
+    ("of Accuracy",    {"dexterity": (2, 5)}),
+    ("of Slaying",     {"dmg_min": (2, 5), "dmg_max": (3, 8)}),
+]
+
+# ============ BOOTS BASES ============
+BOOTS_BASES = [
+    # (name, defense, str_req, ilvl)
+    ("Leather Boots",     2,  0,  1),
+    ("Heavy Boots",       5,  0,  3),
+    ("Chain Boots",       9,  0,  6),
+    ("Light Plate Boots",14,  0,  9),
+    ("Greaves",          20, 10, 12),
+    ("War Boots",        28, 14, 16),
+    ("Mirrored Boots",   36, 20, 21),
+    ("Myrmidon Greaves", 46, 26, 26),
+    ("Boneweave Boots",  58, 32, 30),
+]
+
+BOOTS_PREFIXES = [
+    ("Fleet",      {"move_speed": (5, 15)}),
+    ("Sturdy",     {"defense": (3, 12)}),
+    ("Stalwart",   {"vitality": (1, 4)}),
+    ("Blessed",    {"defense": (5, 18), "bonus_hp": (5, 12)}),
+    ("Rugged",     {"defense": (2, 8), "strength": (1, 3)}),
+    ("Treaded",    {"move_speed": (8, 20), "dexterity": (1, 3)}),
+]
+BOOTS_SUFFIXES = [
+    ("of Speed",       {"move_speed": (10, 25)}),
+    ("of Stability",   {"defense": (5, 15)}),
+    ("of the Ox",      {"vitality": (2, 6)}),
+    ("of Escape",      {"move_speed": (5, 12), "bonus_hp": (5, 15)}),
+    ("of the Titan",   {"strength": (2, 5)}),
+    ("of the Wind",    {"move_speed": (8, 18), "dexterity": (1, 3)}),
+]
+
+# ============ AMULET BASES ============
+AMULET_BASES = [
+    # (name, ilvl)
+    ("Bone Amulet",       1),
+    ("Tooth Amulet",      4),
+    ("Coral Amulet",      7),
+    ("Gold Amulet",      10),
+    ("Jade Amulet",      14),
+    ("Onyx Amulet",      18),
+    ("Prismatic Amulet", 22),
+    ("Scarab Amulet",    26),
+    ("Mara's Amulet",    30),
+]
+
+AMULET_PREFIXES = [
+    ("Fortified",  {"bonus_hp": (12, 40)}),
+    ("Arcane",     {"bonus_mana": (12, 35)}),
+    ("Cruel",      {"dmg_min": (2, 5), "dmg_max": (3, 8)}),
+    ("Vampiric",   {"life_steal": (2, 6)}),
+    ("Prismatic",  {"fire_resist": (5, 15), "ice_resist": (5, 15), "lightning_resist": (5, 15)}),
+    ("Eagle's",    {"dexterity": (2, 6)}),
+    ("Lion's",     {"strength": (2, 6)}),
+]
+AMULET_SUFFIXES = [
+    ("of the Zodiac",   {"bonus_hp": (8, 20), "bonus_mana": (8, 20)}),
+    ("of Perfection",   {"strength": (1, 3), "dexterity": (1, 3), "vitality": (1, 3)}),
+    ("of the Stars",    {"crit_chance": (3, 8)}),
+    ("of Ages",         {"bonus_hp": (15, 45)}),
+    ("of Wizardry",     {"energy": (3, 8), "bonus_mana": (10, 25)}),
+    ("of the Vampire",  {"life_steal": (3, 8)}),
+    ("of Mastery",      {"dmg_min": (2, 5), "dmg_max": (4, 10)}),
+]
+
 # Affixes for magic/rare items
 PREFIXES = [
     ("Fine",      {"dmg_min": (1, 3), "dmg_max": (2, 5)}),
@@ -645,6 +772,7 @@ class Armor:
     ilvl: int = 1
     sockets: int = 0
     jewels: list = field(default_factory=list)  # list of Jewel
+    slot: str = "body"  # "body", "helm", "gloves", "boots"
     def get_color(self) -> Tuple[int, int, int]:
         return RARITY_COLORS.get(self.rarity, (180, 180, 180))
     def total_defense(self) -> int:
@@ -653,8 +781,9 @@ class Armor:
             d += j.mods.get("defense", 0)
         return d
     def get_tooltip_lines(self) -> List[str]:
+        slot_label = {"body": "Armor", "helm": "Helm", "gloves": "Gloves", "boots": "Boots"}.get(self.slot, "Armor")
         lines = [self.name]
-        lines.append(f"{self.base_name or self.name}")
+        lines.append(f"{self.base_name or self.name}  ({slot_label})")
         lines.append(f"Defense: {self.total_defense()}")
         if self.sockets > 0:
             filled = len(self.jewels)
@@ -676,11 +805,13 @@ class Ring:
     prefix: str = ""
     suffix: str = ""
     ilvl: int = 1
+    slot: str = "ring"  # "ring" or "amulet"
     def get_color(self) -> Tuple[int, int, int]:
         return RARITY_COLORS.get(self.rarity, (180, 180, 180))
     def get_tooltip_lines(self) -> List[str]:
+        slot_label = "Amulet" if self.slot == "amulet" else "Ring"
         lines = [self.name]
-        lines.append(f"{self.base_name or self.name}")
+        lines.append(f"{self.base_name or self.name}  ({slot_label})")
         for k, v in self.mods.items():
             if v:
                 label = k.replace("_", " ").title()
@@ -710,7 +841,11 @@ class Loot:
     potion_mana: bool = False
     weapon: Optional[Weapon] = None
     armor: Optional[Armor] = None
+    helm: Optional[Armor] = None
+    gloves: Optional[Armor] = None
+    boots: Optional[Armor] = None
     ring: Optional[Ring] = None
+    amulet: Optional[Ring] = None
     jewel: Optional[Jewel] = None
     dmg_boost: bool = False
     shield_boost: bool = False
@@ -773,39 +908,52 @@ class Player(Entity):
     skills: dict = field(default_factory=dict)  # skill_id -> level
     crit_chance: float = 5.0  # base 5% crit
     # Equipment slots
+    equipped_helm: Optional[Armor] = None
     equipped_armor: Optional[Armor] = None
+    equipped_gloves: Optional[Armor] = None
+    equipped_boots: Optional[Armor] = None
     equipped_ring1: Optional[Ring] = None
     equipped_ring2: Optional[Ring] = None
+    equipped_amulet: Optional[Ring] = None
     # Inventory: list of items (Weapon, Armor, Ring, Jewel)
     inventory: list = field(default_factory=list)  # max INV_COLS*INV_ROWS
     # Lives / respawn
     lives: int = 3
     max_lives: int = 3
 
+    def _all_armor_slots(self):
+        return [self.equipped_helm, self.equipped_armor, self.equipped_gloves, self.equipped_boots]
+
+    def _all_jewelry_slots(self):
+        return [self.equipped_ring1, self.equipped_ring2, self.equipped_amulet]
+
     def max_hp(self) -> int:
         base = PLAYER_HP + 10 * self.level + self.vitality * 3
         base += self.weapon.mods.get("bonus_hp", 0)
-        if self.equipped_armor:
-            base += self.equipped_armor.mods.get("bonus_hp", 0)
-        for ring in (self.equipped_ring1, self.equipped_ring2):
-            if ring:
-                base += ring.mods.get("bonus_hp", 0)
+        for a in self._all_armor_slots():
+            if a:
+                base += a.mods.get("bonus_hp", 0)
+        for j in self._all_jewelry_slots():
+            if j:
+                base += j.mods.get("bonus_hp", 0)
         return base
 
     def max_mana(self) -> int:
         base = PLAYER_MANA + 8 * self.level + self.energy * 4
         base += self.weapon.mods.get("bonus_mana", 0)
-        if self.equipped_armor:
-            base += self.equipped_armor.mods.get("bonus_mana", 0)
-        for ring in (self.equipped_ring1, self.equipped_ring2):
-            if ring:
-                base += ring.mods.get("bonus_mana", 0)
+        for a in self._all_armor_slots():
+            if a:
+                base += a.mods.get("bonus_mana", 0)
+        for j in self._all_jewelry_slots():
+            if j:
+                base += j.mods.get("bonus_mana", 0)
         return base
 
     def total_defense(self) -> int:
         d = 0
-        if self.equipped_armor:
-            d += self.equipped_armor.total_defense()
+        for a in self._all_armor_slots():
+            if a:
+                d += a.total_defense()
         return d
 
     def damage_reduction(self) -> float:
@@ -3337,22 +3485,25 @@ class Game:
                         else:
                             self.add_floating_text(l.pos.x, l.pos.y - 10, "Inventory Full!", (200, 60, 60), 1.0)
                     self.play_sound("pickup")
-                if l.armor:
-                    ac = l.armor.get_color()
-                    # Auto-equip if better or no armor
-                    if not self.player.equipped_armor or l.armor.total_defense() > self.player.equipped_armor.total_defense():
-                        if self.player.equipped_armor and len(self.player.inventory) < INV_COLS * INV_ROWS:
-                            self.player.inventory.append(self.player.equipped_armor)
-                        self.player.equipped_armor = l.armor
-                        self.add_floating_text(l.pos.x, l.pos.y - 10, l.armor.name, ac, 1.5)
-                    else:
-                        if len(self.player.inventory) < INV_COLS * INV_ROWS:
-                            self.player.inventory.append(l.armor)
-                            self.add_floating_text(l.pos.x, l.pos.y - 10, f"[Inv] {l.armor.name}", ac, 1.2)
-                    self.play_sound("pickup")
+                # -- Auto-equip armor-slot items (body/helm/gloves/boots) --
+                for loot_field, slot_attr in [("armor", "equipped_armor"), ("helm", "equipped_helm"),
+                                               ("gloves", "equipped_gloves"), ("boots", "equipped_boots")]:
+                    loot_item = getattr(l, loot_field, None)
+                    if loot_item:
+                        ic = loot_item.get_color()
+                        current = getattr(self.player, slot_attr, None)
+                        if not current or loot_item.total_defense() > current.total_defense():
+                            if current and len(self.player.inventory) < INV_COLS * INV_ROWS:
+                                self.player.inventory.append(current)
+                            setattr(self.player, slot_attr, loot_item)
+                            self.add_floating_text(l.pos.x, l.pos.y - 10, loot_item.name, ic, 1.5)
+                        else:
+                            if len(self.player.inventory) < INV_COLS * INV_ROWS:
+                                self.player.inventory.append(loot_item)
+                                self.add_floating_text(l.pos.x, l.pos.y - 10, f"[Inv] {loot_item.name}", ic, 1.2)
+                        self.play_sound("pickup")
                 if l.ring:
                     rc = l.ring.get_color()
-                    # Auto-equip to first empty ring slot
                     if not self.player.equipped_ring1:
                         self.player.equipped_ring1 = l.ring
                         self.add_floating_text(l.pos.x, l.pos.y - 10, l.ring.name, rc, 1.5)
@@ -3363,6 +3514,16 @@ class Game:
                         if len(self.player.inventory) < INV_COLS * INV_ROWS:
                             self.player.inventory.append(l.ring)
                             self.add_floating_text(l.pos.x, l.pos.y - 10, f"[Inv] {l.ring.name}", rc, 1.2)
+                    self.play_sound("pickup")
+                if l.amulet:
+                    ac = l.amulet.get_color()
+                    if not self.player.equipped_amulet:
+                        self.player.equipped_amulet = l.amulet
+                        self.add_floating_text(l.pos.x, l.pos.y - 10, l.amulet.name, ac, 1.5)
+                    else:
+                        if len(self.player.inventory) < INV_COLS * INV_ROWS:
+                            self.player.inventory.append(l.amulet)
+                            self.add_floating_text(l.pos.x, l.pos.y - 10, f"[Inv] {l.amulet.name}", ac, 1.2)
                     self.play_sound("pickup")
                 if l.jewel:
                     jc = l.jewel.get_color()
@@ -3522,11 +3683,19 @@ class Game:
             drops.append(Loot(pos=sp(), shield_boost=True))
         if random.random() < INFUSION_DROP_CHANCE:
             drops.append(Loot(pos=sp(), infusion=random.choice(INFUSION_TYPES)))
-        # Armor/ring/jewel drops
-        if random.random() < 0.06:
+        # Equipment drops (armor/helm/gloves/boots/ring/amulet/jewel)
+        if random.random() < 0.05:
             drops.append(Loot(pos=sp(), armor=self._gen_armor()))
         if random.random() < 0.04:
+            drops.append(Loot(pos=sp(), helm=self._gen_helm()))
+        if random.random() < 0.035:
+            drops.append(Loot(pos=sp(), gloves=self._gen_gloves()))
+        if random.random() < 0.035:
+            drops.append(Loot(pos=sp(), boots=self._gen_boots()))
+        if random.random() < 0.03:
             drops.append(Loot(pos=sp(), ring=self._gen_ring()))
+        if random.random() < 0.02:
+            drops.append(Loot(pos=sp(), amulet=self._gen_amulet()))
         if random.random() < 0.03:
             drops.append(Loot(pos=sp(), jewel=self._gen_jewel()))
         if isinstance(e, Elite):
@@ -3778,6 +3947,134 @@ class Game:
         elif quality == "Flawed":
             mods = {k: max(1, int(v * 0.75)) for k, v in mods.items()}
         return Jewel(name=full_name, mods=mods, color=jcolor)
+
+    def _gen_helm(self, force_rarity: Optional[str] = None) -> Armor:
+        """Generate a helm scaled to current level."""
+        depth = self.current_level
+        rarity = force_rarity or _pick_rarity(depth, self._get_tier_scale()["drop_bonus"])
+        eligible = [h for h in HELM_BASES if h[3] <= depth + 3]
+        if not eligible:
+            eligible = HELM_BASES[:2]
+        weights = [1.0 + max(0, depth - h[3]) * 0.2 for h in eligible]
+        base = random.choices(eligible, weights=weights, k=1)[0]
+        name, defense, str_req, ilvl = base
+        mods = {}
+        display_name = name
+        prefix_name = ""
+        suffix_name = ""
+        sockets = 0
+        defense = int(defense * (1.0 + depth * 0.08))
+        if rarity in (RARITY_MAGIC, RARITY_RARE, RARITY_UNIQUE, RARITY_SET):
+            pn, pm = random.choice(HELM_PREFIXES)
+            prefix_name = pn
+            for k, (lo, hi) in pm.items():
+                mods[k] = mods.get(k, 0) + random.randint(int(lo), int(hi))
+            display_name = f"{pn} {name}"
+        if rarity in (RARITY_RARE, RARITY_UNIQUE, RARITY_SET):
+            sn, sm = random.choice(HELM_SUFFIXES)
+            suffix_name = sn
+            for k, (lo, hi) in sm.items():
+                mods[k] = mods.get(k, 0) + random.randint(int(lo), int(hi))
+            display_name = f"{display_name} {sn}"
+            sockets = random.randint(0, min(2, 1 + depth // 10))
+        return Armor(name=display_name, defense=defense, rarity=rarity, mods=mods,
+                     base_name=name, prefix=prefix_name, suffix=suffix_name,
+                     ilvl=ilvl, sockets=sockets, slot="helm")
+
+    def _gen_gloves(self, force_rarity: Optional[str] = None) -> Armor:
+        """Generate gloves scaled to current level."""
+        depth = self.current_level
+        rarity = force_rarity or _pick_rarity(depth, self._get_tier_scale()["drop_bonus"])
+        eligible = [g for g in GLOVES_BASES if g[3] <= depth + 3]
+        if not eligible:
+            eligible = GLOVES_BASES[:2]
+        weights = [1.0 + max(0, depth - g[3]) * 0.2 for g in eligible]
+        base = random.choices(eligible, weights=weights, k=1)[0]
+        name, defense, str_req, ilvl = base
+        mods = {}
+        display_name = name
+        prefix_name = ""
+        suffix_name = ""
+        sockets = 0
+        defense = int(defense * (1.0 + depth * 0.06))
+        if rarity in (RARITY_MAGIC, RARITY_RARE, RARITY_UNIQUE, RARITY_SET):
+            pn, pm = random.choice(GLOVES_PREFIXES)
+            prefix_name = pn
+            for k, (lo, hi) in pm.items():
+                mods[k] = mods.get(k, 0) + random.randint(int(lo), int(hi))
+            display_name = f"{pn} {name}"
+        if rarity in (RARITY_RARE, RARITY_UNIQUE, RARITY_SET):
+            sn, sm = random.choice(GLOVES_SUFFIXES)
+            suffix_name = sn
+            for k, (lo, hi) in sm.items():
+                mods[k] = mods.get(k, 0) + random.randint(int(lo), int(hi))
+            display_name = f"{display_name} {sn}"
+            sockets = random.randint(0, min(2, 1 + depth // 12))
+        return Armor(name=display_name, defense=defense, rarity=rarity, mods=mods,
+                     base_name=name, prefix=prefix_name, suffix=suffix_name,
+                     ilvl=ilvl, sockets=sockets, slot="gloves")
+
+    def _gen_boots(self, force_rarity: Optional[str] = None) -> Armor:
+        """Generate boots scaled to current level."""
+        depth = self.current_level
+        rarity = force_rarity or _pick_rarity(depth, self._get_tier_scale()["drop_bonus"])
+        eligible = [b for b in BOOTS_BASES if b[3] <= depth + 3]
+        if not eligible:
+            eligible = BOOTS_BASES[:2]
+        weights = [1.0 + max(0, depth - b[3]) * 0.2 for b in eligible]
+        base = random.choices(eligible, weights=weights, k=1)[0]
+        name, defense, str_req, ilvl = base
+        mods = {}
+        display_name = name
+        prefix_name = ""
+        suffix_name = ""
+        sockets = 0
+        defense = int(defense * (1.0 + depth * 0.06))
+        if rarity in (RARITY_MAGIC, RARITY_RARE, RARITY_UNIQUE, RARITY_SET):
+            pn, pm = random.choice(BOOTS_PREFIXES)
+            prefix_name = pn
+            for k, (lo, hi) in pm.items():
+                mods[k] = mods.get(k, 0) + random.randint(int(lo), int(hi))
+            display_name = f"{pn} {name}"
+        if rarity in (RARITY_RARE, RARITY_UNIQUE, RARITY_SET):
+            sn, sm = random.choice(BOOTS_SUFFIXES)
+            suffix_name = sn
+            for k, (lo, hi) in sm.items():
+                mods[k] = mods.get(k, 0) + random.randint(int(lo), int(hi))
+            display_name = f"{display_name} {sn}"
+            sockets = random.randint(0, min(1, depth // 15))
+        return Armor(name=display_name, defense=defense, rarity=rarity, mods=mods,
+                     base_name=name, prefix=prefix_name, suffix=suffix_name,
+                     ilvl=ilvl, sockets=sockets, slot="boots")
+
+    def _gen_amulet(self, force_rarity: Optional[str] = None) -> Ring:
+        """Generate an amulet scaled to current level."""
+        depth = self.current_level
+        rarity = force_rarity or _pick_rarity(depth, self._get_tier_scale()["drop_bonus"])
+        eligible = [a for a in AMULET_BASES if a[1] <= depth + 3]
+        if not eligible:
+            eligible = AMULET_BASES[:2]
+        base = random.choice(eligible)
+        name, ilvl = base
+        mods = {}
+        display_name = name
+        prefix_name = ""
+        suffix_name = ""
+        if rarity in (RARITY_MAGIC, RARITY_RARE, RARITY_UNIQUE, RARITY_SET):
+            pn, pm = random.choice(AMULET_PREFIXES)
+            prefix_name = pn
+            for k, (lo, hi) in pm.items():
+                mods[k] = mods.get(k, 0) + random.randint(int(lo), int(hi))
+            display_name = f"{pn} {name}"
+        if rarity in (RARITY_RARE, RARITY_UNIQUE, RARITY_SET):
+            sn, sm = random.choice(AMULET_SUFFIXES)
+            suffix_name = sn
+            for k, (lo, hi) in sm.items():
+                mods[k] = mods.get(k, 0) + random.randint(int(lo), int(hi))
+            display_name = f"{display_name} {sn}"
+        return Ring(name=display_name, rarity=rarity, mods=mods,
+                    base_name=name, prefix=prefix_name, suffix=suffix_name,
+                    ilvl=ilvl, slot="amulet")
 
     def _is_act_boss_level(self) -> bool:
         """True if current level is the last in the act (boss level)."""
@@ -4221,24 +4518,35 @@ class Game:
                 # Pulsing ring
                 ring_pulse = int(3 + 2 * math.sin(self.game_time * 4))
                 pygame.draw.circle(s, icol, (vx, vy), 11 + ring_pulse, 2)
-            elif l.armor:
-                ac = l.armor.get_color()
+            elif l.armor or l.helm or l.gloves or l.boots:
+                eq_item = l.armor or l.helm or l.gloves or l.boots
+                ac = eq_item.get_color()
                 pygame.draw.circle(s, (ac[0]//3, ac[1]//3, ac[2]//3), (vx, vy), 16)
                 pygame.draw.rect(s, ac, (vx - 9, vy - 10, 18, 20), border_radius=4)
                 pygame.draw.rect(s, (min(255, ac[0]+40), min(255, ac[1]+40), min(255, ac[2]+40)),
                                  (vx - 9, vy - 10, 18, 20), 1, border_radius=4)
-                # Armor symbol (chestplate)
-                pygame.draw.line(s, (min(255, ac[0]+60), min(255, ac[1]+60), min(255, ac[2]+60)),
-                                (vx - 4, vy - 5), (vx + 4, vy - 5), 2)
-                alabel = self.font.render(l.armor.name, True, ac)
+                # Slot-specific icon hint
+                hi = (min(255, ac[0]+60), min(255, ac[1]+60), min(255, ac[2]+60))
+                if eq_item.slot == "helm":
+                    pygame.draw.arc(s, hi, (vx - 6, vy - 8, 12, 10), 0, math.pi, 2)
+                elif eq_item.slot == "gloves":
+                    pygame.draw.line(s, hi, (vx - 4, vy - 2), (vx + 4, vy - 2), 2)
+                    pygame.draw.line(s, hi, (vx - 4, vy + 2), (vx + 4, vy + 2), 2)
+                elif eq_item.slot == "boots":
+                    pygame.draw.line(s, hi, (vx - 5, vy + 3), (vx + 5, vy + 3), 2)
+                    pygame.draw.line(s, hi, (vx + 5, vy + 3), (vx + 5, vy - 3), 2)
+                else:
+                    pygame.draw.line(s, hi, (vx - 4, vy - 5), (vx + 4, vy - 5), 2)
+                alabel = self.font.render(eq_item.name, True, ac)
                 s.blit(alabel, (vx - alabel.get_width() // 2, vy - 24))
-            elif l.ring:
-                rc = l.ring.get_color()
+            elif l.ring or l.amulet:
+                jewel_item = l.ring or l.amulet
+                rc = jewel_item.get_color()
                 pygame.draw.circle(s, (rc[0]//3, rc[1]//3, rc[2]//3), (vx, vy), 13)
                 pygame.draw.circle(s, rc, (vx, vy), 8, 2)
                 pygame.draw.circle(s, (min(255, rc[0]+60), min(255, rc[1]+60), min(255, rc[2]+60)),
                                    (vx, vy - 3), 3)
-                rlabel = self.font.render(l.ring.name, True, rc)
+                rlabel = self.font.render(jewel_item.name, True, rc)
                 s.blit(rlabel, (vx - rlabel.get_width() // 2, vy - 22))
             elif l.jewel:
                 jc = l.jewel.get_color()
@@ -5411,7 +5719,7 @@ class Game:
             ("Q / E", "Use HP / Mana Potion"),
             ("Left Shift", "Dash (grants invulnerability)"),
             ("C", "Character Stats (allocate stat points)"),
-            ("I", "Inventory (equip/sell weapons)"),
+            ("I", "Equipment & Inventory (equip gear, socket jewels)"),
             ("T", "Skill Tree (spend skill points)"),
             ("F11", "Toggle Fullscreen"),
             ("P / Esc", "Pause Menu (Resume, Save, Quit)"),
@@ -5566,15 +5874,34 @@ class Game:
             pygame.display.flip()
             self.clock.tick(30)
 
-    # ---- INVENTORY SCREEN (I key) ----
+    # ---- INVENTORY / EQUIPMENT SCREEN (I key) ----
     def _inventory_screen(self):
-        """D2-style inventory with equipped weapon and grid."""
+        """D2R-style equipment screen with paper doll, inventory grid, and socketing."""
         p = self.player
-        cell_w, cell_h = 60, 60
-        grid_x = WIDTH // 2 - (INV_COLS * cell_w) // 2
-        grid_y = 360
-        selected = -1  # -1 = equipped, 0+ = inventory slot
-        scroll = 0
+        cell_w, cell_h = 54, 54
+        # Equipment slot definitions: (label, attr_name, slot_type, x, y, w, h)
+        # slot_type: "weapon", "armor_body", "armor_helm", "armor_gloves", "armor_boots", "ring", "amulet"
+        eq_panel_x = 80
+        eq_panel_y = 100
+        slot_w, slot_h = 70, 70
+        equip_slots = [
+            ("Helm",    "equipped_helm",    "armor_helm",    eq_panel_x + 155, eq_panel_y + 10),
+            ("Amulet",  "equipped_amulet",  "amulet",        eq_panel_x + 290, eq_panel_y + 30),
+            ("Weapon",  "weapon",           "weapon",        eq_panel_x + 20,  eq_panel_y + 110),
+            ("Armor",   "equipped_armor",   "armor_body",    eq_panel_x + 155, eq_panel_y + 110),
+            ("Gloves",  "equipped_gloves",  "armor_gloves",  eq_panel_x + 290, eq_panel_y + 110),
+            ("Ring 1",  "equipped_ring1",   "ring",          eq_panel_x + 70,  eq_panel_y + 220),
+            ("Boots",   "equipped_boots",   "armor_boots",   eq_panel_x + 155, eq_panel_y + 220),
+            ("Ring 2",  "equipped_ring2",   "ring",          eq_panel_x + 240, eq_panel_y + 220),
+        ]
+        # Inventory grid (right side)
+        grid_cols = 8
+        grid_rows = 5
+        grid_x = WIDTH // 2 + 100
+        grid_y = 110
+        # Selected item for dragging/socketing (index into inventory, or None)
+        selected_idx = None
+        socketing_mode = False  # True when a jewel is selected for socketing
         running = True
         while running:
             mx, my = pygame.mouse.get_pos()
@@ -5586,146 +5913,372 @@ class Game:
                     if ev.key in (pygame.K_i, pygame.K_ESCAPE):
                         running = False
                 if ev.type == pygame.MOUSEBUTTONDOWN:
-                    if ev.button == 1:  # Left click - equip
-                        for idx in range(len(p.inventory)):
-                            row = idx // INV_COLS
-                            col = idx % INV_COLS
+                    if ev.button == 1:  # Left click
+                        clicked_something = False
+                        # Check if clicking an equipment slot
+                        for label, attr, stype, sx, sy in equip_slots:
+                            if sx <= mx <= sx + slot_w and sy <= my <= sy + slot_h:
+                                clicked_something = True
+                                equipped_item = getattr(p, attr)
+                                if socketing_mode and selected_idx is not None:
+                                    # Try to socket jewel into this equipped item
+                                    inv_item = p.inventory[selected_idx]
+                                    if isinstance(inv_item, Jewel) and equipped_item:
+                                        can_socket = False
+                                        if isinstance(equipped_item, Weapon) and equipped_item.sockets > len(equipped_item.jewels):
+                                            can_socket = True
+                                        elif isinstance(equipped_item, Armor) and equipped_item.sockets > len(equipped_item.jewels):
+                                            can_socket = True
+                                        if can_socket:
+                                            equipped_item.jewels.append(inv_item)
+                                            # Apply jewel mods
+                                            for mk, mv in inv_item.mods.items():
+                                                equipped_item.mods[mk] = equipped_item.mods.get(mk, 0) + mv
+                                            p.inventory.pop(selected_idx)
+                                            self.play_sound("pickup")
+                                            selected_idx = None
+                                            socketing_mode = False
+                                        else:
+                                            selected_idx = None
+                                            socketing_mode = False
+                                elif selected_idx is not None:
+                                    # Try to equip the selected inventory item into this slot
+                                    inv_item = p.inventory[selected_idx]
+                                    can_equip = False
+                                    if stype == "weapon" and isinstance(inv_item, Weapon):
+                                        can_equip = True
+                                    elif stype == "armor_body" and isinstance(inv_item, Armor) and inv_item.slot == "body":
+                                        can_equip = True
+                                    elif stype == "armor_helm" and isinstance(inv_item, Armor) and inv_item.slot == "helm":
+                                        can_equip = True
+                                    elif stype == "armor_gloves" and isinstance(inv_item, Armor) and inv_item.slot == "gloves":
+                                        can_equip = True
+                                    elif stype == "armor_boots" and isinstance(inv_item, Armor) and inv_item.slot == "boots":
+                                        can_equip = True
+                                    elif stype == "ring" and isinstance(inv_item, Ring) and inv_item.slot == "ring":
+                                        can_equip = True
+                                    elif stype == "amulet" and isinstance(inv_item, Ring) and inv_item.slot == "amulet":
+                                        can_equip = True
+                                    if can_equip:
+                                        old = equipped_item
+                                        if stype == "weapon":
+                                            p.weapon = inv_item
+                                        else:
+                                            setattr(p, attr, inv_item)
+                                        if old:
+                                            p.inventory[selected_idx] = old
+                                        else:
+                                            p.inventory.pop(selected_idx)
+                                        self.play_sound("pickup")
+                                        selected_idx = None
+                                    else:
+                                        selected_idx = None
+                                else:
+                                    # Unequip: move equipped item to inventory
+                                    if equipped_item and attr != "weapon":
+                                        if len(p.inventory) < grid_cols * grid_rows:
+                                            p.inventory.append(equipped_item)
+                                            setattr(p, attr, None)
+                                            self.play_sound("pickup")
+                                break
+                        if clicked_something:
+                            continue
+                        # Check if clicking an inventory slot
+                        for idx in range(grid_cols * grid_rows):
+                            row = idx // grid_cols
+                            col = idx % grid_cols
                             cx = grid_x + col * cell_w
                             cy = grid_y + row * cell_h
                             if cx <= mx <= cx + cell_w and cy <= my <= cy + cell_h:
-                                # Swap with equipped
-                                old = p.weapon
-                                p.weapon = p.inventory[idx]
-                                p.inventory[idx] = old
-                                self.play_sound("pickup")
-                                self.add_floating_text(p.pos.x, p.pos.y - 20,
-                                                       f"Equipped {p.weapon.name}", p.weapon.get_color(), 1.0)
-                    elif ev.button == 3:  # Right click - sell for gold
+                                clicked_something = True
+                                if idx < len(p.inventory):
+                                    if selected_idx == idx:
+                                        # Deselect
+                                        selected_idx = None
+                                        socketing_mode = False
+                                    else:
+                                        if socketing_mode and selected_idx is not None:
+                                            # Try to socket into an inventory item
+                                            jewel_item = p.inventory[selected_idx]
+                                            target = p.inventory[idx]
+                                            if isinstance(jewel_item, Jewel):
+                                                can_socket = False
+                                                if isinstance(target, Weapon) and target.sockets > len(target.jewels):
+                                                    can_socket = True
+                                                elif isinstance(target, Armor) and target.sockets > len(target.jewels):
+                                                    can_socket = True
+                                                if can_socket:
+                                                    target.jewels.append(jewel_item)
+                                                    for mk, mv in jewel_item.mods.items():
+                                                        target.mods[mk] = target.mods.get(mk, 0) + mv
+                                                    p.inventory.pop(selected_idx)
+                                                    self.play_sound("pickup")
+                                            selected_idx = None
+                                            socketing_mode = False
+                                        else:
+                                            selected_idx = idx
+                                            item = p.inventory[idx]
+                                            socketing_mode = isinstance(item, Jewel)
+                                            # Auto-equip on click: if it's an equippable item, try to equip it
+                                            if isinstance(item, Weapon):
+                                                old = p.weapon
+                                                p.weapon = item
+                                                p.inventory[idx] = old
+                                                self.play_sound("pickup")
+                                                selected_idx = None
+                                            elif isinstance(item, Armor):
+                                                slot_map = {"body": "equipped_armor", "helm": "equipped_helm",
+                                                            "gloves": "equipped_gloves", "boots": "equipped_boots"}
+                                                attr_name = slot_map.get(item.slot)
+                                                if attr_name:
+                                                    old = getattr(p, attr_name)
+                                                    setattr(p, attr_name, item)
+                                                    if old:
+                                                        p.inventory[idx] = old
+                                                    else:
+                                                        p.inventory.pop(idx)
+                                                    self.play_sound("pickup")
+                                                    selected_idx = None
+                                            elif isinstance(item, Ring) and item.slot == "ring":
+                                                if not p.equipped_ring1:
+                                                    p.equipped_ring1 = item
+                                                    p.inventory.pop(idx)
+                                                elif not p.equipped_ring2:
+                                                    p.equipped_ring2 = item
+                                                    p.inventory.pop(idx)
+                                                else:
+                                                    old = p.equipped_ring1
+                                                    p.equipped_ring1 = item
+                                                    p.inventory[idx] = old
+                                                self.play_sound("pickup")
+                                                selected_idx = None
+                                            elif isinstance(item, Ring) and item.slot == "amulet":
+                                                old = p.equipped_amulet
+                                                p.equipped_amulet = item
+                                                if old:
+                                                    p.inventory[idx] = old
+                                                else:
+                                                    p.inventory.pop(idx)
+                                                self.play_sound("pickup")
+                                                selected_idx = None
+                                else:
+                                    selected_idx = None
+                                    socketing_mode = False
+                                break
+                        if not clicked_something:
+                            selected_idx = None
+                            socketing_mode = False
+                    elif ev.button == 3:  # Right click - sell
                         for idx in range(len(p.inventory)):
-                            row = idx // INV_COLS
-                            col = idx % INV_COLS
+                            row = idx // grid_cols
+                            col = idx % grid_cols
                             cx = grid_x + col * cell_w
                             cy = grid_y + row * cell_h
                             if cx <= mx <= cx + cell_w and cy <= my <= cy + cell_h:
-                                sell_price = max(1, (p.inventory[idx].dmg_min + p.inventory[idx].dmg_max) // 2)
-                                rarity_mult = {RARITY_NORMAL: 1, RARITY_MAGIC: 2, RARITY_RARE: 4,
-                                               RARITY_UNIQUE: 8, RARITY_SET: 6}
-                                sell_price *= rarity_mult.get(p.inventory[idx].rarity, 1)
+                                item = p.inventory[idx]
+                                sell_price = self._calc_sell_price(item)
                                 p.gold += sell_price
                                 self.add_floating_text(p.pos.x, p.pos.y - 20,
                                                        f"+{sell_price}g (sold)", C_GOLD, 1.0)
                                 p.inventory.pop(idx)
                                 self.play_sound("gold")
+                                if selected_idx is not None:
+                                    if selected_idx == idx:
+                                        selected_idx = None
+                                        socketing_mode = False
+                                    elif selected_idx > idx:
+                                        selected_idx -= 1
                                 break
 
-            # Draw
+            # ---- Draw ----
             overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
             overlay.fill((0, 0, 0, 230))
             self.screen.blit(overlay, (0, 0))
 
-            title = self.bigfont.render("- INVENTORY -", True, C_GOLD)
-            self.screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 40))
+            title = self.bigfont.render("- EQUIPMENT -", True, C_GOLD)
+            self.screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 20))
             pygame.draw.line(self.screen, C_GOTHIC_FRAME,
-                             (WIDTH // 2 - 160, 75), (WIDTH // 2 + 160, 75), 1)
+                             (WIDTH // 2 - 160, 55), (WIDTH // 2 + 160, 55), 1)
 
-            # Equipped weapon display
-            eq_x = WIDTH // 2 - 250
-            eq_y = 100
-            self.screen.blit(self.font.render("Equipped:", True, (180, 170, 140)), (eq_x, eq_y))
-            w = p.weapon
-            wc = w.get_color()
-            pygame.draw.rect(self.screen, (30, 25, 20), (eq_x, eq_y + 28, 500, 120), border_radius=6)
-            pygame.draw.rect(self.screen, wc, (eq_x, eq_y + 28, 500, 120), 2, border_radius=6)
-            name_txt = self.bigfont.render(w.name, True, wc)
-            self.screen.blit(name_txt, (eq_x + 15, eq_y + 35))
-            rarity_txt = self.font.render(f"[{RARITY_NAMES[w.rarity]}] {w.weapon_class.title()}", True, wc)
-            self.screen.blit(rarity_txt, (eq_x + 15, eq_y + 65))
-            dmg_txt = self.font.render(f"Damage: {w.dmg_min}-{w.dmg_max}   Speed: {w.attack_speed:.1f}", True, (200, 190, 160))
-            self.screen.blit(dmg_txt, (eq_x + 15, eq_y + 90))
-            # Show mods
-            mod_x = eq_x + 280
-            mod_y = eq_y + 65
-            for mk, mv in w.mods.items():
-                if mv:
-                    label = mk.replace("_", " ").title()
-                    mod_color = (100, 200, 255) if mk.endswith("_dmg") else (200, 200, 140)
-                    mt = self.font.render(f"+{mv} {label}", True, mod_color)
-                    self.screen.blit(mt, (mod_x, mod_y))
-                    mod_y += 20
-
-            # Gold
+            # Gold and defense display
             gold_txt = self.font.render(f"Gold: {p.gold}", True, C_GOLD)
-            self.screen.blit(gold_txt, (eq_x + 360, eq_y))
+            self.screen.blit(gold_txt, (eq_panel_x, 60))
+            def_val = p.total_defense()
+            if def_val > 0:
+                red_pct = int(p.damage_reduction() * 100)
+                def_txt = self.font.render(f"Defense: {def_val} (-{red_pct}% dmg)", True, (160, 160, 180))
+                self.screen.blit(def_txt, (eq_panel_x + 200, 60))
 
-            # Inventory grid header
-            inv_title = self.font.render(f"Backpack ({len(p.inventory)}/{INV_COLS * INV_ROWS})", True, (180, 170, 140))
+            # --- Equipment paper doll ---
+            # Draw panel background
+            panel_w = slot_w * 3 + 120
+            panel_h = slot_h * 3 + 80
+            pygame.draw.rect(self.screen, (18, 15, 12), (eq_panel_x - 10, eq_panel_y - 10, panel_w, panel_h), border_radius=8)
+            pygame.draw.rect(self.screen, C_GOTHIC_FRAME, (eq_panel_x - 10, eq_panel_y - 10, panel_w, panel_h), 2, border_radius=8)
+
+            # Draw character silhouette in center
+            sil_cx = eq_panel_x + 155 + slot_w // 2
+            sil_cy = eq_panel_y + 150
+            # Simple body shape
+            pygame.draw.circle(self.screen, (35, 30, 25), (sil_cx, sil_cy - 45), 18)  # head
+            pygame.draw.line(self.screen, (35, 30, 25), (sil_cx, sil_cy - 27), (sil_cx, sil_cy + 20), 4)  # torso
+            pygame.draw.line(self.screen, (35, 30, 25), (sil_cx - 20, sil_cy - 10), (sil_cx + 20, sil_cy - 10), 3)  # arms
+            pygame.draw.line(self.screen, (35, 30, 25), (sil_cx, sil_cy + 20), (sil_cx - 12, sil_cy + 50), 3)  # left leg
+            pygame.draw.line(self.screen, (35, 30, 25), (sil_cx, sil_cy + 20), (sil_cx + 12, sil_cy + 50), 3)  # right leg
+
+            # Draw equipment slots
+            hovered_equip = None
+            for label, attr, stype, sx, sy in equip_slots:
+                equipped = getattr(p, attr)
+                # Slot background
+                bg_col = (30, 26, 20)
+                border_col = (70, 60, 45)
+                if equipped:
+                    border_col = equipped.get_color()
+                    bg_col = (int(border_col[0] * 0.15), int(border_col[1] * 0.15), int(border_col[2] * 0.15))
+                # Highlight if hovered
+                if sx <= mx <= sx + slot_w and sy <= my <= sy + slot_h:
+                    bg_col = (bg_col[0] + 15, bg_col[1] + 15, bg_col[2] + 12)
+                    hovered_equip = (label, attr, stype, equipped)
+                pygame.draw.rect(self.screen, bg_col, (sx, sy, slot_w, slot_h), border_radius=5)
+                pygame.draw.rect(self.screen, border_col, (sx, sy, slot_w, slot_h), 2, border_radius=5)
+                if equipped:
+                    ic = equipped.get_color()
+                    # Item colored square
+                    pygame.draw.rect(self.screen, ic, (sx + 10, sy + 8, slot_w - 20, slot_h - 24), border_radius=4)
+                    pygame.draw.rect(self.screen, (min(255, ic[0]+50), min(255, ic[1]+50), min(255, ic[2]+50)),
+                                     (sx + 10, sy + 8, slot_w - 20, slot_h - 24), 1, border_radius=4)
+                    # Icon letter
+                    icon_char = self._get_item_icon(equipped)
+                    it = self.font.render(icon_char, True, (20, 15, 10))
+                    self.screen.blit(it, (sx + slot_w // 2 - it.get_width() // 2, sy + slot_h // 2 - it.get_height() // 2 - 4))
+                # Slot label below
+                sl = self.font.render(label, True, (120, 110, 95))
+                self.screen.blit(sl, (sx + slot_w // 2 - sl.get_width() // 2, sy + slot_h - 16))
+
+            # --- Inventory grid (right side) ---
+            inv_title = self.font.render(f"Backpack ({len(p.inventory)}/{grid_cols * grid_rows})", True, (180, 170, 140))
             self.screen.blit(inv_title, (grid_x, grid_y - 28))
+            # Grid background
+            gw = grid_cols * cell_w + 10
+            gh = grid_rows * cell_h + 10
+            pygame.draw.rect(self.screen, (18, 15, 12), (grid_x - 5, grid_y - 5, gw, gh), border_radius=6)
+            pygame.draw.rect(self.screen, C_GOTHIC_FRAME, (grid_x - 5, grid_y - 5, gw, gh), 2, border_radius=6)
 
-            # Grid
-            for idx in range(INV_COLS * INV_ROWS):
-                row = idx // INV_COLS
-                col = idx % INV_COLS
+            hovered_inv_idx = None
+            for idx in range(grid_cols * grid_rows):
+                row = idx // grid_cols
+                col = idx % grid_cols
                 cx = grid_x + col * cell_w
                 cy = grid_y + row * cell_h
-                # Cell background
-                pygame.draw.rect(self.screen, (20, 18, 14), (cx, cy, cell_w - 2, cell_h - 2), border_radius=3)
-                pygame.draw.rect(self.screen, (60, 50, 40), (cx, cy, cell_w - 2, cell_h - 2), 1, border_radius=3)
+                bg = (20, 18, 14)
+                bd = (60, 50, 40)
+                if idx == selected_idx:
+                    bg = (50, 45, 30)
+                    bd = (200, 180, 80) if socketing_mode else (180, 160, 100)
+                pygame.draw.rect(self.screen, bg, (cx, cy, cell_w - 2, cell_h - 2), border_radius=3)
+                pygame.draw.rect(self.screen, bd, (cx, cy, cell_w - 2, cell_h - 2), 1, border_radius=3)
                 if idx < len(p.inventory):
                     item = p.inventory[idx]
                     ic = item.get_color()
-                    # Item icon (colored square)
-                    pygame.draw.rect(self.screen, ic, (cx + 8, cy + 8, cell_w - 18, cell_h - 18), border_radius=4)
-                    pygame.draw.rect(self.screen, (min(255, ic[0]+60), min(255, ic[1]+60), min(255, ic[2]+60)),
-                                     (cx + 8, cy + 8, cell_w - 18, cell_h - 18), 1, border_radius=4)
-                    # Weapon class icon
-                    icon_char = "B" if item.weapon_class == "bow" else "X"
+                    pygame.draw.rect(self.screen, ic, (cx + 6, cy + 6, cell_w - 14, cell_h - 14), border_radius=4)
+                    pygame.draw.rect(self.screen, (min(255, ic[0]+50), min(255, ic[1]+50), min(255, ic[2]+50)),
+                                     (cx + 6, cy + 6, cell_w - 14, cell_h - 14), 1, border_radius=4)
+                    icon_char = self._get_item_icon(item)
                     it = self.font.render(icon_char, True, (20, 15, 10))
                     self.screen.blit(it, (cx + cell_w // 2 - it.get_width() // 2,
                                           cy + cell_h // 2 - it.get_height() // 2))
+                    # Check hover
+                    if cx <= mx <= cx + cell_w and cy <= my <= cy + cell_h:
+                        hovered_inv_idx = idx
 
-            # Tooltip for hovered item
-            for idx in range(len(p.inventory)):
-                row = idx // INV_COLS
-                col = idx % INV_COLS
-                cx = grid_x + col * cell_w
-                cy = grid_y + row * cell_h
-                if cx <= mx <= cx + cell_w and cy <= my <= cy + cell_h:
-                    item = p.inventory[idx]
-                    self._draw_weapon_tooltip(item, mx + 15, my)
-                    break
+            # Socketing hint
+            if socketing_mode and selected_idx is not None and selected_idx < len(p.inventory):
+                jewel_name = p.inventory[selected_idx].name
+                hint_txt = self.font.render(f"Click a socketed item to insert {jewel_name}", True, (255, 220, 100))
+                self.screen.blit(hint_txt, (grid_x, grid_y + grid_rows * cell_h + 15))
 
-            # Check hover on equipped
-            if eq_x <= mx <= eq_x + 500 and eq_y + 28 <= my <= eq_y + 148:
-                pass  # Already showing details above
+            # --- Stats summary below equipment ---
+            stats_y = eq_panel_y + panel_h + 10
+            stats_x = eq_panel_x
+            # Weapon stats
+            w = p.weapon
+            wc = w.get_color()
+            wname = self.font.render(f"Weapon: {w.name}", True, wc)
+            self.screen.blit(wname, (stats_x, stats_y))
+            wdmg = self.font.render(f"  Dmg: {w.dmg_min}-{w.dmg_max}  Spd: {w.attack_speed:.1f}", True, (180, 170, 150))
+            self.screen.blit(wdmg, (stats_x, stats_y + 22))
 
-            hint = self.font.render("[Left Click] Equip   [Right Click] Sell for Gold   [I/Esc] Close", True, (100, 95, 85))
-            self.screen.blit(hint, (WIDTH // 2 - hint.get_width() // 2, HEIGHT - 50))
+            # Tooltips (draw last so they're on top)
+            if hovered_inv_idx is not None and hovered_inv_idx < len(p.inventory):
+                item = p.inventory[hovered_inv_idx]
+                self._draw_item_tooltip(item, mx + 15, my)
+            elif hovered_equip:
+                label, attr, stype, equipped = hovered_equip
+                if equipped:
+                    self._draw_item_tooltip(equipped, mx + 15, my)
+
+            # Controls hint
+            hint_lines = [
+                "[Left Click] Equip/Select   [Right Click] Sell   [I/Esc] Close",
+            ]
+            if socketing_mode:
+                hint_lines.append("SOCKETING: Click a socketed weapon/armor to insert the jewel")
+            for i, hl in enumerate(hint_lines):
+                ht = self.font.render(hl, True, (100, 95, 85))
+                self.screen.blit(ht, (WIDTH // 2 - ht.get_width() // 2, HEIGHT - 50 + i * 22))
 
             pygame.display.flip()
             self.clock.tick(30)
 
-    def _draw_weapon_tooltip(self, w: Weapon, x: int, y: int):
-        """Draw a floating tooltip for a weapon."""
-        lines = w.get_tooltip_lines()
-        # Calculate size
+    def _get_item_icon(self, item) -> str:
+        """Return a single character icon for an item."""
+        if isinstance(item, Weapon):
+            return "B" if item.weapon_class == "bow" else "X"
+        elif isinstance(item, Armor):
+            return {"helm": "H", "body": "A", "gloves": "G", "boots": "Bt"}.get(item.slot, "A")
+        elif isinstance(item, Ring):
+            return "Am" if item.slot == "amulet" else "R"
+        elif isinstance(item, Jewel):
+            return "J"
+        return "?"
+
+    def _calc_sell_price(self, item) -> int:
+        """Calculate sell price for any item type."""
+        rarity_mult = {RARITY_NORMAL: 1, RARITY_MAGIC: 2, RARITY_RARE: 4,
+                       RARITY_UNIQUE: 8, RARITY_SET: 6}
+        if isinstance(item, Weapon):
+            base = max(1, (item.dmg_min + item.dmg_max) // 2)
+            return base * rarity_mult.get(item.rarity, 1)
+        elif isinstance(item, Armor):
+            base = max(1, item.defense // 2 + 1)
+            return base * rarity_mult.get(item.rarity, 1)
+        elif isinstance(item, Ring):
+            base = max(1, item.ilvl)
+            return base * rarity_mult.get(item.rarity, 1)
+        elif isinstance(item, Jewel):
+            return max(2, sum(item.mods.values()) if item.mods else 1)
+        return 1
+
+    def _draw_item_tooltip(self, item, x: int, y: int):
+        """Draw a floating tooltip for any item type."""
+        lines = item.get_tooltip_lines()
         max_w = 0
         rendered = []
         for i, line in enumerate(lines):
-            color = w.get_color() if i == 0 else (200, 190, 160)
-            if line.startswith("  +"):
+            color = item.get_color() if i == 0 else (200, 190, 160)
+            if line.startswith("  +") or line.startswith("  ["):
                 color = (100, 200, 255)
             t = self.font.render(line, True, color)
             rendered.append(t)
             max_w = max(max_w, t.get_width())
         total_h = len(rendered) * 24 + 16
-        # Keep on screen
         if x + max_w + 20 > WIDTH:
             x = WIDTH - max_w - 25
         if y + total_h > HEIGHT:
             y = HEIGHT - total_h - 10
-        # Background
         pygame.draw.rect(self.screen, (15, 12, 10), (x, y, max_w + 20, total_h), border_radius=5)
-        pygame.draw.rect(self.screen, w.get_color(), (x, y, max_w + 20, total_h), 1, border_radius=5)
+        pygame.draw.rect(self.screen, item.get_color(), (x, y, max_w + 20, total_h), 1, border_radius=5)
         for i, t in enumerate(rendered):
             self.screen.blit(t, (x + 10, y + 8 + i * 24))
 
@@ -6043,7 +6596,7 @@ class Game:
             for i, w in enumerate(items_list):
                 iy = 160 + i * 70 - scroll
                 if 200 <= mx <= WIDTH - 200 and iy <= my <= iy + 64 and 125 < iy < HEIGHT - 80:
-                    self._draw_weapon_tooltip(w, mx + 15, my)
+                    self._draw_item_tooltip(w, mx + 15, my)
                     break
 
             hint = self.font.render("[Tab] Switch Buy/Sell   [Click] Buy or Sell   [Scroll] Navigate   [V/Esc] Close",
@@ -6082,32 +6635,15 @@ class Game:
                 "crit_chance": p.crit_chance,
                 "lives": p.lives,
                 "max_lives": p.max_lives,
-                "weapon": {
-                    "name": p.weapon.name,
-                    "dmg_min": p.weapon.dmg_min,
-                    "dmg_max": p.weapon.dmg_max,
-                    "attack_speed": p.weapon.attack_speed,
-                    "ranged": p.weapon.ranged,
-                    "rarity": p.weapon.rarity,
-                    "weapon_class": p.weapon.weapon_class,
-                    "mods": p.weapon.mods,
-                    "base_name": p.weapon.base_name,
-                    "prefix": p.weapon.prefix,
-                    "suffix": p.weapon.suffix,
-                    "set_name": p.weapon.set_name,
-                    "ilvl": p.weapon.ilvl,
-                },
-                "inventory": [
-                    {
-                        "name": w.name, "dmg_min": w.dmg_min, "dmg_max": w.dmg_max,
-                        "attack_speed": w.attack_speed, "ranged": w.ranged,
-                        "rarity": w.rarity, "weapon_class": w.weapon_class,
-                        "mods": w.mods, "base_name": w.base_name,
-                        "prefix": w.prefix, "suffix": w.suffix,
-                        "set_name": w.set_name, "ilvl": w.ilvl,
-                    }
-                    for w in p.inventory
-                ],
+                "weapon": self._item_to_dict(p.weapon),
+                "equipped_helm": self._item_to_dict(p.equipped_helm),
+                "equipped_armor": self._item_to_dict(p.equipped_armor),
+                "equipped_gloves": self._item_to_dict(p.equipped_gloves),
+                "equipped_boots": self._item_to_dict(p.equipped_boots),
+                "equipped_ring1": self._item_to_dict(p.equipped_ring1),
+                "equipped_ring2": self._item_to_dict(p.equipped_ring2),
+                "equipped_amulet": self._item_to_dict(p.equipped_amulet),
+                "inventory": [self._item_to_dict(item) for item in p.inventory],
             },
             "game": {
                 "current_level": self.current_level,
@@ -6133,8 +6669,78 @@ class Game:
                                    "Save Failed!", (255, 80, 80), 1.5)
             return False
 
+    def _item_to_dict(self, item) -> Optional[dict]:
+        """Serialize any item to a dict for saving."""
+        if item is None:
+            return None
+        if isinstance(item, Weapon):
+            return {"_type": "weapon", "name": item.name, "dmg_min": item.dmg_min,
+                    "dmg_max": item.dmg_max, "attack_speed": item.attack_speed,
+                    "ranged": item.ranged, "rarity": item.rarity,
+                    "weapon_class": item.weapon_class, "mods": item.mods,
+                    "base_name": item.base_name, "prefix": item.prefix,
+                    "suffix": item.suffix, "set_name": item.set_name,
+                    "ilvl": item.ilvl, "sockets": item.sockets,
+                    "jewels": [self._item_to_dict(j) for j in item.jewels]}
+        elif isinstance(item, Armor):
+            return {"_type": "armor", "name": item.name, "defense": item.defense,
+                    "rarity": item.rarity, "mods": item.mods,
+                    "base_name": item.base_name, "prefix": item.prefix,
+                    "suffix": item.suffix, "ilvl": item.ilvl,
+                    "sockets": item.sockets, "slot": item.slot,
+                    "jewels": [self._item_to_dict(j) for j in item.jewels]}
+        elif isinstance(item, Ring):
+            return {"_type": "ring", "name": item.name, "rarity": item.rarity,
+                    "mods": item.mods, "base_name": item.base_name,
+                    "prefix": item.prefix, "suffix": item.suffix,
+                    "ilvl": item.ilvl, "slot": item.slot}
+        elif isinstance(item, Jewel):
+            return {"_type": "jewel", "name": item.name, "mods": item.mods,
+                    "color": list(item.color)}
+        return None
+
+    def _item_from_dict(self, d) -> Optional[object]:
+        """Reconstruct any item from a save dict."""
+        if d is None:
+            return None
+        t = d.get("_type", "weapon")  # backward compat: default to weapon
+        if t == "weapon":
+            jewels = [self._item_from_dict(j) for j in d.get("jewels", []) if j]
+            return Weapon(
+                name=d["name"], dmg_min=d["dmg_min"], dmg_max=d["dmg_max"],
+                attack_speed=d["attack_speed"], ranged=d["ranged"],
+                rarity=d.get("rarity", RARITY_NORMAL),
+                weapon_class=d.get("weapon_class", "bow"),
+                mods=d.get("mods", {}), base_name=d.get("base_name", ""),
+                prefix=d.get("prefix", ""), suffix=d.get("suffix", ""),
+                set_name=d.get("set_name", ""), ilvl=d.get("ilvl", 1),
+                sockets=d.get("sockets", 0), jewels=jewels)
+        elif t == "armor":
+            jewels = [self._item_from_dict(j) for j in d.get("jewels", []) if j]
+            return Armor(
+                name=d["name"], defense=d["defense"],
+                rarity=d.get("rarity", RARITY_NORMAL),
+                mods=d.get("mods", {}), base_name=d.get("base_name", ""),
+                prefix=d.get("prefix", ""), suffix=d.get("suffix", ""),
+                ilvl=d.get("ilvl", 1), sockets=d.get("sockets", 0),
+                slot=d.get("slot", "body"), jewels=jewels)
+        elif t == "ring":
+            return Ring(
+                name=d["name"], rarity=d.get("rarity", RARITY_NORMAL),
+                mods=d.get("mods", {}), base_name=d.get("base_name", ""),
+                prefix=d.get("prefix", ""), suffix=d.get("suffix", ""),
+                ilvl=d.get("ilvl", 1), slot=d.get("slot", "ring"))
+        elif t == "jewel":
+            color = tuple(d.get("color", [200, 200, 200]))
+            return Jewel(name=d["name"], mods=d.get("mods", {}), color=color)
+        return None
+
     def _weapon_from_dict(self, d: dict) -> Weapon:
-        """Reconstruct a Weapon from a save dict."""
+        """Backward-compat: reconstruct a Weapon from old save dict."""
+        result = self._item_from_dict(d)
+        if isinstance(result, Weapon):
+            return result
+        # Fallback for very old saves
         return Weapon(
             name=d["name"], dmg_min=d["dmg_min"], dmg_max=d["dmg_max"],
             attack_speed=d["attack_speed"], ranged=d["ranged"],
@@ -6198,7 +6804,20 @@ class Game:
             p.hp = min(pd.get("hp", p.max_hp()), p.max_hp())
             p.mana = min(pd.get("mana", p.max_mana()), p.max_mana())
             p.weapon = self._weapon_from_dict(pd["weapon"])
-            p.inventory = [self._weapon_from_dict(w) for w in pd.get("inventory", [])]
+            # Load equipment slots
+            for slot_name in ("equipped_helm", "equipped_armor", "equipped_gloves",
+                              "equipped_boots", "equipped_ring1", "equipped_ring2", "equipped_amulet"):
+                slot_data = pd.get(slot_name)
+                if slot_data:
+                    setattr(p, slot_name, self._item_from_dict(slot_data))
+                else:
+                    setattr(p, slot_name, None)
+            # Load inventory (supports mixed item types)
+            p.inventory = []
+            for item_data in pd.get("inventory", []):
+                item = self._item_from_dict(item_data)
+                if item:
+                    p.inventory.append(item)
             # Rebuild level
             self._build_texture_cache(self.current_biome)
             self.enemies.clear()
