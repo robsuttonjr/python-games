@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EMT Conduit Bend Calculator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #f0a500;
+      font-size: 1.8rem;
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 0.85rem;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 10px;
+      padding: 20px;
+      max-width: 680px;
+      margin: 0 auto 20px auto;
+    }
+
+    .card h2 {
+      color: #f0a500;
+      font-size: 1rem;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-bottom: 1px solid #0f3460;
+      padding-bottom: 8px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .form-group {
+      flex: 1;
+      min-width: 140px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      color: #aaa;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    select, input[type="number"] {
+      width: 100%;
+      padding: 9px 12px;
+      background: #0f3460;
+      border: 1px solid #1a4a80;
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    select:focus, input[type="number"]:focus {
+      border-color: #f0a500;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .tab-btn {
+      padding: 9px 18px;
+      border: 1px solid #0f3460;
+      border-radius: 6px;
+      background: #0f3460;
+      color: #aaa;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background: #f0a500;
+      border-color: #f0a500;
+      color: #1a1a2e;
+      font-weight: 600;
+    }
+
+    .tab-btn:hover:not(.active) {
+      border-color: #f0a500;
+      color: #f0a500;
+    }
+
+    .calc-panel { display: none; }
+    .calc-panel.active { display: block; }
+
+    .calc-btn {
+      width: 100%;
+      padding: 12px;
+      background: #f0a500;
+      color: #1a1a2e;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+      letter-spacing: 0.5px;
+      transition: background 0.2s;
+    }
+
+    .calc-btn:hover { background: #ffc333; }
+
+    .results {
+      margin-top: 16px;
+      display: none;
+    }
+
+    .results.show { display: block; }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .result-item {
+      background: #0f3460;
+      border-radius: 8px;
+      padding: 12px 14px;
+      border-left: 3px solid #f0a500;
+    }
+
+    .result-item .result-label {
+      font-size: 0.75rem;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .result-item .result-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #f0a500;
+    }
+
+    .result-item .result-unit {
+      font-size: 0.8rem;
+      color: #888;
+      margin-left: 4px;
+    }
+
+    .result-item.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .diagram {
+      margin-top: 16px;
+      background: #0a1628;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .diagram svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .note {
+      font-size: 0.78rem;
+      color: #888;
+      margin-top: 10px;
+      padding: 10px;
+      background: #0a1628;
+      border-radius: 6px;
+      border-left: 3px solid #1a4a80;
+    }
+
+    .error {
+      color: #ff6b6b;
+      font-size: 0.85rem;
+      margin-top: 8px;
+      display: none;
+    }
+
+    .error.show { display: block; }
+
+    @media (max-width: 500px) {
+      .result-grid { grid-template-columns: 1fr; }
+      .result-item.full-width { grid-column: 1; }
+      h1 { font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>EMT Conduit Bend Calculator</h1>
+<p class="subtitle">Electrical Metallic Tubing — Field Bending Reference</p>
+
+<!-- Conduit Size -->
+<div class="card">
+  <h2>Conduit Size</h2>
+  <div class="form-row">
+    <div class="form-group">
+      <label>EMT Trade Size</label>
+      <select id="conduitSize">
+        <option value="0.5">1/2"</option>
+        <option value="0.75">3/4"</option>
+        <option value="1" selected>1"</option>
+        <option value="1.25">1-1/4"</option>
+        <option value="1.5">1-1/2"</option>
+        <option value="2">2"</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- Bend Type Tabs -->
+<div class="card">
+  <h2>Bend Type</h2>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('stub')">90° Stub-Up</button>
+    <button class="tab-btn" onclick="switchTab('offset')">Offset</button>
+    <button class="tab-btn" onclick="switchTab('saddle3')">3-Point Saddle</button>
+    <button class="tab-btn" onclick="switchTab('saddle4')">4-Point Saddle</button>
+    <button class="tab-btn" onclick="switchTab('backtoback')">Back-to-Back</button>
+  </div>
+
+  <!-- 90° Stub-Up -->
+  <div id="panel-stub" class="calc-panel active">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Desired Stub Height (inches)</label>
+        <input type="number" id="stub-height" placeholder="e.g. 12" min="1" step="0.125">
+      </div>
+    </div>
+    <div class="note">Mark placement = stub height minus take-up (gain). Take-up accounts for the arc of the bend.</div>
+    <div class="error" id="stub-error">Please enter a valid stub height.</div>
+    <button class="calc-btn" onclick="calcStub()">Calculate</button>
+    <div class="results" id="stub-results">
+      <div class="result-grid">
+        <div class="result-item">
+          <div class="result-label">Mark at</div>
+          <div class="result-value"><span id="stub-mark">—</span><span class="result-unit">in</span></div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Take-Up (Gain)</div>
+          <div class="result-value"><span id="stub-takeup">—</span><span class="result-unit">in</span></div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Min Radius (NEC)</div>
+          <div class="result-value"><span id="stub-radius">—</span><span class="result-unit">in</span></div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Bend Angle</div>
+          <div class="result-value">90<span class="result-unit">°</span></div>
+        </div>
+      </div>
+      <div class="diagram">
+        <svg id="stub-diagram" viewBox="0 0 300 200" width="300" height="200">
+          <line x1="60" y1="170" x2="60" y2="60" stroke="#aaa" stroke-width="6" stroke-linecap="round"/>
+          <path d="M60,60 Q60,30 90,30" stroke="#aaa" stroke-width="6" fill="none" stroke-linecap="round"/>
+          <line x1="90" y1="30" x2="240" y2="30" stroke="#aaa" stroke-width="6" stroke-linecap="round"/>
+          <!-- mark line -->
+          <line x1="50" y1="120" x2="70" y2="120" stroke="#f0a500" stroke-width="2" stroke-dasharray="4,2"/>
+          <text x="75" y="124" fill="#f0a500" font-size="11">← Mark here</text>
+          <!-- stub label -->
+          <line x1="30" y1="170" x2="30" y2="60" stroke="#f0a500" stroke-width="1" stroke-dasharray="3,3"/>
+          <text x="10" y="120" fill="#f0a500" font-size="10" transform="rotate(-90,18,120)">Stub</text>
+          <!-- arrow -->
+          <line x1="20" y1="170" x2="20" y2="62" stroke="#f0a500" stroke-width="1" marker-end="url(#arr)"/>
+          <defs>
+            <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#f0a500"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Offset -->
+  <div id="panel-offset" class="calc-panel">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Offset Height (inches)</label>
+        <input type="number" id="offset-height" placeholder="e.g. 6" min="0.5" step="0.125">
+      </div>
+      <div class="form-group">
+        <label>Bend Angle</label>
+        <select id="offset-angle">
+          <option value="10">10°</option>
+          <option value="15">15°</option>
+          <option value="22">22.5°</option>
+          <option value="30">30°</option>
+          <option value="45" selected>45°</option>
+        </select>
+      </div>
+    </div>
+    <div class="note">Two equal bends in opposite directions. The spread is the distance between the two marks on the conduit.</div>
+    <div class="error" id="offset-error">Please enter a valid offset height.</div>
+    <button class="calc-btn" onclick="calcOffset()">Calculate</button>
+    <div class="results" id="offset-results">
+      <div class="result-grid">
+        <div class="result-item">
+          <div class="result-label">Spread Between Marks</div>
+          <div class="result-value"><span id="offset-spread">—</span><span class="result-unit">in</span></div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Shrinkage</div>
+          <div class="result-value"><span id="offset-shrink">—</span><span class="result-unit">in</span></div>
+        </div>
+        <div class="result-item full-width">
+          <div class="result-label">Cut conduit this much longer to compensate for shrinkage</div>
+          <div class="result-value" style="font-size:1rem">Add <span id="offset-shrink2">—</span><span class="result-unit">in</span> to total run length</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3-Point Saddle -->
+  <div id="panel-saddle3" class="calc-panel">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Obstacle Height (inches)</label>
+        <input type="number" id="s3-height" placeholder="e.g. 2" min="0.25" step="0.125">
+      </div>
+    </div>
+    <div class="note">Uses a 45° center bend flanked by two 22.5° side bends. Mark the center of the obstacle on the conduit, then measure out to each side bend mark.</div>
+    <div class="error" id="s3-error">Please enter a valid obstacle height.</div>
+    <button class="calc-btn" onclick="calcSaddle3()">Calculate</button>
+    <div class="results" id="s3-results">
+      <div class="result-grid">
+        <div class="result-item">
+          <div class="result-label">Center Mark (45°)</div>
+          <div class="result-value">Center<span class="result-unit"> of obstacle</span></div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Side Marks Distance</div>
+          <div class="result-value"><span id="s3-side">—</span><span class="result-unit">in each side</span></div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Shrinkage</div>
+          <div class="result-value"><span id="s3-shrink">—</span><span class="result-unit">in</span></div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Side Bend Angle</div>
+          <div class="result-value">22.5<span class="result-unit">°</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4-Point Saddle -->
+  <div id="panel-saddle4" class="calc-panel">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Obstacle Height (inches)</label>
+        <input type="number" id="s4-height" placeholder="e.g. 3" min="0.25" step="0.125">
+      </div>
+      <div class="form-group">
+        <label>Obstacle Width (inches)</label>
+        <input type="number" id="s4-width" placeholder="e.g. 4" min="0.25" step="0.125">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Bend Angle</label>
+        <select id="s4-angle">
+          <option value="30">30°</option>
+          <option value="45" selected>45°</option>
+        </select>
+      </div>
+    </div>
+    <div class="note">Four equal bends. Mark the center of the obstacle; marks are placed symmetrically around it.</div>
+    <div class="error" id="s4-error">Please enter valid obstacle dimensions.</div>
+    <button class="calc-btn" onclick="calcSaddle4()">Calculate</button>
+    <div class="results" id="s4-results">
+      <div class="result-grid">
+        <div class="result-item">
+          <div class="result-label">Spread (each offset)</div>
+          <div class="result-value"><span id="s4-spread">—</span><span class="result-unit">in</span></div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Center Gap</div>
+          <div class="result-value"><span id="s4-gap">—</span><span class="result-unit">in</span></div>
+        </div>
+        <div class="result-item full-width">
+          <div class="result-label">Mark Layout (from first mark)</div>
+          <div class="result-value" style="font-size:0.95rem" id="s4-layout">—</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Total Shrinkage</div>
+          <div class="result-value"><span id="s4-shrink">—</span><span class="result-unit">in</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Back-to-Back -->
+  <div id="panel-backtoback" class="calc-panel">
+    <div class="form-row">
+      <div class="form-group">
+        <label>First Stub Height (inches)</label>
+        <input type="number" id="b2b-stub1" placeholder="e.g. 12" min="1" step="0.125">
+      </div>
+      <div class="form-group">
+        <label>Distance Between Stubs (inches)</label>
+        <input type="number" id="b2b-dist" placeholder="e.g. 36" min="1" step="0.125">
+      </div>
+    </div>
+    <div class="note">Two 90° bends. First mark = first stub height minus take-up. Second mark = first mark + distance between stubs.</div>
+    <div class="error" id="b2b-error">Please enter valid values.</div>
+    <button class="calc-btn" onclick="calcBackToBack()">Calculate</button>
+    <div class="results" id="b2b-results">
+      <div class="result-grid">
+        <div class="result-item">
+          <div class="result-label">First Mark</div>
+          <div class="result-value"><span id="b2b-mark1">—</span><span class="result-unit">in</span></div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Second Mark</div>
+          <div class="result-value"><span id="b2b-mark2">—</span><span class="result-unit">in</span></div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Take-Up (Gain)</div>
+          <div class="result-value"><span id="b2b-takeup">—</span><span class="result-unit">in</span></div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Total Conduit Needed</div>
+          <div class="result-value"><span id="b2b-total">—</span><span class="result-unit">in</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Reference Card -->
+<div class="card">
+  <h2>Quick Reference — Take-Up &amp; Radius by Size</h2>
+  <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+      <thead>
+        <tr style="color:#f0a500;border-bottom:1px solid #0f3460">
+          <th style="padding:7px;text-align:left">Trade Size</th>
+          <th style="padding:7px;text-align:center">Take-Up (90°)</th>
+          <th style="padding:7px;text-align:center">Min Radius</th>
+          <th style="padding:7px;text-align:center">OD (approx)</th>
+        </tr>
+      </thead>
+      <tbody id="ref-table"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  // ── Conduit Data ──────────────────────────────────────────────────────────────
+  // takeUp: inches deducted from stub for 90° bend mark placement
+  // radius: NEC minimum bend radius (inches) for 90° bends
+  // od: outside diameter (inches)
+  const CONDUIT = {
+    "0.5":  { label: '1/2"',   takeUp: 5,  radius: 4,   od: 0.706 },
+    "0.75": { label: '3/4"',   takeUp: 6,  radius: 4.5, od: 0.922 },
+    "1":    { label: '1"',     takeUp: 8,  radius: 5.75,od: 1.163 },
+    "1.25": { label: '1-1/4"', takeUp: 11, radius: 7.25,od: 1.510 },
+    "1.5":  { label: '1-1/2"', takeUp: 14, radius: 8.25,od: 1.740 },
+    "2":    { label: '2"',     takeUp: 16, radius: 9.5, od: 2.197 },
+  };
+
+  // ── Offset multipliers: spread = height × spreadMult, shrink = height × shrinkMult
+  const OFFSET_DATA = {
+    "10":  { spreadMult: 1/Math.sin(10*Math.PI/180), shrinkMult: 1/6 },
+    "15":  { spreadMult: 1/Math.sin(15*Math.PI/180), shrinkMult: 1/4 },
+    "22":  { spreadMult: 1/Math.sin(22.5*Math.PI/180), shrinkMult: 3/8 },
+    "30":  { spreadMult: 1/Math.sin(30*Math.PI/180), shrinkMult: 1/2 },
+    "45":  { spreadMult: 1/Math.sin(45*Math.PI/180), shrinkMult: 7/10 },
+  };
+
+  // ── Helpers ───────────────────────────────────────────────────────────────────
+  function fmt(n) { return Math.round(n * 100) / 100; }
+  function toFraction(decimal) {
+    const whole = Math.floor(decimal);
+    const frac = decimal - whole;
+    const eighths = Math.round(frac * 8);
+    if (eighths === 0) return whole + '"';
+    if (eighths === 8) return (whole + 1) + '"';
+    const fracs = ['', '1/8', '1/4', '3/8', '1/2', '5/8', '3/4', '7/8'];
+    return (whole > 0 ? whole + ' ' : '') + fracs[eighths] + '"';
+  }
+  function fmtIn(n) { return fmt(n) + ' (' + toFraction(n) + ')'; }
+
+  function getConduit() { return CONDUIT[document.getElementById('conduitSize').value]; }
+
+  function showError(id) { document.getElementById(id).classList.add('show'); }
+  function hideError(id) { document.getElementById(id).classList.remove('show'); }
+  function showResults(id) { document.getElementById(id).classList.add('show'); }
+
+  // ── Tab Switching ─────────────────────────────────────────────────────────────
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.calc-panel').forEach(p => p.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('panel-' + name).classList.add('active');
+  }
+
+  // ── 90° Stub-Up ───────────────────────────────────────────────────────────────
+  function calcStub() {
+    hideError('stub-error');
+    const c = getConduit();
+    const h = parseFloat(document.getElementById('stub-height').value);
+    if (!h || h <= 0) { showError('stub-error'); return; }
+    const mark = h - c.takeUp;
+    if (mark <= 0) { showError('stub-error'); document.getElementById('stub-error').textContent = 'Stub height too small for this conduit size (min: ' + (c.takeUp + 1) + '").'; return; }
+    document.getElementById('stub-mark').textContent = fmtIn(mark);
+    document.getElementById('stub-takeup').textContent = c.takeUp + '"';
+    document.getElementById('stub-radius').textContent = c.radius + '"';
+    showResults('stub-results');
+  }
+
+  // ── Offset ────────────────────────────────────────────────────────────────────
+  function calcOffset() {
+    hideError('offset-error');
+    const h = parseFloat(document.getElementById('offset-height').value);
+    const angle = document.getElementById('offset-angle').value;
+    if (!h || h <= 0) { showError('offset-error'); return; }
+    const od = OFFSET_DATA[angle];
+    const spread = h * od.spreadMult;
+    const shrink = h * od.shrinkMult;
+    document.getElementById('offset-spread').textContent = fmtIn(spread);
+    document.getElementById('offset-shrink').textContent = fmtIn(shrink);
+    document.getElementById('offset-shrink2').textContent = fmtIn(shrink);
+    showResults('offset-results');
+  }
+
+  // ── 3-Point Saddle ────────────────────────────────────────────────────────────
+  function calcSaddle3() {
+    hideError('s3-error');
+    const h = parseFloat(document.getElementById('s3-height').value);
+    if (!h || h <= 0) { showError('s3-error'); return; }
+    // Side marks = offset distance for 22.5° to match 45° center
+    // spread for 22.5° offset of height h
+    const spread = h / Math.sin(22.5 * Math.PI / 180);
+    const shrink = h * 3/8;  // 22.5° shrinkage constant
+    document.getElementById('s3-side').textContent = fmtIn(spread);
+    document.getElementById('s3-shrink').textContent = fmtIn(shrink);
+    showResults('s3-results');
+  }
+
+  // ── 4-Point Saddle ────────────────────────────────────────────────────────────
+  function calcSaddle4() {
+    hideError('s4-error');
+    const h = parseFloat(document.getElementById('s4-height').value);
+    const w = parseFloat(document.getElementById('s4-width').value);
+    const angle = parseInt(document.getElementById('s4-angle').value);
+    if (!h || h <= 0 || !w || w <= 0) { showError('s4-error'); return; }
+    const angleRad = angle * Math.PI / 180;
+    const spread = h / Math.sin(angleRad);
+    const shrinkMult = angle === 45 ? 7/10 : 1/2;
+    const shrinkEach = h * shrinkMult;
+    const totalShrink = 2 * shrinkEach;
+    // Center gap = obstacle width
+    const gap = w;
+    // Layout from start of conduit (arbitrary reference at mark 1):
+    // mark1=0, mark2=spread, [gap], mark3=spread+gap, mark4=spread+gap+spread
+    const m1 = 0;
+    const m2 = fmt(spread);
+    const m3 = fmt(spread + gap);
+    const m4 = fmt(spread + gap + spread);
+    document.getElementById('s4-spread').textContent = fmtIn(spread);
+    document.getElementById('s4-gap').textContent = fmtIn(gap);
+    document.getElementById('s4-layout').textContent = `0" → ${fmtIn(spread)} → ${fmtIn(spread + gap)} → ${fmtIn(spread + gap + spread)}`;
+    document.getElementById('s4-shrink').textContent = fmtIn(totalShrink);
+    showResults('s4-results');
+  }
+
+  // ── Back-to-Back ──────────────────────────────────────────────────────────────
+  function calcBackToBack() {
+    hideError('b2b-error');
+    const c = getConduit();
+    const stub1 = parseFloat(document.getElementById('b2b-stub1').value);
+    const dist = parseFloat(document.getElementById('b2b-dist').value);
+    if (!stub1 || stub1 <= 0 || !dist || dist <= 0) { showError('b2b-error'); return; }
+    const mark1 = stub1 - c.takeUp;
+    if (mark1 <= 0) { showError('b2b-error'); document.getElementById('b2b-error').textContent = 'Stub height too small for this conduit size (min: ' + (c.takeUp + 1) + '").'; document.getElementById('b2b-error').classList.add('show'); return; }
+    const mark2 = mark1 + dist;
+    // Approximate total conduit needed: stub1 + dist + stub1 (mirrored) - both gains already accounted
+    const total = stub1 + dist;
+    document.getElementById('b2b-mark1').textContent = fmtIn(mark1);
+    document.getElementById('b2b-mark2').textContent = fmtIn(mark2);
+    document.getElementById('b2b-takeup').textContent = c.takeUp + '"';
+    document.getElementById('b2b-total').textContent = fmtIn(total);
+    showResults('b2b-results');
+  }
+
+  // ── Build Reference Table ─────────────────────────────────────────────────────
+  function buildRefTable() {
+    const tbody = document.getElementById('ref-table');
+    Object.entries(CONDUIT).forEach(([key, c], i) => {
+      const tr = document.createElement('tr');
+      tr.style.background = i % 2 === 0 ? '#0a1628' : 'transparent';
+      tr.innerHTML = `
+        <td style="padding:7px">${c.label}</td>
+        <td style="padding:7px;text-align:center">${c.takeUp}"</td>
+        <td style="padding:7px;text-align:center">${c.radius}"</td>
+        <td style="padding:7px;text-align:center">${c.od}"</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  buildRefTable();
+</script>
+</body>
+</html>
