@@ -1718,6 +1718,7 @@ class Game:
         self.shake_x = 0.0
         self.shake_y = 0.0
         self.shake_intensity = 0.0
+        self.screen_flashes: List[Tuple[Tuple[int, int, int], float, float]] = []
         self.game_time = 0.0
         self.boss_spawned = False
         self.kills = 0
@@ -2543,6 +2544,9 @@ class Game:
     def add_screen_shake(self, intensity):
         self.shake_intensity = max(self.shake_intensity, intensity)
 
+    def add_screen_flash(self, color, duration=0.35):
+        self.screen_flashes.append((color, duration, duration))
+
     # ---- Spawning (same mechanics) ----
     def _random_floor_pos(self, near_player=True, max_tries=200):
         tries = 0
@@ -2677,6 +2681,7 @@ class Game:
         self.enemies.append(b)
         self.boss_spawned = True
         self.add_screen_shake(12)
+        self.add_screen_flash((220, 40, 40), 0.6)
         self.emit_death_burst(pos.x, pos.y, (180, 60, 60), 30)
         # Announce boss with D2R name
         act_info = self._get_act_info()
@@ -2713,6 +2718,7 @@ class Game:
         b.is_uber = True  # tag for special drops
         self.enemies.append(b)
         self.add_screen_shake(18)
+        self.add_screen_flash((200, 40, 200), 0.8)
         self.emit_death_burst(pos.x, pos.y, (200, 40, 200), 45)
         self.emit_particles(pos.x, pos.y, 30, (255, 80, 255), speed=120, life=1.0, gravity=-20)
         self.add_floating_text(pos.x, pos.y - 55, name, (255, 60, 255), 3.0)
@@ -3579,6 +3585,7 @@ class Game:
             self.add_floating_text(self.player.pos.x, self.player.pos.y - 30, "LEVEL UP!", C_GOLD, 1.5)
             self.emit_particles(self.player.pos.x, self.player.pos.y, 25, C_GOLD, speed=100, life=1.0, gravity=-50)
             self.add_screen_shake(5)
+            self.add_screen_flash((255, 220, 100), 0.35)
             self.play_sound("levelup")
 
         # Treasure goblin: massive loot explosion
@@ -3625,12 +3632,14 @@ class Game:
                 self.emit_death_burst(e.pos.x, e.pos.y, (255, 80, 255), 80)
                 self.emit_particles(e.pos.x, e.pos.y, 60, (255, 200, 80), speed=150, life=1.2, gravity=-30)
                 self.add_screen_shake(25)
+                self.add_screen_flash((255, 80, 255), 1.0)
                 self.add_floating_text(e.pos.x, e.pos.y - 60, "UBER BOSS SLAIN!", (255, 80, 255), 3.5)
                 self.add_floating_text(e.pos.x, e.pos.y - 25, "LEGENDARY LOOT!", C_GOLD, 3.0)
                 self.play_sound("levelup")
             else:
                 self.emit_death_burst(e.pos.x, e.pos.y, (255, 100, 40), 50)
                 self.add_screen_shake(15)
+                self.add_screen_flash((255, 140, 60), 0.7)
                 act_info = self._get_act_info()
                 boss_name = act_info.get("boss_name", "Boss")
                 self.add_floating_text(e.pos.x, e.pos.y - 50,
@@ -3828,6 +3837,15 @@ class Game:
         for c in self.corpses:
             c.life -= dt
             if c.life > 0:
+                # Emit wisps as corpse dissolves (last ~35% of life)
+                if c.life < 1.4 and random.random() < 0.35 * dt * 30:
+                    wisp_r = max(30, min(120, c.color[0]))
+                    wisp_g = max(30, min(120, c.color[1]))
+                    wisp_b = max(30, min(120, c.color[2]))
+                    ox = random.uniform(-c.radius * 0.6, c.radius * 0.6)
+                    self.emit_particles(c.x + ox, c.y - c.radius * 0.3, 1,
+                                        (wisp_r, wisp_g, wisp_b),
+                                        speed=8, life=0.9, size=2.2, gravity=-45)
                 alive.append(c)
         self.corpses = alive
 
@@ -3848,6 +3866,11 @@ class Game:
             self.shake_x = 0
             self.shake_y = 0
             self.shake_intensity = 0
+
+    def update_screen_flashes(self, dt: float):
+        if not self.screen_flashes:
+            return
+        self.screen_flashes = [(c, l - dt, m) for (c, l, m) in self.screen_flashes if l - dt > 0]
 
     # ---- Act / level progression helpers ----
     def _get_act_info(self) -> dict:
@@ -4179,6 +4202,7 @@ class Game:
         self._draw_particles(s, ox, oy)
         self._draw_floating_texts(s, ox, oy)
         self._draw_lighting(s, ox, oy)
+        self._draw_screen_flash(s)
         self._draw_ui(s)
         self._draw_reticle(s)
         self._draw_minimap(s)
@@ -4208,6 +4232,18 @@ class Game:
                             s.blit(self.rock_tiles[variant], (px, py))
                         elif wtype == WALL_WATER and hasattr(self, 'water_tiles'):
                             s.blit(self.water_tiles[variant], (px, py))
+                            # Animated shimmer ripples overlay
+                            phase = self.game_time * 1.8 + (tx * 0.6 + ty * 0.9)
+                            shimmer_y = int((math.sin(phase) * 0.5 + 0.5) * (TILE - 4)) + 2
+                            shimmer_alpha = int(60 + 40 * math.sin(phase * 1.3))
+                            shimmer_col = (180, 210, 230) if self.current_biome == "icecavern" else (160, 180, 210)
+                            if self.current_biome == "firepit":
+                                shimmer_col = (255, 180, 100)
+                            elif self.current_biome == "swamp":
+                                shimmer_col = (120, 150, 110)
+                            shimmer_surf = pygame.Surface((TILE, 2), pygame.SRCALPHA)
+                            shimmer_surf.fill((*shimmer_col, max(20, min(120, shimmer_alpha))))
+                            s.blit(shimmer_surf, (px, py + shimmer_y))
                         else:
                             s.blit(self.wall_tiles[variant], (px, py))
                     else:
@@ -4267,7 +4303,7 @@ class Game:
             else:
                 next_biome = self.current_biome
             pcol = BIOME_PORTAL_COLORS.get(next_biome, (200, 200, 100))
-            # Swirling portal with biome color
+            # Outer ring of orbs
             for i in range(8):
                 ang = self.portal_angle + i * (math.tau / 8)
                 r = 17
@@ -4276,12 +4312,30 @@ class Game:
                 pulse = 0.6 + 0.4 * math.sin(self.game_time * 3 + i)
                 col = (int(pcol[0] * pulse), int(pcol[1] * pulse), int(pcol[2] * pulse))
                 pygame.draw.circle(s, col, (x, y), 4)
+            # Inner counter-rotating ring
+            for i in range(6):
+                ang = -self.portal_angle * 1.6 + i * (math.tau / 6)
+                r = 10
+                x = px + int(math.cos(ang) * r)
+                y = py + int(math.sin(ang) * r)
+                pulse = 0.7 + 0.3 * math.sin(self.game_time * 5 + i * 1.3)
+                col = (min(255, int(pcol[0] * pulse + 40)),
+                       min(255, int(pcol[1] * pulse + 40)),
+                       min(255, int(pcol[2] * pulse + 40)))
+                pygame.draw.circle(s, col, (x, y), 2)
             # Center glow
             glow = 0.7 + 0.3 * math.sin(self.game_time * 2)
             center_col = (int(pcol[0] * 0.7 * glow), int(pcol[1] * 0.7 * glow), int(pcol[2] * 0.5 * glow))
             pygame.draw.circle(s, center_col, (px, py), 11)
             bright = (min(255, int(pcol[0] * glow)), min(255, int(pcol[1] * glow)), min(255, int(pcol[2] * 0.6 * glow)))
             pygame.draw.circle(s, bright, (px, py), 6)
+            # Occasional upward sparkle emission
+            if random.random() < 0.25:
+                angp = random.uniform(0, math.tau)
+                rp = random.uniform(4, 14)
+                ex = px + self.cam_x - ox + math.cos(angp) * rp
+                ey = py + self.cam_y - oy + math.sin(angp) * rp
+                self.emit_particles(ex, ey, 1, pcol, speed=20, life=0.7, size=1.6, gravity=-60)
             # D2R-style portal label showing next area
             if self._is_act_boss_level():
                 # Last level of act - portal leads to next act
@@ -4304,18 +4358,35 @@ class Game:
                 continue
             px = tx * TILE - self.cam_x + ox + TILE // 2
             py = ty * TILE - self.cam_y + oy + TILE // 2
-            # torch base
-            pygame.draw.rect(s, (90, 70, 40), (px - 3, py, 6, 11))
-            # flame
-            flicker = random.uniform(0.6, 1.0)
+            # torch base with banded highlights
+            pygame.draw.rect(s, (70, 50, 28), (px - 3, py, 6, 11))
+            pygame.draw.rect(s, (110, 85, 50), (px - 3, py + 2, 6, 2))
+            pygame.draw.rect(s, (110, 85, 50), (px - 3, py + 7, 6, 2))
+            # flame: multi-layer with per-frame flicker
+            flicker = random.uniform(0.65, 1.0)
+            sway = math.sin(self.game_time * 9 + tx * 1.3 + ty * 0.7) * 1.2
+            cx = px + int(sway)
+            # outer orange halo
+            halo_surf = pygame.Surface((22, 26), pygame.SRCALPHA)
+            halo_col = (int(255 * flicker), int(110 * flicker), int(30 * flicker), 70)
+            pygame.draw.circle(halo_surf, halo_col, (11, 13), 10)
+            s.blit(halo_surf, (cx - 11, py - 15))
+            # mid flame
             fr = int(255 * flicker)
             fg = int(160 * flicker)
             fb = int(40 * flicker)
-            pygame.draw.circle(s, (fr, fg, fb), (px, py - 3), 6)
-            pygame.draw.circle(s, (255, min(255, fg + 60), fb + 20), (px, py - 6), 3)
-            # emit occasional fire particles
-            if random.random() < 0.15:
-                self.emit_fire(px + self.cam_x - ox, py + self.cam_y - oy, 1)
+            pygame.draw.circle(s, (fr, fg, fb), (cx, py - 3), 6)
+            # inner bright flame
+            pygame.draw.circle(s, (255, min(255, fg + 60), fb + 20), (cx, py - 6), 3)
+            # white-hot core
+            pygame.draw.circle(s, (255, 240, 180), (cx, py - 6), 1)
+            # rising embers
+            if random.random() < 0.25:
+                self.emit_fire(px + self.cam_x - ox, py - 4 + self.cam_y - oy, 1)
+            if random.random() < 0.08:
+                ex = px + self.cam_x - ox + random.randint(-2, 2)
+                ey = py - 6 + self.cam_y - oy
+                self.emit_particles(ex, ey, 1, (255, 220, 150), speed=18, life=0.55, size=1.2, gravity=-80)
 
     def _draw_corpses(self, s, ox, oy):
         for c in self.corpses:
@@ -5074,7 +5145,14 @@ class Game:
             sy = int(ft.y - self.cam_y + oy)
             if not (-100 < sx < WIDTH + 100 and -50 < sy < HEIGHT + 50):
                 continue
-            alpha = max(0.0, ft.life / ft.max_life)
+            life_ratio = max(0.0, ft.life / ft.max_life)
+            # Pop-in effect: scale bursts to 1.3x early, then shrinks as it fades
+            progress = 1.0 - life_ratio
+            if progress < 0.15:
+                pop = 1.0 + (progress / 0.15) * 0.35
+            else:
+                pop = 1.35 - ((progress - 0.15) / 0.85) * 0.5
+            alpha = life_ratio if life_ratio > 0.4 else (life_ratio / 0.4)
             r = max(0, min(255, int(ft.r * alpha)))
             g = max(0, min(255, int(ft.g * alpha)))
             b = max(0, min(255, int(ft.b * alpha)))
@@ -5082,6 +5160,10 @@ class Game:
                 rendered = self.bigfont.render(ft.text, True, (r, g, b))
             else:
                 rendered = self.dmgfont.render(ft.text, True, (r, g, b))
+            scaled_w = max(1, int(rendered.get_width() * pop))
+            scaled_h = max(1, int(rendered.get_height() * pop))
+            if pop != 1.0:
+                rendered = pygame.transform.smoothscale(rendered, (scaled_w, scaled_h))
             s.blit(rendered, (sx - rendered.get_width() // 2, sy - rendered.get_height() // 2))
 
     def _draw_lighting(self, s, ox, oy):
@@ -5308,6 +5390,17 @@ class Game:
             pygame.draw.circle(surf, (60, 140, 200), (vpx, vpy), 3, 1)
 
         s.blit(surf, (WIDTH - mm_w - 12, 12))
+
+    def _draw_screen_flash(self, s):
+        if not self.screen_flashes:
+            return
+        flash_surf = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        for color, life, max_life in self.screen_flashes:
+            t = max(0.0, min(1.0, life / max_life))
+            alpha = int(140 * (t ** 2))
+            if alpha > 0:
+                flash_surf.fill((color[0], color[1], color[2], alpha))
+                s.blit(flash_surf, (0, 0))
 
     # ---- Diablo-style UI ----
     def _draw_ui(self, s):
@@ -7122,6 +7215,7 @@ class Game:
             self.update_corpses(dt)
             self.update_blood_stains(dt)
             self.update_screen_shake(dt)
+            self.update_screen_flashes(dt)
             # Update lightning chains
             self.lightning_chains = [(s, e, l - dt) for s, e, l in self.lightning_chains if l - dt > 0]
             if self.player.hp <= 0:
