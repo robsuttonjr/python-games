@@ -157,11 +157,11 @@ BIOME_COLORS = {
                    "tree_trunk": (35, 32, 20), "tree_top": (20, 45, 18), "outdoor": True},
 }
 BIOME_AMBIENT = {
-    "crypt":     (220, 225, 210),
-    "cave":      (215, 210, 195),
-    "firepit":   (225, 195, 185),
-    "icecavern": (200, 215, 230),
-    "swamp":     (200, 215, 195),
+    "crypt":     (145, 150, 135),
+    "cave":      (135, 130, 115),
+    "firepit":   (155, 120, 105),
+    "icecavern": (130, 145, 160),
+    "swamp":     (125, 140, 120),
 }
 BIOME_NAMES = {
     "crypt": "Rogue Encampment", "cave": "Lut Gholein", "firepit": "Burning Hells",
@@ -209,31 +209,31 @@ ACT_AREAS = {
 }
 
 # ============ VISUAL CONFIG ============
-AMBIENT_LIGHT = (210, 210, 200)
-PLAYER_LIGHT_RADIUS = 400
-PLAYER_LIGHT_COLOR = (255, 230, 190)
-TORCH_LIGHT_RADIUS = 270
-TORCH_LIGHT_COLOR = (255, 180, 80)
-PROJ_LIGHT_RADIUS = 110
-MAX_PARTICLES = 500
-SCREEN_SHAKE_DECAY = 10.0
+AMBIENT_LIGHT = (160, 155, 145)
+PLAYER_LIGHT_RADIUS = 340
+PLAYER_LIGHT_COLOR = (240, 215, 170)
+TORCH_LIGHT_RADIUS = 220
+TORCH_LIGHT_COLOR = (230, 160, 65)
+PROJ_LIGHT_RADIUS = 80
+MAX_PARTICLES = 350
+SCREEN_SHAKE_DECAY = 14.0
 
 # ============ COLOR PALETTE (D2R dark fantasy) ============
-C_BLOOD = (160, 20, 20)
-C_BLOOD_DARK = (100, 10, 10)
-C_GOLD = (255, 215, 80)
-C_GOLD_DARK = (180, 140, 40)
-C_MANA_BLUE = (60, 80, 200)
-C_MANA_LIGHT = (100, 140, 255)
-C_FIRE = (255, 140, 40)
-C_FIRE_BRIGHT = (255, 220, 100)
-C_POISON = (80, 200, 60)
-C_ICE = (140, 200, 255)
-C_LIGHTNING = (255, 255, 100)
-C_LAVA = (255, 80, 20)
-C_GOTHIC_FRAME = (90, 75, 50)
-C_GOTHIC_FRAME_LIGHT = (140, 120, 80)
-C_GOTHIC_BG = (12, 10, 15)
+C_BLOOD = (140, 18, 18)
+C_BLOOD_DARK = (85, 8, 8)
+C_GOLD = (220, 190, 70)
+C_GOLD_DARK = (160, 125, 35)
+C_MANA_BLUE = (50, 70, 180)
+C_MANA_LIGHT = (85, 120, 220)
+C_FIRE = (220, 120, 35)
+C_FIRE_BRIGHT = (240, 195, 85)
+C_POISON = (65, 170, 50)
+C_ICE = (120, 175, 225)
+C_LIGHTNING = (235, 235, 90)
+C_LAVA = (220, 65, 15)
+C_GOTHIC_FRAME = (80, 65, 42)
+C_GOTHIC_FRAME_LIGHT = (125, 105, 70)
+C_GOTHIC_BG = (10, 8, 12)
 
 BIOME_PORTAL_COLORS = {
     "crypt": (180, 160, 120), "cave": (160, 130, 80), "firepit": (255, 120, 40),
@@ -2514,25 +2514,24 @@ class Game:
                 gravity=gravity
             ))
 
-    def emit_blood(self, x, y, count=8):
-        self.emit_particles(x, y, count, C_BLOOD, speed=100, life=0.7, size=2.5, gravity=180)
+    def emit_blood(self, x, y, count=5):
+        self.emit_particles(x, y, count, C_BLOOD, speed=70, life=0.5, size=2.0, gravity=180)
 
-    def emit_death_burst(self, x, y, color, count=20):
-        self.emit_particles(x, y, count, color, speed=140, life=0.9, size=3.0, gravity=100)
-        # blood stain on ground
+    def emit_death_burst(self, x, y, color, count=12):
+        self.emit_particles(x, y, count, color, speed=100, life=0.7, size=2.5, gravity=100)
         self.dungeon.blood_stains.append((x, y, 2.0 + random.random() * 2.0))
 
-    def emit_magic(self, x, y, count=6):
-        self.emit_particles(x, y, count, C_MANA_LIGHT, speed=60, life=0.5, size=2.0, gravity=-40)
+    def emit_magic(self, x, y, count=4):
+        self.emit_particles(x, y, count, C_MANA_LIGHT, speed=40, life=0.4, size=1.8, gravity=-30)
 
-    def emit_fire(self, x, y, count=3):
-        self.emit_particles(x, y, count, C_FIRE, speed=30, life=0.4, size=2.0, gravity=-100)
+    def emit_fire(self, x, y, count=2):
+        self.emit_particles(x, y, count, C_FIRE, speed=22, life=0.35, size=1.8, gravity=-80)
 
-    def emit_dust(self, x, y, count=2):
-        self.emit_particles(x, y, count, (120, 110, 90), speed=20, life=0.5, size=1.5, gravity=-10)
+    def emit_dust(self, x, y, count=1):
+        self.emit_particles(x, y, count, (100, 90, 75), speed=14, life=0.4, size=1.2, gravity=-8)
 
-    def emit_sparks(self, x, y, count=5):
-        self.emit_particles(x, y, count, C_FIRE_BRIGHT, speed=120, life=0.3, size=1.5, gravity=60)
+    def emit_sparks(self, x, y, count=3):
+        self.emit_particles(x, y, count, C_FIRE_BRIGHT, speed=85, life=0.25, size=1.3, gravity=50)
 
     def add_floating_text(self, x, y, text, color, scale=1.0):
         self.floating_texts.append(FloatingText(
@@ -2658,8 +2657,8 @@ class Game:
         self.enemies.append(goblin)
         self.add_floating_text(pos.x, pos.y - 30, "TREASURE GOBLIN!", C_GOLD, 1.5)
         self.play_sound("goblin")
-        self.emit_particles(pos.x, pos.y, 25, C_GOLD, speed=100, life=0.8, gravity=-40)
-        self.add_screen_shake(4)
+        self.emit_particles(pos.x, pos.y, 10, C_GOLD, speed=60, life=0.5, gravity=-30)
+        self.add_screen_shake(2)
 
     def spawn_boss(self):
         if not self._is_act_boss_level() or self.boss_spawned:
@@ -2680,16 +2679,16 @@ class Game:
                  kind=1, shot_cd=random.uniform(*BOSS_SHOT_CD))
         self.enemies.append(b)
         self.boss_spawned = True
-        self.add_screen_shake(12)
-        self.add_screen_flash((220, 40, 40), 0.6)
-        self.emit_death_burst(pos.x, pos.y, (180, 60, 60), 30)
+        self.add_screen_shake(6)
+        self.add_screen_flash((160, 30, 30), 0.3)
+        self.emit_death_burst(pos.x, pos.y, (140, 45, 45), 18)
         # Announce boss with D2R name
         act_info = self._get_act_info()
         boss_name = act_info.get("boss_name", "Boss")
         boss_title = act_info.get("boss_title", "")
-        self.add_floating_text(pos.x, pos.y - 40, boss_name, (255, 80, 60), 2.5)
+        self.add_floating_text(pos.x, pos.y - 40, boss_name, (220, 70, 50), 1.8)
         if boss_title:
-            self.add_floating_text(pos.x, pos.y - 15, boss_title, (200, 160, 80), 2.0)
+            self.add_floating_text(pos.x, pos.y - 15, boss_title, (180, 140, 70), 1.4)
 
     def spawn_uber_boss(self):
         """Spawn a rare uber boss - much larger, tougher, high unique drop chance."""
@@ -2717,12 +2716,12 @@ class Game:
                  kind=1, shot_cd=random.uniform(0.8, 1.3))
         b.is_uber = True  # tag for special drops
         self.enemies.append(b)
-        self.add_screen_shake(18)
-        self.add_screen_flash((200, 40, 200), 0.8)
-        self.emit_death_burst(pos.x, pos.y, (200, 40, 200), 45)
-        self.emit_particles(pos.x, pos.y, 30, (255, 80, 255), speed=120, life=1.0, gravity=-20)
-        self.add_floating_text(pos.x, pos.y - 55, name, (255, 60, 255), 3.0)
-        self.add_floating_text(pos.x, pos.y - 25, title, (200, 140, 200), 2.5)
+        self.add_screen_shake(10)
+        self.add_screen_flash((140, 30, 140), 0.45)
+        self.emit_death_burst(pos.x, pos.y, (160, 30, 160), 25)
+        self.emit_particles(pos.x, pos.y, 15, (180, 60, 180), speed=80, life=0.7, gravity=-20)
+        self.add_floating_text(pos.x, pos.y - 55, name, (200, 55, 200), 2.0)
+        self.add_floating_text(pos.x, pos.y - 25, title, (170, 120, 170), 1.6)
         self.play_sound("boss_roar")
 
     def spawn_pickup_near_player(self):
@@ -2815,10 +2814,10 @@ class Game:
         explodes = random.random() < CRATE_EXPLODE_CHANCE
         if explodes:
             # Explosion effect
-            self.emit_death_burst(crate.pos.x, crate.pos.y, (255, 140, 40), 25)
-            self.emit_particles(crate.pos.x, crate.pos.y, 20, (255, 100, 30),
-                                speed=120, life=0.6, gravity=60)
-            self.add_screen_shake(6)
+            self.emit_death_burst(crate.pos.x, crate.pos.y, (200, 110, 30), 12)
+            self.emit_particles(crate.pos.x, crate.pos.y, 8, (200, 80, 25),
+                                speed=80, life=0.4, gravity=60)
+            self.add_screen_shake(3)
             self.add_floating_text(crate.pos.x, crate.pos.y - 15, "BOOM!", (255, 160, 40), 1.0)
             self.play_sound("crate_explode")
             # Damage nearby enemies
@@ -3011,12 +3010,12 @@ class Game:
         if keys[pygame.K_q] and self.player.potions_hp > 0 and self.player.hp < self.player.max_hp():
             self.player.hp = min(self.player.max_hp(), self.player.hp + POTION_HEAL)
             self.player.potions_hp -= 1
-            self.emit_particles(self.player.pos.x, self.player.pos.y, 10, (100, 220, 100), speed=40, life=0.6, gravity=-60)
+            self.emit_particles(self.player.pos.x, self.player.pos.y, 5, (80, 180, 80), speed=30, life=0.4, gravity=-40)
             self.add_floating_text(self.player.pos.x, self.player.pos.y - 20, f"+{POTION_HEAL}", (100, 255, 100))
         if keys[pygame.K_e] and self.player.potions_mana > 0 and self.player.mana < self.player.max_mana():
             self.player.mana = min(self.player.max_mana(), self.player.mana + POTION_MANA)
             self.player.potions_mana -= 1
-            self.emit_particles(self.player.pos.x, self.player.pos.y, 10, C_MANA_LIGHT, speed=40, life=0.6, gravity=-60)
+            self.emit_particles(self.player.pos.x, self.player.pos.y, 5, C_MANA_LIGHT, speed=30, life=0.4, gravity=-40)
 
     # ---- Combat ----
     def shoot_basic(self, direction: Vec):
@@ -3186,7 +3185,7 @@ class Game:
                     e.alive = False
                     if self.treasure_goblin is e:
                         self.treasure_goblin = None
-                    self.emit_particles(e.pos.x, e.pos.y, 20, C_GOLD, speed=80, life=0.6, gravity=-30)
+                    self.emit_particles(e.pos.x, e.pos.y, 8, C_GOLD, speed=50, life=0.4, gravity=-25)
                     self.add_floating_text(e.pos.x, e.pos.y - 20, "ESCAPED!", (200, 180, 60), 1.2)
                     continue
                 # Flee from player — with wall avoidance
@@ -3581,20 +3580,20 @@ class Game:
             self.player.stat_points += STAT_POINTS_PER_LEVEL
             self.player.skill_points += SKILL_POINTS_PER_LEVEL
         if self.player.level > old_level:
-            self.player.levelup_flash = 2.0
-            self.add_floating_text(self.player.pos.x, self.player.pos.y - 30, "LEVEL UP!", C_GOLD, 1.5)
-            self.emit_particles(self.player.pos.x, self.player.pos.y, 25, C_GOLD, speed=100, life=1.0, gravity=-50)
-            self.add_screen_shake(5)
-            self.add_screen_flash((255, 220, 100), 0.35)
+            self.player.levelup_flash = 1.5
+            self.add_floating_text(self.player.pos.x, self.player.pos.y - 30, "LEVEL UP!", C_GOLD, 1.3)
+            self.emit_particles(self.player.pos.x, self.player.pos.y, 12, C_GOLD, speed=60, life=0.7, gravity=-40)
+            self.add_screen_shake(3)
+            self.add_screen_flash((200, 180, 80), 0.2)
             self.play_sound("levelup")
 
-        # Treasure goblin: massive loot explosion
+        # Treasure goblin: loot explosion
         if isinstance(e, TreasureGoblin):
             if self.treasure_goblin is e:
                 self.treasure_goblin = None
-            self.emit_death_burst(e.pos.x, e.pos.y, C_GOLD, 50)
-            self.add_screen_shake(8)
-            self.add_floating_text(e.pos.x, e.pos.y - 30, "JACKPOT!", C_GOLD, 2.0)
+            self.emit_death_burst(e.pos.x, e.pos.y, C_GOLD, 25)
+            self.add_screen_shake(4)
+            self.add_floating_text(e.pos.x, e.pos.y - 30, "JACKPOT!", C_GOLD, 1.5)
             self.play_sound("jackpot")
             for _ in range(10):
                 self.loots.append(Loot(pos=self._safe_loot_pos(e.pos, 40), gold=random.randint(12, 35)))
@@ -3624,29 +3623,28 @@ class Game:
         death_color = (180, 60, 60)
         if isinstance(e, Elite):
             death_color = AURAS[e.aura]["color"]
-            self.emit_death_burst(e.pos.x, e.pos.y, death_color, 30)
-            self.add_screen_shake(6)
+            self.emit_death_burst(e.pos.x, e.pos.y, death_color, 16)
+            self.add_screen_shake(3)
         elif isinstance(e, Boss):
             if getattr(e, 'is_uber', False):
-                # Uber boss death - massive explosion
-                self.emit_death_burst(e.pos.x, e.pos.y, (255, 80, 255), 80)
-                self.emit_particles(e.pos.x, e.pos.y, 60, (255, 200, 80), speed=150, life=1.2, gravity=-30)
-                self.add_screen_shake(25)
-                self.add_screen_flash((255, 80, 255), 1.0)
-                self.add_floating_text(e.pos.x, e.pos.y - 60, "UBER BOSS SLAIN!", (255, 80, 255), 3.5)
-                self.add_floating_text(e.pos.x, e.pos.y - 25, "LEGENDARY LOOT!", C_GOLD, 3.0)
+                self.emit_death_burst(e.pos.x, e.pos.y, (180, 60, 180), 35)
+                self.emit_particles(e.pos.x, e.pos.y, 20, (200, 170, 60), speed=90, life=0.8, gravity=-25)
+                self.add_screen_shake(12)
+                self.add_screen_flash((140, 50, 140), 0.5)
+                self.add_floating_text(e.pos.x, e.pos.y - 60, "UBER BOSS SLAIN!", (200, 70, 200), 2.5)
+                self.add_floating_text(e.pos.x, e.pos.y - 25, "LEGENDARY LOOT!", C_GOLD, 2.0)
                 self.play_sound("levelup")
             else:
-                self.emit_death_burst(e.pos.x, e.pos.y, (255, 100, 40), 50)
-                self.add_screen_shake(15)
-                self.add_screen_flash((255, 140, 60), 0.7)
+                self.emit_death_burst(e.pos.x, e.pos.y, (200, 80, 30), 25)
+                self.add_screen_shake(8)
+                self.add_screen_flash((180, 100, 40), 0.4)
                 act_info = self._get_act_info()
                 boss_name = act_info.get("boss_name", "Boss")
                 self.add_floating_text(e.pos.x, e.pos.y - 50,
-                                       f"{boss_name} SLAIN!", (255, 200, 60), 2.5)
+                                       f"{boss_name} SLAIN!", (220, 180, 50), 1.8)
                 if self._is_act_boss_level():
                     self.add_floating_text(e.pos.x, e.pos.y - 20,
-                                           f"{act_info['name']} Complete!", C_GOLD, 3.0)
+                                           f"{act_info['name']} Complete!", C_GOLD, 2.0)
                     self.play_sound("levelup")
         else:
             self.emit_death_burst(e.pos.x, e.pos.y, death_color, 15)
@@ -3762,8 +3760,8 @@ class Game:
         for d in drops:
             if d.weapon and d.weapon.rarity == RARITY_UNIQUE:
                 self.add_floating_text(d.pos.x, d.pos.y - 30,
-                                       f"UNIQUE: {d.weapon.name}", RARITY_COLORS[RARITY_UNIQUE], 3.0)
-                self.add_screen_shake(4)
+                                       f"UNIQUE: {d.weapon.name}", RARITY_COLORS[RARITY_UNIQUE], 2.0)
+                self.add_screen_shake(2)
                 self.play_sound("jackpot")
 
     def update_spawning(self, dt: float):
@@ -3838,14 +3836,14 @@ class Game:
             c.life -= dt
             if c.life > 0:
                 # Emit wisps as corpse dissolves (last ~35% of life)
-                if c.life < 1.4 and random.random() < 0.35 * dt * 30:
-                    wisp_r = max(30, min(120, c.color[0]))
-                    wisp_g = max(30, min(120, c.color[1]))
-                    wisp_b = max(30, min(120, c.color[2]))
-                    ox = random.uniform(-c.radius * 0.6, c.radius * 0.6)
-                    self.emit_particles(c.x + ox, c.y - c.radius * 0.3, 1,
+                if c.life < 1.0 and random.random() < 0.15 * dt * 30:
+                    wisp_r = max(20, min(80, c.color[0] // 2))
+                    wisp_g = max(20, min(80, c.color[1] // 2))
+                    wisp_b = max(20, min(80, c.color[2] // 2))
+                    ox = random.uniform(-c.radius * 0.4, c.radius * 0.4)
+                    self.emit_particles(c.x + ox, c.y - c.radius * 0.2, 1,
                                         (wisp_r, wisp_g, wisp_b),
-                                        speed=8, life=0.9, size=2.2, gravity=-45)
+                                        speed=5, life=0.6, size=1.5, gravity=-30)
                 alive.append(c)
         self.corpses = alive
 
@@ -4232,17 +4230,16 @@ class Game:
                             s.blit(self.rock_tiles[variant], (px, py))
                         elif wtype == WALL_WATER and hasattr(self, 'water_tiles'):
                             s.blit(self.water_tiles[variant], (px, py))
-                            # Animated shimmer ripples overlay
-                            phase = self.game_time * 1.8 + (tx * 0.6 + ty * 0.9)
+                            phase = self.game_time * 0.8 + (tx * 0.4 + ty * 0.6)
                             shimmer_y = int((math.sin(phase) * 0.5 + 0.5) * (TILE - 4)) + 2
-                            shimmer_alpha = int(60 + 40 * math.sin(phase * 1.3))
-                            shimmer_col = (180, 210, 230) if self.current_biome == "icecavern" else (160, 180, 210)
+                            shimmer_alpha = int(20 + 15 * math.sin(phase * 0.9))
+                            shimmer_col = (140, 165, 185) if self.current_biome == "icecavern" else (120, 140, 165)
                             if self.current_biome == "firepit":
-                                shimmer_col = (255, 180, 100)
+                                shimmer_col = (190, 130, 70)
                             elif self.current_biome == "swamp":
-                                shimmer_col = (120, 150, 110)
-                            shimmer_surf = pygame.Surface((TILE, 2), pygame.SRCALPHA)
-                            shimmer_surf.fill((*shimmer_col, max(20, min(120, shimmer_alpha))))
+                                shimmer_col = (85, 110, 78)
+                            shimmer_surf = pygame.Surface((TILE, 1), pygame.SRCALPHA)
+                            shimmer_surf.fill((*shimmer_col, max(10, min(50, shimmer_alpha))))
                             s.blit(shimmer_surf, (px, py + shimmer_y))
                         else:
                             s.blit(self.wall_tiles[variant], (px, py))
@@ -4303,39 +4300,26 @@ class Game:
             else:
                 next_biome = self.current_biome
             pcol = BIOME_PORTAL_COLORS.get(next_biome, (200, 200, 100))
-            # Outer ring of orbs
-            for i in range(8):
-                ang = self.portal_angle + i * (math.tau / 8)
-                r = 17
-                x = px + int(math.cos(ang) * r)
-                y = py + int(math.sin(ang) * r)
-                pulse = 0.6 + 0.4 * math.sin(self.game_time * 3 + i)
-                col = (int(pcol[0] * pulse), int(pcol[1] * pulse), int(pcol[2] * pulse))
-                pygame.draw.circle(s, col, (x, y), 4)
-            # Inner counter-rotating ring
             for i in range(6):
-                ang = -self.portal_angle * 1.6 + i * (math.tau / 6)
-                r = 10
+                ang = self.portal_angle + i * (math.tau / 6)
+                r = 15
                 x = px + int(math.cos(ang) * r)
                 y = py + int(math.sin(ang) * r)
-                pulse = 0.7 + 0.3 * math.sin(self.game_time * 5 + i * 1.3)
-                col = (min(255, int(pcol[0] * pulse + 40)),
-                       min(255, int(pcol[1] * pulse + 40)),
-                       min(255, int(pcol[2] * pulse + 40)))
-                pygame.draw.circle(s, col, (x, y), 2)
-            # Center glow
-            glow = 0.7 + 0.3 * math.sin(self.game_time * 2)
-            center_col = (int(pcol[0] * 0.7 * glow), int(pcol[1] * 0.7 * glow), int(pcol[2] * 0.5 * glow))
-            pygame.draw.circle(s, center_col, (px, py), 11)
-            bright = (min(255, int(pcol[0] * glow)), min(255, int(pcol[1] * glow)), min(255, int(pcol[2] * 0.6 * glow)))
-            pygame.draw.circle(s, bright, (px, py), 6)
-            # Occasional upward sparkle emission
-            if random.random() < 0.25:
+                pulse = 0.7 + 0.3 * math.sin(self.game_time * 2 + i * 0.8)
+                col = (int(pcol[0] * pulse * 0.7), int(pcol[1] * pulse * 0.7), int(pcol[2] * pulse * 0.7))
+                pygame.draw.circle(s, col, (x, y), 3)
+            glow = 0.75 + 0.25 * math.sin(self.game_time * 1.5)
+            center_col = (int(pcol[0] * 0.5 * glow), int(pcol[1] * 0.5 * glow), int(pcol[2] * 0.35 * glow))
+            pygame.draw.circle(s, center_col, (px, py), 10)
+            bright = (min(220, int(pcol[0] * 0.8 * glow)), min(220, int(pcol[1] * 0.8 * glow)),
+                      min(220, int(pcol[2] * 0.5 * glow)))
+            pygame.draw.circle(s, bright, (px, py), 5)
+            if random.random() < 0.06:
                 angp = random.uniform(0, math.tau)
-                rp = random.uniform(4, 14)
-                ex = px + self.cam_x - ox + math.cos(angp) * rp
-                ey = py + self.cam_y - oy + math.sin(angp) * rp
-                self.emit_particles(ex, ey, 1, pcol, speed=20, life=0.7, size=1.6, gravity=-60)
+                rp = random.uniform(3, 10)
+                sparkx = px + self.cam_x - ox + math.cos(angp) * rp
+                sparky = py + self.cam_y - oy + math.sin(angp) * rp
+                self.emit_particles(sparkx, sparky, 1, pcol, speed=12, life=0.5, size=1.2, gravity=-40)
             # D2R-style portal label showing next area
             if self._is_act_boss_level():
                 # Last level of act - portal leads to next act
@@ -4358,35 +4342,19 @@ class Game:
                 continue
             px = tx * TILE - self.cam_x + ox + TILE // 2
             py = ty * TILE - self.cam_y + oy + TILE // 2
-            # torch base with banded highlights
-            pygame.draw.rect(s, (70, 50, 28), (px - 3, py, 6, 11))
-            pygame.draw.rect(s, (110, 85, 50), (px - 3, py + 2, 6, 2))
-            pygame.draw.rect(s, (110, 85, 50), (px - 3, py + 7, 6, 2))
-            # flame: multi-layer with per-frame flicker
-            flicker = random.uniform(0.65, 1.0)
-            sway = math.sin(self.game_time * 9 + tx * 1.3 + ty * 0.7) * 1.2
+            pygame.draw.rect(s, (60, 42, 22), (px - 3, py, 6, 11))
+            pygame.draw.rect(s, (90, 70, 40), (px - 3, py + 3, 6, 2))
+            flicker = 0.7 + 0.3 * math.sin(self.game_time * 2.5 + tx * 1.7 + ty * 0.9)
+            sway = math.sin(self.game_time * 3.5 + tx * 1.3 + ty * 0.7) * 0.8
             cx = px + int(sway)
-            # outer orange halo
-            halo_surf = pygame.Surface((22, 26), pygame.SRCALPHA)
-            halo_col = (int(255 * flicker), int(110 * flicker), int(30 * flicker), 70)
-            pygame.draw.circle(halo_surf, halo_col, (11, 13), 10)
-            s.blit(halo_surf, (cx - 11, py - 15))
-            # mid flame
-            fr = int(255 * flicker)
-            fg = int(160 * flicker)
-            fb = int(40 * flicker)
-            pygame.draw.circle(s, (fr, fg, fb), (cx, py - 3), 6)
-            # inner bright flame
-            pygame.draw.circle(s, (255, min(255, fg + 60), fb + 20), (cx, py - 6), 3)
-            # white-hot core
-            pygame.draw.circle(s, (255, 240, 180), (cx, py - 6), 1)
-            # rising embers
-            if random.random() < 0.25:
+            fr = int(210 * flicker)
+            fg = int(130 * flicker)
+            fb = int(30 * flicker)
+            pygame.draw.circle(s, (fr, fg, fb), (cx, py - 3), 5)
+            pygame.draw.circle(s, (min(255, fr + 30), min(255, fg + 40), fb + 15), (cx, py - 5), 3)
+            pygame.draw.circle(s, (240, 220, 160), (cx, py - 5), 1)
+            if random.random() < 0.06:
                 self.emit_fire(px + self.cam_x - ox, py - 4 + self.cam_y - oy, 1)
-            if random.random() < 0.08:
-                ex = px + self.cam_x - ox + random.randint(-2, 2)
-                ey = py - 6 + self.cam_y - oy
-                self.emit_particles(ex, ey, 1, (255, 220, 150), speed=18, life=0.55, size=1.2, gravity=-80)
 
     def _draw_corpses(self, s, ox, oy):
         for c in self.corpses:
@@ -4425,12 +4393,11 @@ class Game:
                 pygame.draw.ellipse(pool_surf, (40, int(120 * pulse), 30, 80), (4, 8, r * 2 - 8, r * 2 - 16))
                 bubble_col = (60, 180, 40)
             s.blit(pool_surf, (px - r, py - r))
-            if random.random() < 0.12:
-                bx = px + random.randint(-12, 12)
-                by = py + random.randint(-8, 8)
-                pygame.draw.circle(s, bubble_col, (bx, by), random.randint(2, 4))
-            # Lava emits fire particles
-            if hazard == "lava" and random.random() < 0.08:
+            if random.random() < 0.04:
+                bx = px + random.randint(-10, 10)
+                by = py + random.randint(-6, 6)
+                pygame.draw.circle(s, bubble_col, (bx, by), random.randint(1, 3))
+            if hazard == "lava" and random.random() < 0.03:
                 self.emit_fire(px + self.cam_x - ox + random.randint(-10, 10),
                                py + self.cam_y - oy + random.randint(-10, 10), 1)
 
@@ -4448,7 +4415,7 @@ class Game:
             if chest.hit_flash > 0:
                 # Flash white on hit
                 flash_surf = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
-                flash_surf.fill((255, 255, 255, 180))
+                flash_surf.fill((255, 255, 255, 110))
                 s.blit(flash_surf, (cx - TILE // 2, cy - TILE // 2))
             else:
                 surf = self.gold_chest_surf if chest.kind == "gold" else self.chest_surf
@@ -4471,7 +4438,7 @@ class Game:
             # Crate sprite (or flash)
             if crate.hit_flash > 0:
                 flash_surf = pygame.Surface((TILE, TILE), pygame.SRCALPHA)
-                flash_surf.fill((255, 255, 255, 180))
+                flash_surf.fill((255, 255, 255, 110))
                 s.blit(flash_surf, (cx - TILE // 2, cy - TILE // 2))
             else:
                 s.blit(self.crate_surf, (cx - TILE // 2, cy - TILE // 2))
@@ -4500,7 +4467,7 @@ class Game:
         # Face shadow (mysterious)
         pygame.draw.circle(s, (30, 25, 18), (vx, vy - 12), 7)
         # Eyes (small glowing)
-        eye_glow = int(180 + 40 * math.sin(t * 2.5))
+        eye_glow = int(190 + 15 * math.sin(t * 1.5))
         pygame.draw.circle(s, (eye_glow, eye_glow - 30, 0), (vx - 3, vy - 13), 2)
         pygame.draw.circle(s, (eye_glow, eye_glow - 30, 0), (vx + 3, vy - 13), 2)
         # Belt
@@ -4534,61 +4501,36 @@ class Game:
                 wc = l.weapon.get_color()
                 is_unique = l.weapon.rarity == RARITY_UNIQUE
                 is_set = l.weapon.rarity == RARITY_SET
-                # Unique/Set weapons get a pulsing golden aura
                 if is_unique or is_set:
-                    aura_pulse = 0.6 + 0.4 * math.sin(self.game_time * 4)
-                    aura_r = 24 + int(4 * math.sin(self.game_time * 3))
-                    ac = wc if is_unique else (0, 220, 0)
-                    pygame.draw.circle(s, (int(ac[0] * 0.3 * aura_pulse),
-                                           int(ac[1] * 0.3 * aura_pulse),
-                                           int(ac[2] * 0.15 * aura_pulse)), (vx, vy), aura_r)
-                    # Sparkle particles
-                    for i in range(3):
-                        ang = self.game_time * 2.5 + i * math.tau / 3
-                        sx = vx + int(math.cos(ang) * 18)
-                        sy = vy + int(math.sin(ang) * 14)
-                        pygame.draw.circle(s, (255, 240, 150) if is_unique else (120, 255, 120),
-                                           (sx, sy), 2)
-                    # Column of light for uniques
-                    if is_unique:
-                        beam_alpha = int(40 * aura_pulse)
-                        pygame.draw.line(s, (beam_alpha, beam_alpha - 5, 0),
-                                         (vx, vy - 30), (vx, vy + 15), 2)
-                glow_c = (min(255, wc[0]//2 + glow_alpha), min(255, wc[1]//2 + glow_alpha), min(255, wc[2]//2))
-                pygame.draw.circle(s, glow_c, (vx, vy), 17)
+                    aura_pulse = 0.75 + 0.25 * math.sin(self.game_time * 2.5)
+                    aura_r = 20 + int(2 * math.sin(self.game_time * 2))
+                    ac = wc if is_unique else (0, 180, 0)
+                    pygame.draw.circle(s, (int(ac[0] * 0.2 * aura_pulse),
+                                           int(ac[1] * 0.2 * aura_pulse),
+                                           int(ac[2] * 0.1 * aura_pulse)), (vx, vy), aura_r)
+                glow_c = (min(200, wc[0]//3 + glow_alpha), min(200, wc[1]//3 + glow_alpha), min(200, wc[2]//3))
+                pygame.draw.circle(s, glow_c, (vx, vy), 14)
                 pygame.draw.rect(s, wc, (vx - 8, vy - 8, 16, 16), border_radius=3)
-                pygame.draw.rect(s, (min(255, wc[0]+40), min(255, wc[1]+40), min(255, wc[2]+40)),
+                pygame.draw.rect(s, (min(255, wc[0]+30), min(255, wc[1]+30), min(255, wc[2]+30)),
                                  (vx - 8, vy - 8, 16, 16), 1, border_radius=3)
-                # Weapon name label with rarity color
                 wlabel = self.font.render(l.weapon.name, True, wc)
                 s.blit(wlabel, (vx - wlabel.get_width() // 2, vy - 22))
             elif l.potion_hp:
-                pygame.draw.circle(s, (glow_alpha, 0, 0), (vx, vy), 14)
-                pygame.draw.rect(s, (200, 40, 40), (vx - 7, vy - 7, 14, 14), border_radius=4)
-                pygame.draw.rect(s, (255, 80, 80), (vx - 3, vy - 6, 6, 4))
+                pygame.draw.circle(s, (glow_alpha // 2, 0, 0), (vx, vy), 12)
+                pygame.draw.rect(s, (180, 35, 35), (vx - 6, vy - 6, 12, 12), border_radius=3)
+                pygame.draw.rect(s, (220, 70, 70), (vx - 2, vy - 5, 4, 3))
             elif l.potion_mana:
-                pygame.draw.circle(s, (0, 0, glow_alpha), (vx, vy), 14)
-                pygame.draw.rect(s, (40, 80, 200), (vx - 7, vy - 7, 14, 14), border_radius=4)
-                pygame.draw.rect(s, (80, 120, 255), (vx - 3, vy - 6, 6, 4))
+                pygame.draw.circle(s, (0, 0, glow_alpha // 2), (vx, vy), 12)
+                pygame.draw.rect(s, (35, 65, 180), (vx - 6, vy - 6, 12, 12), border_radius=3)
+                pygame.draw.rect(s, (70, 100, 220), (vx - 2, vy - 5, 4, 3))
             elif l.dmg_boost:
-                pygame.draw.circle(s, (glow_alpha + 15, glow_alpha, 0), (vx, vy), 14)
-                pygame.draw.circle(s, (250, 160, 40), (vx, vy), 10)
-                pygame.draw.circle(s, (255, 220, 120), (vx, vy), 6)
-                # pulsing rays
-                for i in range(4):
-                    ang = self.game_time * 2 + i * math.pi / 2
-                    ex = vx + int(math.cos(ang) * 13)
-                    ey = vy + int(math.sin(ang) * 13)
-                    pygame.draw.line(s, (255, 200, 80), (vx, vy), (ex, ey), 2)
+                pygame.draw.circle(s, (glow_alpha // 2 + 8, glow_alpha // 2, 0), (vx, vy), 12)
+                pygame.draw.circle(s, (210, 140, 35), (vx, vy), 8)
+                pygame.draw.circle(s, (240, 195, 100), (vx, vy), 4)
             elif l.shield_boost:
-                pygame.draw.circle(s, (0, 0, glow_alpha + 10), (vx, vy), 14)
-                pygame.draw.circle(s, (80, 200, 250), (vx, vy), 10)
-                pygame.draw.circle(s, (180, 240, 255), (vx, vy), 6)
-                for i in range(4):
-                    ang = self.game_time * 2 + i * math.pi / 2
-                    ex = vx + int(math.cos(ang) * 13)
-                    ey = vy + int(math.sin(ang) * 13)
-                    pygame.draw.line(s, (140, 220, 255), (vx, vy), (ex, ey), 2)
+                pygame.draw.circle(s, (0, 0, glow_alpha // 2 + 5), (vx, vy), 12)
+                pygame.draw.circle(s, (65, 170, 215), (vx, vy), 8)
+                pygame.draw.circle(s, (150, 210, 235), (vx, vy), 4)
             elif l.infusion:
                 icol = INFUSION_COLORS[l.infusion]
                 pygame.draw.circle(s, (icol[0] // 3, icol[1] // 3, icol[2] // 3), (vx, vy), 16)
@@ -4596,9 +4538,8 @@ class Game:
                 # Arrow symbol inside
                 pygame.draw.line(s, (255, 255, 255), (vx - 5, vy), (vx + 5, vy), 2)
                 pygame.draw.polygon(s, (255, 255, 255), [(vx + 5, vy), (vx + 2, vy - 3), (vx + 2, vy + 3)])
-                # Pulsing ring
-                ring_pulse = int(3 + 2 * math.sin(self.game_time * 4))
-                pygame.draw.circle(s, icol, (vx, vy), 11 + ring_pulse, 2)
+                ring_pulse = int(2 + 1 * math.sin(self.game_time * 2.5))
+                pygame.draw.circle(s, icol, (vx, vy), 11 + ring_pulse, 1)
             elif l.armor or l.helm or l.gloves or l.boots:
                 eq_item = l.armor or l.helm or l.gloves or l.boots
                 ac = eq_item.get_color()
@@ -4639,9 +4580,9 @@ class Game:
                 jlabel = self.font.render(l.jewel.name, True, jc)
                 s.blit(jlabel, (vx - jlabel.get_width() // 2, vy - 22))
             elif l.gold:
-                pygame.draw.circle(s, (glow_alpha + 10, glow_alpha + 5, 0), (vx, vy), 11)
-                pygame.draw.circle(s, (255, 215, 0), (vx, vy), 7)
-                pygame.draw.circle(s, (200, 170, 0), (vx, vy), 7, 1)
+                pygame.draw.circle(s, (glow_alpha // 2 + 5, glow_alpha // 2 + 2, 0), (vx, vy), 9)
+                pygame.draw.circle(s, (220, 190, 0), (vx, vy), 6)
+                pygame.draw.circle(s, (180, 150, 0), (vx, vy), 6, 1)
 
     def _draw_projectiles(self, s, ox, oy):
         for pr in self.projectiles:
@@ -4749,33 +4690,23 @@ class Game:
             pygame.draw.polygon(s, crown_col, pts)
             pygame.draw.polygon(s, (200, 160, 60), pts, 1)
 
-        # Uber boss aura - massive pulsing purple/red aura with demonic glow
         if isinstance(e, Boss) and getattr(e, 'is_uber', False):
-            uber_pulse = 0.5 + 0.5 * math.sin(self.game_time * 5)
-            # Outer dark aura ring
-            pygame.draw.circle(s, (int(120 * uber_pulse), 20, int(120 * uber_pulse)),
-                               (ex, ey), e.radius + 20, 5)
-            # Inner fire ring
-            pygame.draw.circle(s, (int(200 * uber_pulse), int(60 * uber_pulse), int(40 * uber_pulse)),
-                               (ex, ey), e.radius + 12, 3)
-            # Demonic horns
-            horn_col = (200, 60, 200)
-            pygame.draw.line(s, horn_col, (ex - 18, ey - e.radius - 5),
-                             (ex - 28, ey - e.radius - 30), 3)
-            pygame.draw.line(s, horn_col, (ex + 18, ey - e.radius - 5),
-                             (ex + 28, ey - e.radius - 30), 3)
-            # Skull emblem above
-            pygame.draw.circle(s, (255, 255, 255), (ex, ey - e.radius - 18), 7)
-            pygame.draw.circle(s, (40, 0, 40), (ex - 3, ey - e.radius - 20), 2)
-            pygame.draw.circle(s, (40, 0, 40), (ex + 3, ey - e.radius - 20), 2)
+            uber_pulse = 0.7 + 0.3 * math.sin(self.game_time * 3)
+            pygame.draw.circle(s, (int(80 * uber_pulse), 12, int(80 * uber_pulse)),
+                               (ex, ey), e.radius + 16, 3)
+            horn_col = (int(100 * uber_pulse), int(30 * uber_pulse), int(100 * uber_pulse))
+            pygame.draw.line(s, horn_col, (ex - 16, ey - e.radius - 3),
+                             (ex - 24, ey - e.radius - 22), 2)
+            pygame.draw.line(s, horn_col, (ex + 16, ey - e.radius - 3),
+                             (ex + 24, ey - e.radius - 22), 2)
 
         # Body - D2R creature sprites (natural colors, HP bar shows health)
         flash = e.hit_flash > 0
 
         if isinstance(e, Boss):
             # Boss: massive armored demon lord
-            bc = (160, 30, 25) if not flash else (255, 255, 255)
-            bd = (100, 15, 10) if not flash else (240, 240, 240)
+            bc = (135, 25, 20) if not flash else (240, 240, 240)
+            bd = (85, 12, 8) if not flash else (220, 220, 220)
             pygame.draw.circle(s, bd, (ex, ey), e.radius + 3)
             pygame.draw.circle(s, bc, (ex, ey), e.radius)
             pygame.draw.circle(s, (min(255, bc[0] + 25), bc[1], bc[2]), (ex - 4, ey - 4), e.radius - 6)
@@ -4799,7 +4730,7 @@ class Game:
             for tx in [-8, -4, 0, 4, 8]:
                 pygame.draw.line(s, (255, 240, 200), (ex + tx, ey + 6), (ex + tx, ey + 11), 1)
         elif e.kind == 4:  # Treasure Goblin
-            shimmer = 0.7 + 0.3 * math.sin(self.game_time * 8)
+            shimmer = 0.8 + 0.2 * math.sin(self.game_time * 3)
             gcol = (int(255 * shimmer), int(215 * shimmer), int(40 * shimmer))
             # Hunched body
             pygame.draw.ellipse(s, (120, 100, 40), (ex - e.radius, ey - 2, e.radius * 2, e.radius + 4))
@@ -4847,7 +4778,7 @@ class Game:
                 pygame.draw.circle(s, (10, 5, 5), (ex - 5, ey - 7), 4)
                 pygame.draw.circle(s, (10, 5, 5), (ex + 5, ey - 7), 4)
                 # Glowing red pupils
-                glow = 0.7 + 0.3 * math.sin(self.game_time * 5 + e.pos.x * 0.1)
+                glow = 0.75 + 0.25 * math.sin(self.game_time * 2 + e.pos.x * 0.1)
                 eye_r = int(200 * glow)
                 pygame.draw.circle(s, (eye_r, 20, 10), (ex - 5, ey - 7), 2)
                 pygame.draw.circle(s, (eye_r, 20, 10), (ex + 5, ey - 7), 2)
@@ -4880,10 +4811,10 @@ class Game:
                 pygame.draw.polygon(s, horn, [
                     (ex + 9, ey - 10), (ex + 20, ey - 28), (ex + 15, ey - 25), (ex + 5, ey - 8)])
                 # Slanted angry eyes
-                pygame.draw.line(s, (255, 200, 40), (ex - 9, ey - 6), (ex - 3, ey - 3), 3)
-                pygame.draw.line(s, (255, 200, 40), (ex + 3, ey - 3), (ex + 9, ey - 6), 3)
-                pygame.draw.circle(s, (255, 255, 80), (ex - 6, ey - 4), 2)
-                pygame.draw.circle(s, (255, 255, 80), (ex + 6, ey - 4), 2)
+                pygame.draw.line(s, (200, 160, 30), (ex - 9, ey - 6), (ex - 3, ey - 3), 3)
+                pygame.draw.line(s, (200, 160, 30), (ex + 3, ey - 3), (ex + 9, ey - 6), 3)
+                pygame.draw.circle(s, (220, 200, 60), (ex - 6, ey - 4), 2)
+                pygame.draw.circle(s, (220, 200, 60), (ex + 6, ey - 4), 2)
                 # Fanged snarling mouth
                 pygame.draw.arc(s, (50, 10, 10), (ex - 7, ey + 2, 14, 10), 3.14, 6.28, 2)
                 pygame.draw.polygon(s, (255, 240, 200), [(ex - 5, ey + 5), (ex - 4, ey + 10), (ex - 3, ey + 5)])
@@ -4930,8 +4861,8 @@ class Game:
                 pygame.draw.line(s, (140, 200, 80), (ex - 4, ey - 2), (ex - 7, ey + 7), 2)
                 pygame.draw.line(s, (140, 200, 80), (ex + 4, ey - 2), (ex + 7, ey + 7), 2)
                 # Venom drip
-                if random.random() < 0.3:
-                    pygame.draw.circle(s, (100, 200, 60), (ex + random.choice([-7, 7]), ey + 9), 1)
+                if random.random() < 0.08:
+                    pygame.draw.circle(s, (80, 160, 50), (ex + random.choice([-7, 7]), ey + 9), 1)
 
             # --- Kind 3: WRAITH - hooded spectral reaper with soul wisps ---
             elif e.kind == 3:
@@ -4972,7 +4903,7 @@ class Game:
                     dist = e.radius + 8 + math.sin(self.game_time * 3 + i) * 3
                     sx = ex + int(math.cos(ang) * dist)
                     sy = wy + int(math.sin(ang) * (dist * 0.6))
-                    wisp_pulse = 0.5 + 0.5 * math.sin(self.game_time * 5 + i * 2)
+                    wisp_pulse = 0.6 + 0.4 * math.sin(self.game_time * 2.5 + i * 2)
                     wisp_col = (int(120 * wisp_pulse), int(180 * wisp_pulse), int(255 * wisp_pulse))
                     pygame.draw.circle(s, wisp_col, (sx, sy), 3)
                     pygame.draw.circle(s, (200, 220, 255), (sx, sy), 1)
@@ -5034,8 +4965,8 @@ class Game:
 
         # Level up flash
         if p.levelup_flash > 0:
-            flash_r = int(40 + 20 * math.sin(p.levelup_flash * 8))
-            pygame.draw.circle(s, (flash_r, flash_r - 5, 0), (px, py), 40, 2)
+            flash_r = int(30 + 15 * math.sin(p.levelup_flash * 4))
+            pygame.draw.circle(s, (flash_r, flash_r - 5, 0), (px, py), 35, 2)
 
         # Iframes blink
         if p.iframes > 0 and int(p.iframes * 20) % 2 == 0:
@@ -5108,7 +5039,7 @@ class Game:
         # Red hurt flash overlay
         if hurt_alpha > 0:
             flash_surf = pygame.Surface((50, 50), pygame.SRCALPHA)
-            pulse = 0.7 + 0.3 * math.sin(self.game_time * 20)
+            pulse = 0.8 + 0.2 * math.sin(self.game_time * 6)
             a = int(hurt_alpha * pulse)
             pygame.draw.circle(flash_surf, (255, 30, 20, a), (25, 25), 22)
             pygame.draw.circle(flash_surf, (255, 80, 60, a // 2), (25, 25), 18)
@@ -5397,7 +5328,7 @@ class Game:
         flash_surf = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         for color, life, max_life in self.screen_flashes:
             t = max(0.0, min(1.0, life / max_life))
-            alpha = int(140 * (t ** 2))
+            alpha = int(80 * (t ** 2))
             if alpha > 0:
                 flash_surf.fill((color[0], color[1], color[2], alpha))
                 s.blit(flash_surf, (0, 0))
