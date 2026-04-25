@@ -47,6 +47,7 @@ IFRAME_TIME = 0.25
 
 POTION_HEAL = 50
 POTION_MANA = 40
+BELT_SLOTS = 4
 
 ENEMY_BASE_HP = 12  # low base - scales up with level/act (D2R: Act 1 monsters die easily)
 ENEMY_BASE_DMG = (2, 4)  # low base damage - scales up progressively
@@ -217,6 +218,10 @@ TORCH_LIGHT_COLOR = (230, 160, 65)
 PROJ_LIGHT_RADIUS = 80
 MAX_PARTICLES = 350
 SCREEN_SHAKE_DECAY = 14.0
+MINIMAP_MODES = ["small", "large", "hidden"]
+MINIMAP_SCALE_MIN = 0.65
+MINIMAP_SCALE_MAX = 1.85
+MINIMAP_SCALE_STEP = 0.15
 
 # ============ COLOR PALETTE (D2R dark fantasy) ============
 C_BLOOD = (140, 18, 18)
@@ -883,6 +888,7 @@ class Player(Entity):
     gold: int = 0
     potions_hp: int = 1
     potions_mana: int = 1
+    belt_slots: list = field(default_factory=lambda: ["hp", "hp", "mana", "mana"])
     basic_cd: float = 0.0
     power_cd: float = 0.0
     weapon: Weapon = field(default_factory=lambda: Weapon("Wooden Bow", 6, 10, 2.5, True,
@@ -920,6 +926,31 @@ class Player(Entity):
     # Lives / respawn
     lives: int = 3
     max_lives: int = 3
+
+    def add_potion_to_belt(self, kind: str) -> bool:
+        """Try to place potion in first empty belt slot."""
+        for i in range(min(BELT_SLOTS, len(self.belt_slots))):
+            if self.belt_slots[i] is None:
+                self.belt_slots[i] = kind
+                return True
+        return False
+
+    def consume_belt_slot(self, slot_idx: int) -> Optional[str]:
+        """Consume potion in a belt slot; returns potion kind or None."""
+        if 0 <= slot_idx < min(BELT_SLOTS, len(self.belt_slots)):
+            kind = self.belt_slots[slot_idx]
+            if kind in ("hp", "mana"):
+                self.belt_slots[slot_idx] = None
+                return kind
+        return None
+
+    def consume_next_belt_potion(self, kind: str) -> bool:
+        """Consume first matching belt potion."""
+        for i in range(min(BELT_SLOTS, len(self.belt_slots))):
+            if self.belt_slots[i] == kind:
+                self.belt_slots[i] = None
+                return True
+        return False
 
     def _all_armor_slots(self):
         return [self.equipped_helm, self.equipped_armor, self.equipped_gloves, self.equipped_boots]
@@ -1729,6 +1760,8 @@ class Game:
         self.crates: List[Crate] = []
         self.vendor: Optional[Vendor] = None
         self.show_vendor_hint = False
+        self.minimap_mode_idx = 0  # 0=small, 1=large, 2=hidden
+        self.minimap_scale = 1.0
 
         if menu_choice == "continue":
             # Load saved game
@@ -2965,6 +2998,57 @@ class Game:
             if crate.alive:
                 crate.hit_flash = max(0.0, crate.hit_flash - dt)
 
+    def _drink_potion(self, kind: str) -> bool:
+        """Consume one potion of the requested type from belt first, then stash."""
+        p = self.player
+        if kind == "hp":
+            if p.hp >= p.max_hp():
+                return False
+            had_belt = p.consume_next_belt_potion("hp")
+            if not had_belt:
+                if p.potions_hp <= 0:
+                    return False
+                p.potions_hp -= 1
+            p.hp = min(p.max_hp(), p.hp + POTION_HEAL)
+            self.emit_particles(p.pos.x, p.pos.y, 5, (80, 180, 80), speed=30, life=0.4, gravity=-40)
+            self.add_floating_text(p.pos.x, p.pos.y - 20, f"+{POTION_HEAL}", (100, 255, 100))
+            return True
+
+        if kind == "mana":
+            if p.mana >= p.max_mana():
+                return False
+            had_belt = p.consume_next_belt_potion("mana")
+            if not had_belt:
+                if p.potions_mana <= 0:
+                    return False
+                p.potions_mana -= 1
+            p.mana = min(p.max_mana(), p.mana + POTION_MANA)
+            self.emit_particles(p.pos.x, p.pos.y, 5, C_MANA_LIGHT, speed=30, life=0.4, gravity=-40)
+            return True
+        return False
+
+    def _drink_belt_slot(self, slot_idx: int) -> bool:
+        """Consume specific belt slot (1-4 hotkeys)."""
+        potion_kind = self.player.consume_belt_slot(slot_idx)
+        if not potion_kind:
+            return False
+        if potion_kind == "hp":
+            if self.player.hp >= self.player.max_hp():
+                self.player.belt_slots[slot_idx] = "hp"
+                return False
+            self.player.hp = min(self.player.max_hp(), self.player.hp + POTION_HEAL)
+            self.emit_particles(self.player.pos.x, self.player.pos.y, 5, (80, 180, 80), speed=30, life=0.4, gravity=-40)
+            self.add_floating_text(self.player.pos.x, self.player.pos.y - 20, f"+{POTION_HEAL}", (100, 255, 100))
+            return True
+        if potion_kind == "mana":
+            if self.player.mana >= self.player.max_mana():
+                self.player.belt_slots[slot_idx] = "mana"
+                return False
+            self.player.mana = min(self.player.max_mana(), self.player.mana + POTION_MANA)
+            self.emit_particles(self.player.pos.x, self.player.pos.y, 5, C_MANA_LIGHT, speed=30, life=0.4, gravity=-40)
+            return True
+        return False
+
     # ---- Input ----
     def handle_input(self, dt: float):
         keys = pygame.key.get_pressed()
@@ -3006,16 +3090,19 @@ class Game:
         if want_power and self.player.power_cd <= 0 and self.player.mana >= POWER_MANA_COST:
             self.shoot_power(aim_dir)
 
-        # Potions
-        if keys[pygame.K_q] and self.player.potions_hp > 0 and self.player.hp < self.player.max_hp():
-            self.player.hp = min(self.player.max_hp(), self.player.hp + POTION_HEAL)
-            self.player.potions_hp -= 1
-            self.emit_particles(self.player.pos.x, self.player.pos.y, 5, (80, 180, 80), speed=30, life=0.4, gravity=-40)
-            self.add_floating_text(self.player.pos.x, self.player.pos.y - 20, f"+{POTION_HEAL}", (100, 255, 100))
-        if keys[pygame.K_e] and self.player.potions_mana > 0 and self.player.mana < self.player.max_mana():
-            self.player.mana = min(self.player.max_mana(), self.player.mana + POTION_MANA)
-            self.player.potions_mana -= 1
-            self.emit_particles(self.player.pos.x, self.player.pos.y, 5, C_MANA_LIGHT, speed=30, life=0.4, gravity=-40)
+        # Potions: belt-first (Diablo style), then stash fallback via Q/E
+        if keys[pygame.K_q]:
+            self._drink_potion("hp")
+        if keys[pygame.K_e]:
+            self._drink_potion("mana")
+        if keys[pygame.K_1]:
+            self._drink_belt_slot(0)
+        if keys[pygame.K_2]:
+            self._drink_belt_slot(1)
+        if keys[pygame.K_3]:
+            self._drink_belt_slot(2)
+        if keys[pygame.K_4]:
+            self._drink_belt_slot(3)
 
     # ---- Combat ----
     def shoot_basic(self, direction: Vec):
@@ -3477,10 +3564,12 @@ class Game:
                     self.add_floating_text(l.pos.x, l.pos.y - 10, f"+{l.gold}g", C_GOLD, 0.8)
                     self.play_sound("gold")
                 if l.potion_hp:
-                    self.player.potions_hp += 1
+                    if not self.player.add_potion_to_belt("hp"):
+                        self.player.potions_hp += 1
                     self.play_sound("pickup")
                 if l.potion_mana:
-                    self.player.potions_mana += 1
+                    if not self.player.add_potion_to_belt("mana"):
+                        self.player.potions_mana += 1
                     self.play_sound("pickup")
                 if l.weapon:
                     wc = l.weapon.get_color()
@@ -5210,8 +5299,13 @@ class Game:
         pygame.draw.circle(s, (220, 200, 160), (mx, my), 2)
 
     def _draw_minimap(self, s):
-        mm_w = 300
-        mm_h = 220
+        mm_mode = MINIMAP_MODES[self.minimap_mode_idx]
+        if mm_mode == "hidden":
+            return
+
+        base_w, base_h = (300, 220) if mm_mode == "small" else (480, 340)
+        mm_w = int(base_w * self.minimap_scale)
+        mm_h = int(base_h * self.minimap_scale)
         surf = pygame.Surface((mm_w, mm_h), pygame.SRCALPHA)
         surf.fill((0, 0, 0, 150))
         # Gothic frame
@@ -5320,6 +5414,11 @@ class Game:
             pygame.draw.circle(surf, (100, 200, 255), (vpx, vpy), 3)
             pygame.draw.circle(surf, (60, 140, 200), (vpx, vpy), 3, 1)
 
+        zoom_pct = int(self.minimap_scale * 100)
+        mode_label = "MiniMap: Small" if mm_mode == "small" else "MiniMap: Large"
+        mode_txt = self.font.render(f"{mode_label} ({zoom_pct}%)", True, (170, 160, 140))
+        surf.blit(mode_txt, (8, mm_h - mode_txt.get_height() - 6))
+
         s.blit(surf, (WIDTH - mm_w - 12, 12))
 
     def _draw_screen_flash(self, s):
@@ -5391,23 +5490,33 @@ class Game:
         dash_frac = p.dash_cd / DASH_CD if DASH_CD > 0 else 0
         self._draw_skill_icon(s, WIDTH // 2 + 20, skill_y, 36, dash_frac, (100, 200, 140), "Shift")
 
-        # Potion slots
-        pot_y = HEIGHT - panel_h + 14
-        # HP potion
-        pygame.draw.rect(s, (60, 20, 20), (WIDTH // 2 + 100, pot_y, 32, 32), border_radius=5)
-        pygame.draw.rect(s, (120, 40, 40), (WIDTH // 2 + 100, pot_y, 32, 32), 1, border_radius=5)
-        pot_txt = self.font.render(f"{p.potions_hp}", True, (220, 160, 160))
-        s.blit(pot_txt, (WIDTH // 2 + 108, pot_y + 6))
-        q_label = self.font.render("Q", True, (150, 130, 120))
-        s.blit(q_label, (WIDTH // 2 + 109, pot_y + 34))
+        # Diablo-style potion belt (1-4)
+        pot_y = HEIGHT - panel_h + 12
+        belt_x = WIDTH // 2 + 92
+        slot_w = 28
+        slot_gap = 8
+        for i in range(BELT_SLOTS):
+            sx = belt_x + i * (slot_w + slot_gap)
+            slot_kind = p.belt_slots[i] if i < len(p.belt_slots) else None
+            if slot_kind == "hp":
+                fill = (90, 25, 25)
+                outline = (150, 60, 60)
+            elif slot_kind == "mana":
+                fill = (28, 40, 100)
+                outline = (70, 90, 170)
+            else:
+                fill = (28, 24, 20)
+                outline = (70, 58, 44)
+            pygame.draw.rect(s, fill, (sx, pot_y, slot_w, 32), border_radius=5)
+            pygame.draw.rect(s, outline, (sx, pot_y, slot_w, 32), 1, border_radius=5)
+            key_label = self.font.render(str(i + 1), True, (170, 155, 130))
+            s.blit(key_label, (sx + 9, pot_y + 34))
 
-        # Mana potion
-        pygame.draw.rect(s, (20, 30, 80), (WIDTH // 2 + 145, pot_y, 32, 32), border_radius=5)
-        pygame.draw.rect(s, (40, 60, 140), (WIDTH // 2 + 145, pot_y, 32, 32), 1, border_radius=5)
-        pot_txt2 = self.font.render(f"{p.potions_mana}", True, (160, 180, 220))
-        s.blit(pot_txt2, (WIDTH // 2 + 153, pot_y + 6))
-        e_label = self.font.render("E", True, (150, 130, 120))
-        s.blit(e_label, (WIDTH // 2 + 154, pot_y + 34))
+        # Stash counts + quick-use keys (fallback if belt empty)
+        hp_stash = self.font.render(f"HP:{p.potions_hp} [Q]", True, (220, 160, 160))
+        mana_stash = self.font.render(f"MP:{p.potions_mana} [E]", True, (160, 180, 220))
+        s.blit(hp_stash, (belt_x, pot_y - 22))
+        s.blit(mana_stash, (belt_x, pot_y + 50))
 
         # Gold
         gold_txt = self.font.render(f"Gold: {p.gold}", True, C_GOLD)
@@ -5806,7 +5915,8 @@ class Game:
             ("WASD", "Move"),
             ("Left Click", "Single Arrow"),
             ("Right Click", "Multishot (fan of arrows, costs mana)"),
-            ("Q / E", "Use HP / Mana Potion"),
+            ("1-4", "Use potion belt slots (Diablo-style quick belt)"),
+            ("Q / E", "Use HP / Mana potion (belt first, then stash)"),
             ("Left Shift", "Dash (grants invulnerability)"),
             ("C", "Character Stats (allocate stat points)"),
             ("I", "Equipment & Inventory (equip gear, socket jewels)"),
@@ -5818,6 +5928,8 @@ class Game:
             ("Infusions", "Pick up Fire/Ice/Lightning arrows for timed buffs"),
             ("V", "Trade with vendor NPC (when nearby)"),
             ("M", "Open Waypoint Map - teleport to any discovered area"),
+            ("Tab", "Toggle minimap size / hidden"),
+            ("- / =", "Minimap zoom out / in"),
             ("", ""),
             ("Portals", "Step into portal to advance through Act areas (D2R-style progression)"),
             ("Acts", "5 Acts from Crypt to Frozen Summit, then Nightmare and Hell difficulty"),
@@ -6738,6 +6850,7 @@ class Game:
                 "mana": p.mana,
                 "potions_hp": p.potions_hp,
                 "potions_mana": p.potions_mana,
+                "belt_slots": p.belt_slots,
                 "strength": p.strength,
                 "dexterity": p.dexterity,
                 "vitality": p.vitality,
@@ -6768,6 +6881,8 @@ class Game:
                 "wave": self.wave,
                 "kills": self.kills,
                 "difficulty": self.difficulty_name,
+                "minimap_mode_idx": self.minimap_mode_idx,
+                "minimap_scale": self.minimap_scale,
             },
         }
         try:
@@ -6892,6 +7007,8 @@ class Game:
             self.waypoints_discovered.add((self.current_act, self.current_act_level))
             self.wave = gd["wave"]
             self.kills = gd["kills"]
+            self.minimap_mode_idx = int(gd.get("minimap_mode_idx", 0)) % len(MINIMAP_MODES)
+            self.minimap_scale = max(MINIMAP_SCALE_MIN, min(MINIMAP_SCALE_MAX, float(gd.get("minimap_scale", 1.0))))
             # Rebuild dungeon for current level
             self.dungeon = Dungeon(level=self.current_level, biome=self.current_biome)
             rx, ry = self.dungeon.center(self.dungeon.rooms[0]) if self.dungeon.rooms else (MAP_W // 2, MAP_H // 2)
@@ -6914,6 +7031,13 @@ class Game:
             p.max_lives = pd.get("max_lives", 3)
             p.potions_hp = pd.get("potions_hp", 1)
             p.potions_mana = pd.get("potions_mana", 1)
+            raw_belt = pd.get("belt_slots", ["hp", "hp", "mana", "mana"])
+            norm_belt = []
+            for v in raw_belt[:BELT_SLOTS]:
+                norm_belt.append(v if v in ("hp", "mana") else None)
+            while len(norm_belt) < BELT_SLOTS:
+                norm_belt.append(None)
+            p.belt_slots = norm_belt
             p.hp = min(pd.get("hp", p.max_hp()), p.max_hp())
             p.mana = min(pd.get("mana", p.max_mana()), p.max_mana())
             p.weapon = self._weapon_from_dict(pd["weapon"])
@@ -7123,6 +7247,15 @@ class Game:
                         self._vendor_screen()
                     if event.key == pygame.K_m:
                         self._waypoint_menu()
+                    if event.key == pygame.K_TAB:
+                        self.minimap_mode_idx = (self.minimap_mode_idx + 1) % len(MINIMAP_MODES)
+                        mode_name = MINIMAP_MODES[self.minimap_mode_idx].title()
+                        self.add_floating_text(self.player.pos.x, self.player.pos.y - 35,
+                                               f"Minimap: {mode_name}", (170, 210, 255), 0.9)
+                    if event.key in (pygame.K_EQUALS, pygame.K_KP_PLUS):
+                        self.minimap_scale = min(MINIMAP_SCALE_MAX, self.minimap_scale + MINIMAP_SCALE_STEP)
+                    if event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
+                        self.minimap_scale = max(MINIMAP_SCALE_MIN, self.minimap_scale - MINIMAP_SCALE_STEP)
                     if event.key == pygame.K_F11:
                         self.fullscreen = not self.fullscreen
                         if self.fullscreen:
