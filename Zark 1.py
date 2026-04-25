@@ -23,6 +23,24 @@ from tkinter import ttk, filedialog, messagebox
 
 APP_TITLE = "The Underground Adventure"
 SAVE_DEFAULT = "adventure_save.json"
+ROOM_COLORS = {
+    "clearing": "#2e8b57",
+    "forest": "#1f5f3a",
+    "front_porch": "#8b6f47",
+    "living_room": "#5e6472",
+    "kitchen": "#6d4c41",
+    "basement": "#2f2f46",
+    "collapsed_tunnel": "#3f3f46",
+    "underground_lake": "#0f4c5c",
+    "crystal_grotto": "#355070",
+    "catacombs": "#2d1e2f",
+    "ruins_courtyard": "#6b705c",
+    "grand_library": "#7f5539",
+    "forge": "#7f1d1d",
+    "clock_tower": "#334155",
+    "sky_temple": "#312e81",
+    "stone_circle": "#4d7c0f",
+}
 
 # ---------------------------
 # Game world & engine (logic)
@@ -38,6 +56,11 @@ def new_game_state():
             "door_locked": True,
             "lantern_lit": False,
             "basement_seen_with_light": False,
+            "library_searched": False,
+            "forge_opened": False,
+            "reliquary_opened": False,
+            "vault_opened": False,
+            "altar_completed": False,
         },
         "score": 0,
         "visited": set(),
@@ -59,12 +82,14 @@ ROOMS = {
         "name": "Dark Forest",
         "desc": ("You are in a dark, spooky forest. The trees are thick and block out most of the light. "
                  "A faint path leads south back to the clearing. "
-                 "You notice a pile of leaves against a large oak tree."),
-        "exits": {"south": "clearing"},
+                 "You notice a pile of leaves against a large oak tree. A ring of ancient stones glimmers to the north."),
+        "exits": {"south": "clearing", "north": "stone_circle"},
         "items": [],
         "details": {
             "leaves": "A suspicious pile of fallen leaves mounded near the roots of a huge oak.",
-            "pile of leaves": "Same suspicious pile of leaves."
+            "pile of leaves": "Same suspicious pile of leaves.",
+            "stones": "The stones are etched with symbols that pulse when you approach.",
+            "stone circle": "Ancient monoliths, cracked but still humming with power."
         },
     },
     "front_porch": {
@@ -111,13 +136,121 @@ ROOMS = {
         "desc_dark": "The basement is pitch black. You can't see a thing. The air is cold and damp.",
         "desc_lit": ("With the lantern lit, you can see the basement clearly—stone walls slick with moisture. "
                      "Cobwebs drape the beams. In the corner, propped against a barrel, is a short, gleaming sword. "
-                     "A heavy chest sits half-hidden behind old crates."),
-        "exits": {"north": "kitchen"},
-        "items": ["sword", "chest"],
+                     "A heavy chest sits half-hidden behind old crates. A broken tunnel yawns east."),
+        "exits": {"north": "kitchen", "east": "collapsed_tunnel"},
+        "items": ["sword", "chest", "rope"],
         "details": {
             "chest": "An old wooden chest banded with iron. The lid is shut.",
             "barrel": "Dry as bone. Whatever was in it is long gone.",
-            "cobwebs": "Strands like silver wire in the lantern glow."
+            "cobwebs": "Strands like silver wire in the lantern glow.",
+            "tunnel": "A jagged tunnel reinforced with old mine beams."
+        }
+    },
+    "collapsed_tunnel": {
+        "name": "Collapsed Tunnel",
+        "desc": ("The tunnel floor is slick with clay and old tracks. Mine carts rust in place. "
+                 "A path continues east to a faint blue glow, and south toward whispering catacombs."),
+        "exits": {"west": "basement", "east": "underground_lake", "south": "catacombs"},
+        "items": [],
+        "details": {
+            "tracks": "The rails are warped, but you can still follow them by touch.",
+            "cart": "A mine cart full of cracked stones and broken tools."
+        }
+    },
+    "underground_lake": {
+        "name": "Underground Lake",
+        "desc": ("A black mirror of water stretches across the cavern. Bioluminescent moss paints the walls cyan. "
+                 "A narrow ledge continues east into a crystal grotto."),
+        "exits": {"west": "collapsed_tunnel", "east": "crystal_grotto"},
+        "items": [],
+        "details": {
+            "water": "Still and glassy. Tiny ripples distort your reflection.",
+            "moss": "It glows brighter when your lantern passes nearby."
+        }
+    },
+    "crystal_grotto": {
+        "name": "Crystal Grotto",
+        "desc": ("Needles of crystal jut from floor and ceiling, scattering rainbow light. "
+                 "A carved archway north leads to forgotten ruins."),
+        "exits": {"west": "underground_lake", "north": "ruins_courtyard"},
+        "items": ["pickaxe"],
+        "details": {
+            "crystals": "Resonant and sharp. They hum softly at the edge of hearing.",
+            "archway": "Ancient stonework with geometric carvings."
+        }
+    },
+    "catacombs": {
+        "name": "Whispering Catacombs",
+        "desc": ("Rows of alcoves stretch into darkness. You hear whispers with no source. "
+                 "A locked reliquary chest rests at the far wall."),
+        "exits": {"north": "collapsed_tunnel"},
+        "items": ["reliquary"],
+        "details": {
+            "alcoves": "Most are empty, but some still contain cracked funeral masks.",
+            "reliquary": "A narrow chest with a moon crest engraved on its latch."
+        }
+    },
+    "ruins_courtyard": {
+        "name": "Sunken Ruins Courtyard",
+        "desc": ("Broken statues and vine-covered pillars surround a dry fountain. "
+                 "Passages lead north to a grand library, west to an old forge, and east to a clock tower."),
+        "exits": {"south": "crystal_grotto", "north": "grand_library", "west": "forge", "east": "clock_tower"},
+        "items": [],
+        "details": {
+            "fountain": "No water remains, only coin-sized petals carved in stone.",
+            "statues": "Faceless sentinels eroded by centuries underground."
+        }
+    },
+    "grand_library": {
+        "name": "Grand Library",
+        "desc": ("Towering shelves curve around a domed ceiling painted with constellations. "
+                 "Loose papers swirl in a constant indoor breeze."),
+        "exits": {"south": "ruins_courtyard"},
+        "items": [],
+        "details": {
+            "shelves": "Dusty but organized by symbols rather than language.",
+            "papers": "Some pages sketch maps of a sky temple."
+        }
+    },
+    "forge": {
+        "name": "Ember Forge",
+        "desc": ("Black anvils and cracked crucibles fill this hall. A sealed furnace glows faintly from within."),
+        "exits": {"east": "ruins_courtyard"},
+        "items": [],
+        "details": {
+            "furnace": "A heatproof lockbox built into the furnace housing.",
+            "anvil": "Pitted from impacts, yet still perfectly level."
+        }
+    },
+    "clock_tower": {
+        "name": "Clock Tower Hall",
+        "desc": ("Massive gears rotate overhead with a low metallic pulse. "
+                 "A bridge of stone to the east leads into a floating sky temple."),
+        "exits": {"west": "ruins_courtyard", "east": "sky_temple"},
+        "items": [],
+        "details": {
+            "gears": "Each tooth is etched with numerals from an unknown system.",
+            "bridge": "The bridge floats without visible support."
+        }
+    },
+    "sky_temple": {
+        "name": "Sky Temple Vault",
+        "desc": ("The chamber glows with starlight that has no source. At the center stands a tri-seal vault chest."),
+        "exits": {"west": "clock_tower"},
+        "items": ["vault_chest"],
+        "details": {
+            "vault": "Three circular recesses demand matching sigils.",
+            "chest": "A vault chest with three empty sigil slots."
+        }
+    },
+    "stone_circle": {
+        "name": "Stone Circle",
+        "desc": ("Ancient monoliths surround a low altar carved with a relic-shaped indentation."),
+        "exits": {"south": "forest"},
+        "items": ["altar"],
+        "details": {
+            "altar": "A polished groove in the exact shape of a relic.",
+            "monoliths": "They vibrate softly as if singing through stone."
         }
     },
 }
@@ -148,7 +281,52 @@ ITEMS = {
         "aliases": ["chest", "treasure chest"],
         "portable": False,
         "desc": "Heavy and iron-banded. The lid is shut.",
-    }
+    },
+    "rope": {
+        "aliases": ["rope", "coil of rope"],
+        "portable": True,
+        "desc": "A coil of sturdy rope, stiff with age but still usable.",
+    },
+    "pickaxe": {
+        "aliases": ["pickaxe", "pick"],
+        "portable": True,
+        "desc": "A miner's pickaxe, surprisingly well balanced.",
+    },
+    "moon_sigil": {
+        "aliases": ["moon sigil", "sigil", "moon crest"],
+        "portable": True,
+        "desc": "A silver sigil embossed with a crescent moon.",
+    },
+    "sun_sigil": {
+        "aliases": ["sun sigil", "sun crest"],
+        "portable": True,
+        "desc": "A golden sigil stamped with a radiant sunburst.",
+    },
+    "ember_sigil": {
+        "aliases": ["ember sigil", "ember crest"],
+        "portable": True,
+        "desc": "A copper sigil warm to the touch.",
+    },
+    "relic": {
+        "aliases": ["relic", "sky relic", "star relic"],
+        "portable": True,
+        "desc": "A crystalline relic that refracts light into tiny constellations.",
+    },
+    "reliquary": {
+        "aliases": ["reliquary", "reliquary chest"],
+        "portable": False,
+        "desc": "A moon-marked chest with a mechanical latch.",
+    },
+    "vault_chest": {
+        "aliases": ["vault chest", "vault", "tri-seal chest"],
+        "portable": False,
+        "desc": "An ornate chest with three sigil sockets.",
+    },
+    "altar": {
+        "aliases": ["altar", "stone altar"],
+        "portable": False,
+        "desc": "A monolithic altar waiting for something sacred.",
+    },
 }
 
 DIRECTIONS = {
@@ -207,6 +385,15 @@ class AdventureApp(tk.Tk):
         outer = ttk.Frame(self, padding=(8, 8, 8, 8))
         outer.pack(fill="both", expand=True)
 
+        # Visual area
+        visual_row = ttk.Frame(outer)
+        visual_row.pack(fill="x", pady=(0, 8))
+
+        self.scene_canvas = tk.Canvas(visual_row, height=190, highlightthickness=1)
+        self.scene_canvas.pack(side="left", fill="x", expand=True)
+        self.map_canvas = tk.Canvas(visual_row, width=260, height=190, highlightthickness=1)
+        self.map_canvas.pack(side="left", padx=(8, 0))
+
         # Console (Text) with scrollbar
         console_frame = ttk.Frame(outer)
         console_frame.pack(fill="both", expand=True)
@@ -238,6 +425,7 @@ class AdventureApp(tk.Tk):
         self.console.tag_configure("bad",  foreground="#ff6b6b")  # red
         self.console.tag_configure("info", foreground=self.fg())
         self.console.tag_configure("dim",  foreground=self.dimfg())
+        self.draw_visuals()
 
     # ----- Theming -----
     def bg(self):
@@ -272,8 +460,11 @@ class AdventureApp(tk.Tk):
         self.console.configure(bg=self.bg(), fg=self.fg(), insertbackground=self.fg())
         self.console.tag_configure("info", foreground=self.fg())
         self.console.tag_configure("dim", foreground=self.dimfg())
+        self.scene_canvas.configure(bg=self.bg(), highlightbackground=self.boxfg())
+        self.map_canvas.configure(bg=self.bg(), highlightbackground=self.boxfg())
 
         self.update_status()
+        self.draw_visuals()
 
     def set_theme_cmd(self, variant):
         self.apply_theme(variant)
@@ -320,17 +511,20 @@ class AdventureApp(tk.Tk):
         inv = ", ".join(ITEMS[i]["aliases"][0] for i in self.state["inventory"]) if self.state["inventory"] else "nothing"
         locname = ROOMS[self.state["location"]]["name"]
         self.status.configure(text=f"{locname}   •   Score: {self.state['score']}   •   Inventory: {inv}")
+        self.draw_visuals()
 
     # ----- Game I/O -----
     def print_welcome(self):
         self.append(APP_TITLE, tag="title")
         self.append_paragraph("Welcome to The Underground Adventure!", tag="info", slow=True)
+        self.append_paragraph("New quest: explore the expanded underground world, gather moon/sun/ember sigils, open the sky vault, and place the relic at the Stone Circle.", tag="dim")
         self.append("", tag="info")
         self.append("Type 'help' for commands. Theme: View → Theme or 'theme dark|light'.", tag="dim")
 
     def describe_room(self):
         key = self.state["location"]
         room = ROOMS[key]
+        self.state["visited"].add(key)
         if key == "basement":
             desc = room["desc_lit"] if self.state["flags"]["lantern_lit"] else room["desc_dark"]
         else:
@@ -344,6 +538,100 @@ class AdventureApp(tk.Tk):
         self.append_paragraph("", slow=False)
         self.append_paragraph(desc, slow=True)
         self.update_status()
+
+    def draw_visuals(self):
+        self.draw_scene()
+        self.draw_map()
+
+    def draw_scene(self):
+        c = self.scene_canvas
+        c.delete("all")
+        w = max(c.winfo_width(), 520)
+        h = max(c.winfo_height(), 190)
+        loc = self.state["location"]
+        room = ROOMS[loc]
+        panel = ROOM_COLORS.get(loc, "#3a3f4b")
+        for i in range(18):
+            band_color = panel if i % 2 == 0 else self.bg()
+            alpha_blend = "#" + "".join(f"{(int(panel[j:j+2], 16) + int(self.bg()[j:j+2], 16)) // 2:02x}" for j in (1, 3, 5))
+            c.create_rectangle(0, i * (h / 18), w, (i + 1) * (h / 18), fill=alpha_blend if i % 3 == 0 else band_color, outline="")
+        c.create_rectangle(10, 10, w - 10, h - 10, outline="#ffffff", width=2)
+        c.create_text(24, 30, text=room["name"], fill="#ffffff", font=("Consolas", 18, "bold"), anchor="w")
+        icon = {
+            "forest": "🌲", "clearing": "🌿", "front_porch": "🏚", "living_room": "🛋",
+            "kitchen": "🕯", "basement": "🕳", "collapsed_tunnel": "⛏", "underground_lake": "🌊",
+            "crystal_grotto": "💎", "catacombs": "💀", "ruins_courtyard": "🏛",
+            "grand_library": "📚", "forge": "🔥", "clock_tower": "⚙", "sky_temple": "✨", "stone_circle": "🗿"
+        }.get(loc, "✦")
+        c.create_text(w - 42, 34, text=icon, fill="#ffffff", font=("Segoe UI Emoji", 24), anchor="center")
+        visible = self.room_visible_items(loc)
+        exits = ", ".join(sorted(room["exits"].keys()))
+        inventory_count = len(self.state["inventory"])
+        lantern = "Lit" if self.state["flags"]["lantern_lit"] else "Unlit"
+        door = "Unlocked" if not self.state["flags"]["door_locked"] else "Locked"
+        c.create_text(24, 64, text=f"Exits: {exits}", fill="#eef2ff", font=("Consolas", 11), anchor="w")
+        c.create_text(24, 88, text=f"Visible items: {', '.join(ITEMS[i]['aliases'][0] for i in visible) if visible else 'none'}",
+                      fill="#eef2ff", font=("Consolas", 11), anchor="w")
+        c.create_text(24, 112, text=f"Inventory slots used: {inventory_count}    Lantern: {lantern}    Front door: {door}",
+                      fill="#eef2ff", font=("Consolas", 11), anchor="w")
+        if self.state["visited"]:
+            c.create_text(24, 136, text=f"World explored: {len(self.state['visited'])}/{len(ROOMS)} rooms",
+                          fill="#dbeafe", font=("Consolas", 10), anchor="w")
+        c.create_oval(w - 145, h - 64, w - 25, h - 20, fill="#0f172a", outline="#93c5fd", width=2)
+        c.create_text(w - 85, h - 42, text=f"Score {self.state['score']}", fill="#e0f2fe", font=("Consolas", 11, "bold"))
+        c.create_text(w - 28, h - 24, text="Zark Visual HUD", fill="#dbeafe", font=("Consolas", 10, "italic"), anchor="e")
+
+    def draw_map(self):
+        c = self.map_canvas
+        c.delete("all")
+        c.create_text(12, 16, text="World Map", anchor="w", fill=self.fg(), font=("Consolas", 12, "bold"))
+        layout = {
+            "stone_circle": (34, 28),
+            "forest": (34, 58),
+            "clearing": (34, 88),
+            "front_porch": (34, 118),
+            "living_room": (72, 118),
+            "kitchen": (72, 88),
+            "basement": (72, 58),
+            "collapsed_tunnel": (110, 58),
+            "underground_lake": (146, 58),
+            "crystal_grotto": (182, 58),
+            "ruins_courtyard": (182, 90),
+            "grand_library": (182, 122),
+            "forge": (146, 90),
+            "clock_tower": (218, 90),
+            "sky_temple": (242, 90),
+            "catacombs": (110, 28),
+        }
+        edges = [
+            ("stone_circle", "forest"),
+            ("forest", "clearing"),
+            ("clearing", "front_porch"),
+            ("front_porch", "living_room"),
+            ("living_room", "kitchen"),
+            ("kitchen", "basement"),
+            ("basement", "collapsed_tunnel"),
+            ("collapsed_tunnel", "underground_lake"),
+            ("collapsed_tunnel", "catacombs"),
+            ("underground_lake", "crystal_grotto"),
+            ("crystal_grotto", "ruins_courtyard"),
+            ("ruins_courtyard", "grand_library"),
+            ("ruins_courtyard", "forge"),
+            ("ruins_courtyard", "clock_tower"),
+            ("clock_tower", "sky_temple"),
+        ]
+        for a, b in edges:
+            x1, y1 = layout[a]
+            x2, y2 = layout[b]
+            c.create_line(x1, y1, x2, y2, fill=self.dimfg(), width=2)
+        for room_key, (x, y) in layout.items():
+            is_here = (room_key == self.state["location"])
+            seen = room_key in self.state["visited"]
+            fill = "#60a5fa" if is_here else (ROOM_COLORS.get(room_key, "#4b5563") if seen else "#1f2937")
+            outline = "#ffffff" if is_here else self.boxfg()
+            c.create_oval(x - 12, y - 10, x + 12, y + 10, fill=fill, outline=outline, width=2)
+            if seen or is_here:
+                c.create_text(x, y + 16, text=room_key.replace("_", " "), fill=self.fg(), font=("Consolas", 6))
 
     def room_visible_items(self, room_key):
         items = list(ROOMS[room_key].get("items", []))
@@ -381,6 +669,8 @@ class AdventureApp(tk.Tk):
             "light": self.cmd_light,
             "search": self.cmd_search,
             "read": self.cmd_read,
+            "map": self.cmd_map,
+            "place": self.cmd_place,
             "save": self.cmd_save_cmd,
             "load": self.cmd_load_cmd,
             "help": self.cmd_help, "?": self.cmd_help,
@@ -423,7 +713,8 @@ class AdventureApp(tk.Tk):
             "  look/l/examine [thing]   open [thing]          search [thing]\n"
             "  go/move/walk [n|s|e|w]   n/s/e/w               take/get [item]\n"
             "  use [item] (on [thing])  light (lantern)       read [item]\n"
-            "  inventory/i              drop [item]           save, load, quit\n"
+            "  inventory/i              drop [item]           map, place [item]\n"
+            "  save, load, quit\n"
             "Extras:\n"
             "  theme dark|light         fast on|off           cls"
         )
@@ -542,6 +833,31 @@ class AdventureApp(tk.Tk):
         inv = ", ".join(ITEMS[i]["aliases"][0] for i in self.state["inventory"]) or "nothing"
         self.append("You are carrying: " + inv)
 
+    def cmd_map(self, _):
+        if not self.state["visited"]:
+            self.append("Your map is blank."); return
+        visited_names = [ROOMS[k]["name"] for k in sorted(self.state["visited"])]
+        self.append("Discovered areas:")
+        for name in visited_names:
+            self.append(f"  - {name}", tag="dim")
+
+    def cmd_place(self, args):
+        if not args:
+            self.append("Place what?"); return
+        name = " ".join(args).lower()
+        if self.state["location"] != "stone_circle" or name not in ("relic", "sky relic", "star relic"):
+            self.append("There's nowhere suitable to place that."); return
+        if not self.have("relic"):
+            self.append("You don't have the relic.", tag="bad"); return
+        self.state["inventory"].remove("relic")
+        self.state["flags"]["altar_completed"] = True
+        self.state["score"] += 10
+        self.update_status()
+        self.append("You set the relic into the altar. The monoliths ignite with starfire.", tag="good")
+        self.append(f"*** You win! Final score: {self.state['score']} ***", tag="good")
+        messagebox.showinfo(APP_TITLE, "You restored the Stone Circle. You win!")
+        self.quit()
+
     def cmd_open(self, args):
         if not args:
             self.append("Open what?"); return
@@ -557,12 +873,47 @@ class AdventureApp(tk.Tk):
         if self.state["location"] == "basement" and target in ("chest","treasure chest"):
             if not self.state["flags"]["lantern_lit"]:
                 self.append("You fumble in the dark. Perhaps some light first?", tag="bad"); return
-            self.append("With a groan the chest opens. Inside you find a velvet pouch of gems!", tag="good")
-            self.state["score"] += 5
+            if "moon_sigil" not in self.state["inventory"] and "moon_sigil" not in ROOMS["basement"]["items"]:
+                self.add_to_room("basement", "moon_sigil")
+            self.append("With a groan the chest opens. Inside, resting on velvet, is a moon sigil.", tag="good")
+            self.state["score"] += 2
             self.update_status()
-            self.append(f"*** You win! Final score: {self.state['score']} ***", tag="good")
-            messagebox.showinfo(APP_TITLE, "You win! Thanks for playing.")
-            self.quit()
+            return
+        if self.state["location"] == "catacombs" and target in ("reliquary","reliquary chest","chest"):
+            if not self.have("sword"):
+                self.append("A wraith rises from the alcoves. You need a weapon before opening this.", tag="bad"); return
+            if not self.state["flags"]["reliquary_opened"]:
+                self.state["flags"]["reliquary_opened"] = True
+                self.state["score"] += 2
+                self.append("You force the latch and find journals detailing how to awaken the sky vault with three sigils.", tag="good")
+                self.update_status()
+            else:
+                self.append("The reliquary stands open and empty.")
+            return
+        if self.state["location"] == "forge" and target in ("furnace","lockbox"):
+            if not self.state["flags"]["lantern_lit"]:
+                self.append("The controls are too dark to read. Light the lantern first.", tag="bad"); return
+            if not self.state["flags"]["forge_opened"]:
+                self.state["flags"]["forge_opened"] = True
+                self.add_to_room("forge", "ember_sigil")
+                self.state["score"] += 2
+                self.append("Steam hisses out as the furnace lockbox opens, revealing an ember sigil.", tag="good")
+                self.update_status()
+            else:
+                self.append("The lockbox hangs open.")
+            return
+        if self.state["location"] == "sky_temple" and target in ("vault chest","vault","chest"):
+            needed = {"moon_sigil", "sun_sigil", "ember_sigil"}
+            if not needed.issubset(set(self.state["inventory"])):
+                self.append("Three sigils are required: moon, sun, and ember.", tag="bad"); return
+            if not self.state["flags"]["vault_opened"]:
+                self.state["flags"]["vault_opened"] = True
+                self.add_to_room("sky_temple", "relic")
+                self.state["score"] += 5
+                self.append("The three sigils flare to life and the vault chest unlocks. A star relic rises out.", tag="good")
+                self.update_status()
+            else:
+                self.append("The vault is open.")
             return
         self.append("It doesn't seem to open.")
 
@@ -595,6 +946,8 @@ class AdventureApp(tk.Tk):
 
         if item_key == "lantern":
             self.cmd_light([]); return
+        if item_key == "relic" and self.state["location"] == "stone_circle":
+            self.cmd_place(["relic"]); return
 
         self.append("Nothing happens.")
 
@@ -619,6 +972,16 @@ class AdventureApp(tk.Tk):
             self.cmd_look(["leaves"]); return
         if self.state["location"] == "clearing" and t == "mailbox":
             self.cmd_look(["mailbox"]); return
+        if self.state["location"] == "grand_library" and t in ("shelves", "books", "bookcase"):
+            if not self.state["flags"]["library_searched"]:
+                self.state["flags"]["library_searched"] = True
+                self.add_to_room("grand_library", "sun_sigil")
+                self.state["score"] += 2
+                self.update_status()
+                self.append("Behind a sliding shelf panel you discover a sun sigil.", tag="good")
+            else:
+                self.append("You already found the library's hidden compartment.")
+            return
         self.append("You find nothing of note.")
 
     def cmd_read(self, args):
