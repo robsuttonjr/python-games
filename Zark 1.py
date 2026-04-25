@@ -23,6 +23,14 @@ from tkinter import ttk, filedialog, messagebox
 
 APP_TITLE = "The Underground Adventure"
 SAVE_DEFAULT = "adventure_save.json"
+ROOM_COLORS = {
+    "clearing": "#2e8b57",
+    "forest": "#1f5f3a",
+    "front_porch": "#8b6f47",
+    "living_room": "#5e6472",
+    "kitchen": "#6d4c41",
+    "basement": "#2f2f46",
+}
 
 # ---------------------------
 # Game world & engine (logic)
@@ -207,6 +215,15 @@ class AdventureApp(tk.Tk):
         outer = ttk.Frame(self, padding=(8, 8, 8, 8))
         outer.pack(fill="both", expand=True)
 
+        # Visual area
+        visual_row = ttk.Frame(outer)
+        visual_row.pack(fill="x", pady=(0, 8))
+
+        self.scene_canvas = tk.Canvas(visual_row, height=190, highlightthickness=1)
+        self.scene_canvas.pack(side="left", fill="x", expand=True)
+        self.map_canvas = tk.Canvas(visual_row, width=260, height=190, highlightthickness=1)
+        self.map_canvas.pack(side="left", padx=(8, 0))
+
         # Console (Text) with scrollbar
         console_frame = ttk.Frame(outer)
         console_frame.pack(fill="both", expand=True)
@@ -238,6 +255,7 @@ class AdventureApp(tk.Tk):
         self.console.tag_configure("bad",  foreground="#ff6b6b")  # red
         self.console.tag_configure("info", foreground=self.fg())
         self.console.tag_configure("dim",  foreground=self.dimfg())
+        self.draw_visuals()
 
     # ----- Theming -----
     def bg(self):
@@ -272,8 +290,11 @@ class AdventureApp(tk.Tk):
         self.console.configure(bg=self.bg(), fg=self.fg(), insertbackground=self.fg())
         self.console.tag_configure("info", foreground=self.fg())
         self.console.tag_configure("dim", foreground=self.dimfg())
+        self.scene_canvas.configure(bg=self.bg(), highlightbackground=self.boxfg())
+        self.map_canvas.configure(bg=self.bg(), highlightbackground=self.boxfg())
 
         self.update_status()
+        self.draw_visuals()
 
     def set_theme_cmd(self, variant):
         self.apply_theme(variant)
@@ -320,6 +341,7 @@ class AdventureApp(tk.Tk):
         inv = ", ".join(ITEMS[i]["aliases"][0] for i in self.state["inventory"]) if self.state["inventory"] else "nothing"
         locname = ROOMS[self.state["location"]]["name"]
         self.status.configure(text=f"{locname}   •   Score: {self.state['score']}   •   Inventory: {inv}")
+        self.draw_visuals()
 
     # ----- Game I/O -----
     def print_welcome(self):
@@ -344,6 +366,63 @@ class AdventureApp(tk.Tk):
         self.append_paragraph("", slow=False)
         self.append_paragraph(desc, slow=True)
         self.update_status()
+
+    def draw_visuals(self):
+        self.draw_scene()
+        self.draw_map()
+
+    def draw_scene(self):
+        c = self.scene_canvas
+        c.delete("all")
+        w = max(c.winfo_width(), 520)
+        h = max(c.winfo_height(), 190)
+        loc = self.state["location"]
+        room = ROOMS[loc]
+        panel = ROOM_COLORS.get(loc, "#3a3f4b")
+        c.create_rectangle(0, 0, w, h, fill=panel, outline=panel)
+        c.create_rectangle(10, 10, w - 10, h - 10, outline=self.fg(), width=2)
+        c.create_text(24, 30, text=room["name"], fill="#ffffff", font=("Consolas", 18, "bold"), anchor="w")
+        visible = self.room_visible_items(loc)
+        exits = ", ".join(sorted(room["exits"].keys()))
+        inventory_count = len(self.state["inventory"])
+        lantern = "Lit" if self.state["flags"]["lantern_lit"] else "Unlit"
+        door = "Unlocked" if not self.state["flags"]["door_locked"] else "Locked"
+        c.create_text(24, 64, text=f"Exits: {exits}", fill="#eef2ff", font=("Consolas", 11), anchor="w")
+        c.create_text(24, 88, text=f"Visible items: {', '.join(ITEMS[i]['aliases'][0] for i in visible) if visible else 'none'}",
+                      fill="#eef2ff", font=("Consolas", 11), anchor="w")
+        c.create_text(24, 112, text=f"Inventory slots used: {inventory_count}    Lantern: {lantern}    Front door: {door}",
+                      fill="#eef2ff", font=("Consolas", 11), anchor="w")
+        c.create_text(w - 28, h - 24, text="Zark Visual HUD", fill="#dbeafe", font=("Consolas", 10, "italic"), anchor="e")
+
+    def draw_map(self):
+        c = self.map_canvas
+        c.delete("all")
+        c.create_text(12, 16, text="World Map", anchor="w", fill=self.fg(), font=("Consolas", 12, "bold"))
+        layout = {
+            "forest": (95, 45),
+            "clearing": (95, 95),
+            "front_porch": (95, 145),
+            "living_room": (175, 145),
+            "kitchen": (175, 95),
+            "basement": (175, 45),
+        }
+        edges = [
+            ("forest", "clearing"),
+            ("clearing", "front_porch"),
+            ("front_porch", "living_room"),
+            ("living_room", "kitchen"),
+            ("kitchen", "basement"),
+        ]
+        for a, b in edges:
+            x1, y1 = layout[a]
+            x2, y2 = layout[b]
+            c.create_line(x1, y1, x2, y2, fill=self.dimfg(), width=2)
+        for room_key, (x, y) in layout.items():
+            is_here = (room_key == self.state["location"])
+            fill = "#60a5fa" if is_here else ROOM_COLORS.get(room_key, "#4b5563")
+            outline = "#ffffff" if is_here else self.boxfg()
+            c.create_oval(x - 23, y - 16, x + 23, y + 16, fill=fill, outline=outline, width=2)
+            c.create_text(x, y, text=room_key.replace("_", "\n"), fill="#f8fafc", font=("Consolas", 8, "bold"))
 
     def room_visible_items(self, room_key):
         items = list(ROOMS[room_key].get("items", []))
