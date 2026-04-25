@@ -217,6 +217,10 @@ TORCH_LIGHT_COLOR = (230, 160, 65)
 PROJ_LIGHT_RADIUS = 80
 MAX_PARTICLES = 350
 SCREEN_SHAKE_DECAY = 14.0
+MINIMAP_MODES = ["small", "large", "hidden"]
+MINIMAP_SCALE_MIN = 0.65
+MINIMAP_SCALE_MAX = 1.85
+MINIMAP_SCALE_STEP = 0.15
 
 # ============ COLOR PALETTE (D2R dark fantasy) ============
 C_BLOOD = (140, 18, 18)
@@ -1729,6 +1733,8 @@ class Game:
         self.crates: List[Crate] = []
         self.vendor: Optional[Vendor] = None
         self.show_vendor_hint = False
+        self.minimap_mode_idx = 0  # 0=small, 1=large, 2=hidden
+        self.minimap_scale = 1.0
 
         if menu_choice == "continue":
             # Load saved game
@@ -5210,8 +5216,13 @@ class Game:
         pygame.draw.circle(s, (220, 200, 160), (mx, my), 2)
 
     def _draw_minimap(self, s):
-        mm_w = 300
-        mm_h = 220
+        mm_mode = MINIMAP_MODES[self.minimap_mode_idx]
+        if mm_mode == "hidden":
+            return
+
+        base_w, base_h = (300, 220) if mm_mode == "small" else (480, 340)
+        mm_w = int(base_w * self.minimap_scale)
+        mm_h = int(base_h * self.minimap_scale)
         surf = pygame.Surface((mm_w, mm_h), pygame.SRCALPHA)
         surf.fill((0, 0, 0, 150))
         # Gothic frame
@@ -5319,6 +5330,11 @@ class Game:
             vpy = int(self.vendor.pos.y / TILE * sy)
             pygame.draw.circle(surf, (100, 200, 255), (vpx, vpy), 3)
             pygame.draw.circle(surf, (60, 140, 200), (vpx, vpy), 3, 1)
+
+        zoom_pct = int(self.minimap_scale * 100)
+        mode_label = "MiniMap: Small" if mm_mode == "small" else "MiniMap: Large"
+        mode_txt = self.font.render(f"{mode_label} ({zoom_pct}%)", True, (170, 160, 140))
+        surf.blit(mode_txt, (8, mm_h - mode_txt.get_height() - 6))
 
         s.blit(surf, (WIDTH - mm_w - 12, 12))
 
@@ -5818,6 +5834,8 @@ class Game:
             ("Infusions", "Pick up Fire/Ice/Lightning arrows for timed buffs"),
             ("V", "Trade with vendor NPC (when nearby)"),
             ("M", "Open Waypoint Map - teleport to any discovered area"),
+            ("Tab", "Toggle minimap size / hidden"),
+            ("- / =", "Minimap zoom out / in"),
             ("", ""),
             ("Portals", "Step into portal to advance through Act areas (D2R-style progression)"),
             ("Acts", "5 Acts from Crypt to Frozen Summit, then Nightmare and Hell difficulty"),
@@ -6768,6 +6786,8 @@ class Game:
                 "wave": self.wave,
                 "kills": self.kills,
                 "difficulty": self.difficulty_name,
+                "minimap_mode_idx": self.minimap_mode_idx,
+                "minimap_scale": self.minimap_scale,
             },
         }
         try:
@@ -6892,6 +6912,8 @@ class Game:
             self.waypoints_discovered.add((self.current_act, self.current_act_level))
             self.wave = gd["wave"]
             self.kills = gd["kills"]
+            self.minimap_mode_idx = int(gd.get("minimap_mode_idx", 0)) % len(MINIMAP_MODES)
+            self.minimap_scale = max(MINIMAP_SCALE_MIN, min(MINIMAP_SCALE_MAX, float(gd.get("minimap_scale", 1.0))))
             # Rebuild dungeon for current level
             self.dungeon = Dungeon(level=self.current_level, biome=self.current_biome)
             rx, ry = self.dungeon.center(self.dungeon.rooms[0]) if self.dungeon.rooms else (MAP_W // 2, MAP_H // 2)
@@ -7123,6 +7145,15 @@ class Game:
                         self._vendor_screen()
                     if event.key == pygame.K_m:
                         self._waypoint_menu()
+                    if event.key == pygame.K_TAB:
+                        self.minimap_mode_idx = (self.minimap_mode_idx + 1) % len(MINIMAP_MODES)
+                        mode_name = MINIMAP_MODES[self.minimap_mode_idx].title()
+                        self.add_floating_text(self.player.pos.x, self.player.pos.y - 35,
+                                               f"Minimap: {mode_name}", (170, 210, 255), 0.9)
+                    if event.key in (pygame.K_EQUALS, pygame.K_KP_PLUS):
+                        self.minimap_scale = min(MINIMAP_SCALE_MAX, self.minimap_scale + MINIMAP_SCALE_STEP)
+                    if event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
+                        self.minimap_scale = max(MINIMAP_SCALE_MIN, self.minimap_scale - MINIMAP_SCALE_STEP)
                     if event.key == pygame.K_F11:
                         self.fullscreen = not self.fullscreen
                         if self.fullscreen:
