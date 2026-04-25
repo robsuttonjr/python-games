@@ -61,6 +61,7 @@ def new_game_state():
             "reliquary_opened": False,
             "vault_opened": False,
             "altar_completed": False,
+            "basement_chest_opened": False,
         },
         "score": 0,
         "visited": set(),
@@ -293,7 +294,7 @@ ITEMS = {
         "desc": "A miner's pickaxe, surprisingly well balanced.",
     },
     "moon_sigil": {
-        "aliases": ["moon sigil", "sigil", "moon crest"],
+        "aliases": ["moon sigil", "moon crest"],
         "portable": True,
         "desc": "A silver sigil embossed with a crescent moon.",
     },
@@ -873,11 +874,15 @@ class AdventureApp(tk.Tk):
         if self.state["location"] == "basement" and target in ("chest","treasure chest"):
             if not self.state["flags"]["lantern_lit"]:
                 self.append("You fumble in the dark. Perhaps some light first?", tag="bad"); return
-            if "moon_sigil" not in self.state["inventory"] and "moon_sigil" not in ROOMS["basement"]["items"]:
-                self.add_to_room("basement", "moon_sigil")
-            self.append("With a groan the chest opens. Inside, resting on velvet, is a moon sigil.", tag="good")
-            self.state["score"] += 2
-            self.update_status()
+            if not self.state["flags"]["basement_chest_opened"]:
+                self.state["flags"]["basement_chest_opened"] = True
+                if "moon_sigil" not in self.state["inventory"] and "moon_sigil" not in ROOMS["basement"]["items"]:
+                    self.add_to_room("basement", "moon_sigil")
+                self.append("With a groan the chest opens. Inside, resting on velvet, is a moon sigil.", tag="good")
+                self.state["score"] += 2
+                self.update_status()
+            else:
+                self.append("The basement chest is empty now.")
             return
         if self.state["location"] == "catacombs" and target in ("reliquary","reliquary chest","chest"):
             if not self.have("sword"):
@@ -1021,11 +1026,17 @@ class AdventureApp(tk.Tk):
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            data["visited"] = set(data.get("visited", []))
+            defaults = new_game_state()
+            merged = defaults.copy()
+            merged.update(data)
+            merged_flags = defaults["flags"].copy()
+            merged_flags.update(data.get("flags", {}))
+            merged["flags"] = merged_flags
+            merged["visited"] = set(merged.get("visited", []))
             # keep current theme/typewriter (UX), but load rest
             keep_theme = self.state["theme"]
             keep_type = self.state["typewriter"]
-            self.state = data
+            self.state = merged
             self.state["theme"] = keep_theme
             self.state["typewriter"] = keep_type
             self.apply_theme(self.state["theme"])
