@@ -353,6 +353,7 @@ class AdventureApp(tk.Tk):
         self.title(APP_TITLE)
         self.minsize(820, 560)
         self.state = new_game_state()
+        self.sanitize_state()
         self.cmd_history = []
         self.hist_index = -1
         self.build_ui()
@@ -639,6 +640,34 @@ class AdventureApp(tk.Tk):
         if room_key == "basement" and not self.state["flags"]["lantern_lit"]:
             items = []
         return items
+
+    def sanitize_state(self):
+        """Resolve save/load and progression state conflicts safely."""
+        if self.state.get("location") not in ROOMS:
+            self.state["location"] = "clearing"
+
+        # keep only valid, unique inventory items
+        inv_clean = []
+        for item in self.state.get("inventory", []):
+            if item in ITEMS and item not in inv_clean:
+                inv_clean.append(item)
+        self.state["inventory"] = inv_clean
+
+        # visited should only contain valid rooms
+        visited = self.state.get("visited", set())
+        if not isinstance(visited, set):
+            visited = set(visited)
+        self.state["visited"] = {r for r in visited if r in ROOMS}
+
+        # remove items from rooms if already carried to avoid duplication conflicts
+        inv_set = set(self.state["inventory"])
+        for room in ROOMS.values():
+            room["items"] = [i for i in room.get("items", []) if i not in inv_set]
+
+        # keep flags dictionary intact with defaults merged in
+        flags = new_game_state()["flags"]
+        flags.update(self.state.get("flags", {}))
+        self.state["flags"] = flags
 
     def have(self, item_key):
         return item_key in self.state["inventory"]
@@ -1037,6 +1066,7 @@ class AdventureApp(tk.Tk):
             keep_theme = self.state["theme"]
             keep_type = self.state["typewriter"]
             self.state = merged
+            self.sanitize_state()
             self.state["theme"] = keep_theme
             self.state["typewriter"] = keep_type
             self.apply_theme(self.state["theme"])
